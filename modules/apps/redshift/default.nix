@@ -1,0 +1,35 @@
+{
+  lib,
+  config,
+  pkgs,
+  username,
+  ...
+}:
+let
+  cfg = config.apps.redshift;
+in
+{
+  options.apps.redshift = {
+    enable = lib.mkEnableOption "Enable Redshift color temperature adjuster";
+  };
+
+  config = lib.mkIf cfg.enable {
+    home-manager.users.${username} =
+      { config, ... }:
+      {
+        systemd.user.services.redshift = {
+          Unit = {
+            Description = "Redshift color temperature adjuster";
+            PartOf = [ "graphical-session.target" ];
+          };
+          Install = {
+            WantedBy = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${pkgs.redshift}/bin/redshift -l ''${config.sops.placeholder.location_latitude}:''${config.sops.placeholder.location_longitude}";
+            Restart = "always";
+          };
+        };
+      };
+  };
+}

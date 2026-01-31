@@ -1,0 +1,32 @@
+{
+  lib,
+  config,
+  pkgs,
+  username,
+  ...
+}:
+let
+  cfg = config.apps.python;
+in
+{
+  options.apps.python = {
+    enable = lib.mkEnableOption "Enable Python with packages";
+  };
+
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = [
+      (pkgs.python3.withPackages (
+        ps: with ps; [
+          requests
+          pip
+          tkinter
+          ytmusicapi
+          litellm
+          pyperclip
+          pillow
+          netifaces
+        ]
+      ))
+    ];
+  };
+}

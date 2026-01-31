@@ -1,0 +1,49 @@
+{
+  lib,
+  config,
+  pkgs,
+  username,
+  ...
+}:
+let
+  cfg = config.apps.rescrobbled;
+in
+{
+  options.apps.rescrobbled = {
+    enable = lib.mkEnableOption "Enable Rescrobbled Last.fm scrobbler";
+  };
+
+  config = lib.mkIf cfg.enable {
+    home-manager.users.${username} =
+      { config, ... }:
+      {
+        home.packages = [ pkgs.rescrobbled ];
+
+        systemd.user.services.rescrobbled = {
+          Unit = {
+            Description = "MPRIS scrobbler daemon";
+            After = [ "graphical-session.target" ];
+          };
+          Install = {
+            WantedBy = [ "default.target" ];
+          };
+          Service = {
+            ExecStart = "${pkgs.rescrobbled}/bin/rescrobbled";
+            Restart = "always";
+            RestartSec = "5s";
+          };
+        };
+
+        sops.templates."rescrobbled-config.toml" = {
+          content = ''
+            lastfm-key = "''${config.sops.placeholder.lastfm_api_key or ""}"
+            lastfm-secret = "''${config.sops.placeholder.lastfm_secret or ""}"
+            lastfm-user = "''${config.sops.placeholder.lastfm_username or ""}"
+            player-whitelist = [ "chromium" ]
+            min-play-time = 30
+          '';
+          path = "/home/${username}/.config/rescrobbled/config.toml";
+        };
+      };
+  };
+}

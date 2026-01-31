@@ -1,0 +1,8 @@
+logs/
+result
+result-*
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+secrets/secrets_plain.yaml
