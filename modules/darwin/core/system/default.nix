@@ -42,8 +42,8 @@ in
         ApplePressAndHoldEnabled = false;
         KeyRepeat = 2;
         InitialKeyRepeat = 15;
-        "com.apple.swipescrolldirection" = false;
-        "com.apple.trackpad.scaling" = 2.0;
+        "com.apple.swipescrolldirection" = true;
+        "com.apple.trackpad.scaling" = 1.0;
         AppleInterfaceStyle = "Dark";
         AppleMeasurementUnits = "Centimeters";
         AppleMetricUnits = 1;
@@ -79,6 +79,18 @@ in
         ShowSeconds = false;
         ShowDayOfWeek = true;
         ShowDate = 1;
+      };
+
+      # Custom preferences
+      CustomSystemPreferences = {
+        # Disable Spotlight Cmd+Space shortcut (to use Raycast instead)
+        "com.apple.symbolichotkeys" = {
+          AppleSymbolicHotKeys = {
+            "64" = {
+              enabled = false;
+            };
+          };
+        };
       };
     };
 

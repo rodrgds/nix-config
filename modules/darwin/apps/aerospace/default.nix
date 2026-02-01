@@ -20,7 +20,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Aerospace is installed via homebrew cask in the homebrew module
+    # Install Aerospace via Homebrew cask
+    homebrew.casks = [ "aerospace" ];
 
     # Aerospace configuration via home-manager
     home-manager.users.${username} = {
@@ -116,37 +117,39 @@ in
           alt-shift-up = 'move up'
           alt-shift-right = 'move right'
 
-          # Window management
-          alt-q = 'close'
-          alt-f = 'fullscreen'
-          alt-space = 'layout floating tiling'
+           # Window management
+           # Use AppleScript to send Cmd+Q for proper app quitting on macOS
+           alt-q = 'exec-and-forget osascript -e "tell application \"System Events\" to keystroke \"q\" using command down"'
+           alt-f = 'fullscreen'
+           alt-space = 'layout floating tiling'
 
-          # Layouts (matching i3)
-          alt-s = 'layout accordion horizontal vertical'
-          alt-g = 'layout tiles horizontal vertical'
-          alt-e = 'layout toggle'
-          alt-a = 'focus parent'
+           # Layouts (matching i3)
+           alt-s = 'layout accordion horizontal vertical'
+           alt-g = 'layout tiles horizontal vertical'
+           # alt-e removed - Aerospace doesn't have 'layout toggle' command
+           # alt-a removed - Aerospace doesn't have 'focus parent' command
 
           # Resize
           alt-minus = 'resize smart -50'
           alt-equal = 'resize smart +50'
 
-          # Application launching
-          alt-return = 'exec-and-forget open -a Ghostty'
-          alt-w = 'exec-and-forget open -a "Microsoft Edge"'
-          alt-n = 'exec-and-forget open -a Finder'
+           # Application launching (using -n flag to always open new instances)
+           alt-enter = 'exec-and-forget open -na Ghostty'
+           alt-w = 'exec-and-forget open -na "Microsoft Edge"'
+           alt-n = 'exec-and-forget open -a Finder'
 
-          # Screenshots (CleanShot X instead of Flameshot)
-          alt-shift-s = 'exec-and-forget open -a "CleanShot X"'
+           # Screenshots (Flameshot)
+           alt-shift-s = 'exec-and-forget open -a Flameshot'
 
           # Launcher (Raycast instead of rofi/vicinae)
           alt-d = 'exec-and-forget open -a Raycast'
 
-          # Lock screen (macOS native)
-          alt-l = 'exec-and-forget pmset displaysleepnow'
+          # Lock screen (macOS native) - using ctrl+alt+l to avoid conflict with focus right
+          alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'
 
-          # Config reload (matching i3)
-          alt-shift-c = 'reload-config'
+           # Config reload (matching i3 - both alt-shift-c and alt-shift-r work)
+           alt-shift-c = 'reload-config'
+           alt-shift-r = 'reload-config'
 
           # Workspace navigation
           alt-tab = 'workspace-back-and-forth'

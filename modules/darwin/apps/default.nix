@@ -4,7 +4,6 @@
   imports = [
     ./aerospace
     ./jankyborders
-    ./cleanshot
     ./raycast
   ];
 }

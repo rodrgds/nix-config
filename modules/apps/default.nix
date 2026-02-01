@@ -46,7 +46,7 @@
     ./stremio
     ./grayjay
     ./rescrobbled
-    # Note: cleanshot, raycast are Darwin-only and in modules/darwin/apps
+    # Note: raycast is Darwin-only and in modules/darwin/apps
 
     # Gaming
     ./steam

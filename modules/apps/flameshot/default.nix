@@ -9,6 +9,7 @@
 let
   cfg = config.apps.flameshot;
   isLinux = lib.hasSuffix "-linux" system;
+  isDarwin = lib.hasSuffix "-darwin" system;
 in
 {
   options.apps.flameshot = {
@@ -19,6 +20,9 @@ in
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
         environment.systemPackages = [ pkgs.flameshot ];
+      })
+      (lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "flameshot" ];
       })
     ]
   );

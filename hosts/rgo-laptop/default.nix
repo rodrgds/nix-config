@@ -59,7 +59,7 @@
   # Productivity
   apps.obsidian.enable = true; # Obsidian (unfree, available in nixpkgs)
   apps.raycast.enable = true; # Launcher (Homebrew on Darwin)
-  apps.cleanshot.enable = true; # Screenshots (Homebrew on Darwin, replaces Flameshot)
+  apps.flameshot.enable = true; # Screenshots (Homebrew on Darwin)
 
   # Media
   apps.mpv.enable = true; # MPV with custom Lua script for camera toggle
@@ -78,7 +78,7 @@
   # APPS THAT DON'T WORK ON DARWIN (NixOS-only)
   # ============================================
   # - apps.i3, apps.bumblebee-status, apps.dunst, redshift (X11)
-  # - apps.flameshot (Linux-only, use CleanShot X)
+  # - apps.cleanshot (macOS-only, replaced by Flameshot)
 
   # User configuration (already set in system module, but can be overridden here)
   # users.users.${username} = {
