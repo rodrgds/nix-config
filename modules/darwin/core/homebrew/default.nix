@@ -26,10 +26,9 @@ in
       };
 
       # Taps to add
+      # Note: homebrew/cask, homebrew/cask-versions, and homebrew/services
+      # are deprecated - casks and services are now built into Homebrew core
       taps = [
-        "homebrew/cask"
-        "homebrew/cask-versions"
-        "homebrew/services"
         "nikitabobko/tap" # For Aerospace
         "FelixKratz/formulae" # For JankyBorders
       ];
