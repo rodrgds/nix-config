@@ -53,7 +53,7 @@
 
   # Communication
   apps.telegram.enable = true; # Telegram Desktop (available in nixpkgs)
-  apps.teamspeak.enable = true; # TeamSpeak (nixpkgs on Linux, Homebrew on Darwin)
+  # apps.teamspeak.enable = true; # TeamSpeak - NixOS only (not in Homebrew)
   apps.beeper.enable = true; # Beeper messaging
 
   # Productivity
