@@ -18,7 +18,7 @@ in
 
   config = lib.mkIf cfg.enable {
     # Install Tailscale via Homebrew when enabled
-    homebrew.casks = lib.mkIf cfg.tailscale.enable [ "tailscale" ];
+    homebrew.casks = lib.mkIf cfg.tailscale.enable [ "tailscale-app" ];
 
     # DNS settings can be configured if needed
     # networking.dns = [ "1.1.1.1" "1.0.0.1" ];
