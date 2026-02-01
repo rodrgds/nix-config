@@ -125,12 +125,15 @@ in
     # Enable Fish shell
     programs.fish.enable = true;
 
-    # User configuration
+    # User configuration - set Fish as the default shell
     users.users.${username} = {
       name = username;
       home = "/Users/${username}";
       shell = pkgs.fish;
     };
+
+    # Ensure Fish is in /etc/shells and set as login shell
+    environment.shells = [ pkgs.fish ];
 
     # Home-manager state version
     home-manager.users.${username} = {
