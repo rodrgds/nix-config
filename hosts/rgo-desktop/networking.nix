@@ -1,7 +1,7 @@
 # Host-specific networking configuration
 { ... }:
 {
-  networking.hostName = "rgopc";
+  networking.hostName = "rgo-desktop";
 
   networking.interfaces.enp7s0 = {
     useDHCP = true;

@@ -3,10 +3,12 @@
   config,
   pkgs,
   username,
+  system,
   ...
 }:
 let
   cfg = config.apps.redshift;
+  isLinux = lib.hasSuffix "-linux" system;
 in
 {
   options.apps.redshift = {
@@ -17,7 +19,7 @@ in
     home-manager.users.${username} =
       { config, ... }:
       {
-        systemd.user.services.redshift = {
+        systemd.user.services.redshift = lib.mkIf isLinux {
           Unit = {
             Description = "Redshift color temperature adjuster";
             PartOf = [ "graphical-session.target" ];

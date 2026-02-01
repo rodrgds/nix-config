@@ -15,19 +15,17 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    programs.starship.enable = true;
-
-    home-manager.users.${username} =
-      { ... }:
-      {
-        programs.starship = {
-          enable = true;
-          enableFishIntegration = true;
-          settings = {
-            scan_timeout = 1000;
-            command_timeout = 1000;
-          };
+    # Note: programs.starship is NixOS-only, not available on Darwin
+    # We only configure it via home-manager which works on both
+    home-manager.users.${username} = {
+      programs.starship = {
+        enable = true;
+        enableFishIntegration = true;
+        settings = {
+          scan_timeout = 1000;
+          command_timeout = 1000;
         };
       };
+    };
   };
 }

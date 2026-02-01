@@ -8,14 +8,11 @@
 }:
 let
   cfg = config.apps.opencode-web;
-in
-{
-  options.apps.opencode-web = {
-    enable = lib.mkEnableOption "Enable Opencode Web Server";
-  };
+  isLinux = pkgs.stdenv.isLinux;
 
-  config = lib.mkIf cfg.enable {
-    systemd.services.opencode-web = {
+  # Only define systemd service config on Linux
+  systemdConfig = lib.optionalAttrs isLinux {
+    services.opencode-web = {
       description = "Opencode Web Server";
       after = [
         "network.target"
@@ -44,5 +41,15 @@ in
         USER = username;
       };
     };
+  };
+in
+{
+  options.apps.opencode-web = {
+    enable = lib.mkEnableOption "Enable Opencode Web Server";
+  };
+
+  # Only enable on Linux
+  config = lib.mkIf (cfg.enable && isLinux) {
+    systemd = systemdConfig;
   };
 }

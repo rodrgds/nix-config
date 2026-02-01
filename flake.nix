@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration with flakes and home-manager";
+  description = "NixOS and nix-darwin configuration with flakes and home-manager";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -7,6 +7,16 @@
 
     home-manager = {
       url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-darwin = {
+      url = "github:lnl7/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-homebrew = {
+      url = "github:zhaofengli/nix-homebrew";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -44,65 +54,129 @@
     {
       self,
       nixpkgs,
+      nix-darwin,
       home-manager,
+      nix-homebrew,
       sops-nix,
       steam-config-nix,
       vicinae,
       ...
     }@inputs:
     let
-      system = "x86_64-linux";
+      # Common settings across all systems
       username = "rgo";
       fullname = "Rodrigo Dias";
       constants = import ./modules/constants.nix;
-    in
-    {
-      nixosConfigurations.rgopc = nixpkgs.lib.nixosSystem {
-        inherit system;
 
-        specialArgs = {
-          inherit
-            inputs
-            username
-            fullname
-            constants
-            ;
+      # Helper function to create NixOS configurations
+      mkNixosSystem =
+        { system, hostname }:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = {
+            inherit
+              inputs
+              username
+              fullname
+              constants
+              system
+              ;
+          };
+          modules = [
+            # Apply overlays
+            {
+              nixpkgs.overlays = [ (import ./packages { inherit inputs; }) ];
+            }
+            # Main modules
+            ./modules
+            # Host-specific configuration
+            ./hosts/${hostname}
+            # Home-manager as NixOS module
+            home-manager.nixosModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                extraSpecialArgs = {
+                  inherit
+                    inputs
+                    username
+                    fullname
+                    constants
+                    system
+                    ;
+                };
+                sharedModules = [
+                  sops-nix.homeManagerModules.sops
+                  steam-config-nix.homeModules.default
+                  vicinae.homeManagerModules.default
+                ];
+              };
+            }
+          ];
         };
 
-        modules = [
-          # Apply overlays
-          {
-            nixpkgs.overlays = [ (import ./packages { inherit inputs; }) ];
-          }
-
-          # Main modules
-          ./modules
-
-          # Host-specific configuration
-          ./hosts/rgopc
-
-          # Home-manager as NixOS module
-          home-manager.nixosModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              extraSpecialArgs = {
-                inherit
-                  inputs
-                  username
-                  fullname
-                  constants
-                  ;
+      # Helper function to create Darwin configurations
+      mkDarwinSystem =
+        { system, hostname }:
+        nix-darwin.lib.darwinSystem {
+          inherit system;
+          specialArgs = {
+            inherit
+              inputs
+              username
+              fullname
+              constants
+              system
+              ;
+          };
+          modules = [
+            # Apply overlays
+            {
+              nixpkgs.overlays = [ (import ./packages { inherit inputs; }) ];
+            }
+            # App modules (with cross-platform support)
+            ./modules/apps
+            # Darwin-specific modules
+            ./modules/darwin
+            # Host-specific configuration
+            ./hosts/${hostname}
+            # Homebrew integration
+            nix-homebrew.darwinModules.nix-homebrew
+            # Home-manager as Darwin module
+            home-manager.darwinModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                extraSpecialArgs = {
+                  inherit
+                    inputs
+                    username
+                    fullname
+                    constants
+                    system
+                    ;
+                };
+                sharedModules = [
+                  sops-nix.homeManagerModules.sops
+                ];
               };
-              sharedModules = [
-                sops-nix.homeManagerModules.sops
-                steam-config-nix.homeModules.default
-                vicinae.homeManagerModules.default
-              ];
-            };
-          }
-        ];
+            }
+          ];
+        };
+    in
+    {
+      # NixOS configurations
+      nixosConfigurations.rgo-desktop = mkNixosSystem {
+        system = "x86_64-linux";
+        hostname = "rgo-desktop";
+      };
+
+      # Darwin configurations
+      darwinConfigurations.rgo-laptop = mkDarwinSystem {
+        system = "aarch64-darwin";
+        hostname = "rgo-laptop";
       };
     };
 }

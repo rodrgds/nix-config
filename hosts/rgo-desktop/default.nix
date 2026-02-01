@@ -1,4 +1,4 @@
-# Host-specific configuration for rgopc
+# Host-specific configuration for rgo-desktop
 {
   config,
   pkgs,
@@ -26,7 +26,7 @@
   core.xserver.enable = true;
   core.nvidia.enable = true;
   core.peripherals.enable = true;
-  core.syncthing.enable = true;
+  apps.syncthing.enable = true;
   core.printing.enable = true;
   core.docker.enable = true;
 
@@ -110,7 +110,6 @@
 
   # Opencode
   apps.opencode.enable = true;
-  apps.opencode-web.enable = true;
 
   # Vicinae
   apps.vicinae.enable = true;

@@ -3,10 +3,12 @@
   config,
   pkgs,
   username,
+  system,
   ...
 }:
 let
   cfg = config.apps.rescrobbled;
+  isLinux = lib.hasSuffix "-linux" system;
 in
 {
   options.apps.rescrobbled = {
@@ -19,7 +21,7 @@ in
       {
         home.packages = [ pkgs.rescrobbled ];
 
-        systemd.user.services.rescrobbled = {
+        systemd.user.services.rescrobbled = lib.mkIf isLinux {
           Unit = {
             Description = "MPRIS scrobbler daemon";
             After = [ "graphical-session.target" ];

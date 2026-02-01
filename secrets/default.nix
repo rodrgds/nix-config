@@ -4,10 +4,12 @@
   config,
   pkgs,
   username,
+  system,
   ...
 }:
 let
   cfg = config.secrets;
+  isDarwin = lib.hasSuffix "-darwin" system;
 in
 {
   options.secrets = {
@@ -19,7 +21,11 @@ in
       { config, ... }:
       {
         sops = {
-          age.keyFile = "/home/${username}/.config/sops/age/keys.txt";
+          age.keyFile =
+            if isDarwin then
+              "/Users/${username}/.config/sops/age/keys.txt"
+            else
+              "/home/${username}/.config/sops/age/keys.txt";
           defaultSopsFile = ./secrets.yaml;
 
           secrets = {

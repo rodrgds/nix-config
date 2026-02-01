@@ -3,10 +3,12 @@
   config,
   pkgs,
   username,
+  system,
   ...
 }:
 let
   cfg = config.apps.cs2;
+  isLinux = lib.hasSuffix "-linux" system;
 in
 {
   options.apps.cs2 = {
@@ -231,7 +233,7 @@ in
             }
           '';
 
-        systemd.user.services.cs2-gsi = {
+        systemd.user.services.cs2-gsi = lib.mkIf isLinux {
           Unit = {
             Description = "CS2 Game State Integration Server";
           };
@@ -248,7 +250,7 @@ in
           };
         };
 
-        programs.steam.config = {
+        programs.steam.config = lib.mkIf isLinux {
           enable = true;
           closeSteam = true;
           users."459248649" = {

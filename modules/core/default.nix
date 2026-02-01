@@ -15,7 +15,6 @@
     ./xserver
     ./nvidia
     ./peripherals
-    ./syncthing
     ./printing
     ./docker
   ];

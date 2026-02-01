@@ -46,6 +46,7 @@
     ./stremio
     ./grayjay
     ./rescrobbled
+    # Note: cleanshot, raycast are Darwin-only and in modules/darwin/apps
 
     # Gaming
     ./steam
@@ -75,6 +76,7 @@
     ./core-packages
     ./neovim
     ./thunar
+    ./syncthing
     ./synology-drive
 
     # Optional

@@ -3,10 +3,12 @@
   config,
   pkgs,
   username,
+  system,
   ...
 }:
 let
   cfg = config.apps.synology-drive;
+  isLinux = lib.hasSuffix "-linux" system;
 in
 {
   options.apps.synology-drive = {
@@ -19,7 +21,7 @@ in
       {
         home.packages = [ pkgs.synology-drive-client ];
 
-        systemd.user.services.synology-drive = {
+        systemd.user.services.synology-drive = lib.mkIf isLinux {
           Unit = {
             Description = "Synology Drive Client";
             After = [ "graphical-session-pre.target" ];
