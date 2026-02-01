@@ -1,8 +1,7 @@
-{ pkgs, username }:
+{ pkgs, constants }:
 let
   mod = "Mod4";
-  # Scripts are in modules/scripts/ (source location)
-  scriptDir = "/home/${username}/.config/home/modules/scripts";
+  scriptDir = constants.scriptDir;
 in
 {
   "${mod}+1" = "workspace 1: ";

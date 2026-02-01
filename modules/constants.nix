@@ -1,4 +1,9 @@
 # Reusable constants for the NixOS configuration
+{ username, system }:
+let
+  isDarwin = builtins.match ".*-darwin" system != null;
+  homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
+in
 {
   # Typography - used across multiple modules
   fonts = {
@@ -45,4 +50,10 @@
     dpi = 96;
     opacity = 0.90;
   };
+
+  # Home directory - platform aware (Linux vs macOS)
+  inherit homeDir;
+
+  # Scripts directory - used across multiple modules
+  scriptDir = "${homeDir}/.config/home/modules/scripts";
 }

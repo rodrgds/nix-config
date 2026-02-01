@@ -66,7 +66,7 @@
       # Common settings across all systems
       username = "rgo";
       fullname = "Rodrigo Dias";
-      constants = import ./modules/constants.nix;
+      mkConstants = system: import ./modules/constants.nix { inherit username system; };
 
       # Helper function to create NixOS configurations
       mkNixosSystem =
@@ -78,9 +78,9 @@
               inputs
               username
               fullname
-              constants
               system
               ;
+            constants = mkConstants system;
           };
           modules = [
             # Apply overlays
@@ -102,9 +102,9 @@
                     inputs
                     username
                     fullname
-                    constants
                     system
                     ;
+                  constants = mkConstants system;
                 };
                 sharedModules = [
                   sops-nix.homeManagerModules.sops
@@ -126,9 +126,9 @@
               inputs
               username
               fullname
-              constants
               system
               ;
+            constants = mkConstants system;
           };
           modules = [
             # Apply overlays
@@ -154,9 +154,9 @@
                     inputs
                     username
                     fullname
-                    constants
                     system
                     ;
+                  constants = mkConstants system;
                 };
                 sharedModules = [
                   sops-nix.homeManagerModules.sops

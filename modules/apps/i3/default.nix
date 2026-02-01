@@ -102,12 +102,12 @@ in
                     always = false;
                   }
                 ];
-                keybindings = import ./keybindings.nix { inherit pkgs username; };
+                keybindings = import ./keybindings.nix { inherit pkgs constants; };
                 workspaceOutputAssign = import ./workspaces.nix { };
                 assigns = import ./assigns.nix { };
                 window.commands = import ./window-rules.nix { };
                 colors = import ./colors.nix { };
-                bars = import ./bar.nix { inherit pkgs; };
+                bars = import ./bar.nix { inherit pkgs constants; };
               };
             };
 
