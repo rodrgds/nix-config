@@ -34,8 +34,11 @@ in
           }
         ];
 
-        # macOS-specific configuration
-        shellInit = lib.mkIf isDarwin ''
+        # Disable fish greeting
+        shellInit = ''
+          set -g fish_greeting ""
+        ''
+        + lib.optionalString isDarwin ''
           # Add Homebrew to PATH on macOS
           if test -d /opt/homebrew/bin
             set -gx PATH /opt/homebrew/bin $PATH
