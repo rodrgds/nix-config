@@ -79,7 +79,7 @@ in
         "bash -c 'cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops secrets.yaml\"'";
       "rescrobbled-logs" = "journalctl --user -u rescrobbled.service -f";
       "push_to_unisbad" =
-        "bash -c 'SOURCE=\"${homeDir}/JDSystem/30-39 Projects/32 Uni\\'s Bad/32.11 Public-Facing\" && TARGET=\"${homeDir}/dev/unis-bad/content\" && mkdir -p \"$TARGET\" && cp -r \"$SOURCE\"/* \"$TARGET/\" && cd ${homeDir}/dev/unis-bad && git add -A && git commit -m \"$(date \"+%Y-%m-%d %H:%M:%S\")\"'";
+        "bash -c \"SOURCE='${homeDir}/JDSystem/30-39 Projects/32 Uni'\\\\\''s Bad/32.11 Public-Facing' && TARGET='${homeDir}/dev/unis-bad/content' && mkdir -p \\\\\"$TARGET\\\\\" && cp -r \\\\\"$SOURCE\\\\\"/* \\\\\"$TARGET/\\\\\" && cd ${homeDir}/dev/unis-bad && git add -A && git commit -m \\\\\"\\$(date '+%Y-%m-%d %H:%M:%S')\\\\\"\"";
     };
 
     # Install scripts to the scripts directory
