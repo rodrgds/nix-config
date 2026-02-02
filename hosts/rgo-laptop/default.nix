@@ -74,6 +74,9 @@
   # - Tailscale: modules/core/networking on NixOS, darwin/core/networking on Darwin
   darwin.core.networking.tailscale.enable = true;
 
+  # Auto-cleanup Downloads folder (files older than 30 days)
+  core.downloads-cleanup.enable = true;
+
   # ============================================
   # APPS THAT DON'T WORK ON DARWIN (NixOS-only)
   # ============================================

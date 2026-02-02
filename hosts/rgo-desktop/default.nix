@@ -29,6 +29,7 @@
   apps.syncthing.enable = true;
   core.printing.enable = true;
   core.docker.enable = true;
+  core.downloads-cleanup.enable = true;
 
   # Enable scripts
   scripts.enable = true;

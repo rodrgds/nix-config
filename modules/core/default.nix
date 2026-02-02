@@ -17,5 +17,6 @@
     ./peripherals
     ./printing
     ./docker
+    ./downloads-cleanup
   ];
 }
