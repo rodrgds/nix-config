@@ -47,7 +47,7 @@ in
           };
         };
       })
-      
+
       (lib.optionalAttrs isDarwin {
         # Install Syncthing via Homebrew on macOS
         # Note: The Homebrew cask includes a launchd service that can be enabled with:
