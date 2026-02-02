@@ -86,7 +86,7 @@ in
                     always = false;
                   }
                   {
-                    command = "bash /home/${username}/.config/home/scripts/show_random_wall.sh";
+                    command = "bash /home/${username}/.config/home/modules/scripts/show_random_wall.sh";
                     always = true;
                   }
                   {

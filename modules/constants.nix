@@ -54,7 +54,6 @@ in
   # Home directory - platform aware (Linux vs macOS)
   inherit homeDir;
 
-  # Scripts directory - points to installed scripts (not source)
-  # Scripts are installed here by home-manager with executable = true
-  scriptDir = "${homeDir}/.config/home/scripts";
+  # Scripts directory - used across multiple modules
+  scriptDir = "${homeDir}/.config/home/modules/scripts";
 }

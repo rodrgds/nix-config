@@ -41,8 +41,9 @@ let
     name: content:
     let
       aliasName = getAliasName name;
-      # Point to installed scripts (managed by home-manager, always executable)
-      scriptPath = "${homeDir}/.config/home/scripts/${name}";
+      # Point to source location in repo so aliases work immediately
+      # (home-manager also installs to ~/.config/home/scripts/ for PATH access)
+      scriptPath = "${homeDir}/.config/home/modules/scripts/${name}";
       # Prefix with 'bash ' for .sh scripts to ensure Fish compatibility
       aliasValue = if isShellScript name then "bash ${scriptPath}" else scriptPath;
     in
@@ -67,7 +68,7 @@ in
       "v" = "nvim";
       "glog" = "git log --oneline --graph --decorate --all";
       "ll" = "ls -laFh";
-      "rebuild" = "bash ${homeDir}/.config/home/scripts/rebuild.sh";
+      "rebuild" = "bash ${homeDir}/.config/home/modules/scripts/rebuild.sh";
       "encrypt-secrets" =
         "bash -c 'cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops --encrypt secrets_plain.yaml\" > secrets.yaml && rm -f secrets_plain.yaml'";
       "decrypt-secrets" =
