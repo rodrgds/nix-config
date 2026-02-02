@@ -6,3 +6,4 @@ cp -r "$SOURCE"/* "$TARGET/"
 cd /home/rgo/dev/unis-bad
 git add -A
 git commit -m "$(date '+%Y-%m-%d %H:%M:%S')"
+git push
