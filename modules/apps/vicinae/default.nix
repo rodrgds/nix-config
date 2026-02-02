@@ -65,6 +65,9 @@ in
                 };
                 extensions = with inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system}; [
                   nix
+                  vscode-recents
+                  port-killer
+                  it-tools
                 ];
               };
             };
