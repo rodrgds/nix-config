@@ -22,6 +22,7 @@ in
       (lib.optionalAttrs isLinux {
         environment.systemPackages = with pkgs; [
           microsoft-edge
+          # for PWAs to work
           (runCommand "microsoft-edge-stable-alias" { } ''
             mkdir -p $out/bin
             ln -s ${microsoft-edge}/bin/microsoft-edge $out/bin/microsoft-edge-stable
