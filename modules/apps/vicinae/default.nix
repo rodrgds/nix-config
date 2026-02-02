@@ -5,12 +5,11 @@
   inputs,
   username,
   constants,
-  system,
   ...
 }:
 let
   cfg = config.apps.vicinae;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isLinux;
 in
 {
   options.apps.vicinae = {

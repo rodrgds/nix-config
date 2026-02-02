@@ -2,6 +2,7 @@
 { username, system }:
 let
   isDarwin = builtins.match ".*-darwin" system != null;
+  isLinux = builtins.match ".*-linux" system != null;
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
 in
 {
@@ -50,6 +51,9 @@ in
     dpi = 96;
     opacity = 0.90;
   };
+
+  # Platform detection
+  inherit isDarwin isLinux;
 
   # Home directory - platform aware (Linux vs macOS)
   inherit homeDir;

@@ -9,8 +9,7 @@
 }:
 let
   cfg = config.apps.ghostty;
-  isDarwin = lib.hasSuffix "-darwin" system;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isDarwin isLinux;
   ghosttySettings = {
     theme = "Gruvbox Dark";
     font-family = constants.fonts.primary;

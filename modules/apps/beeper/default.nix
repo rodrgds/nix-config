@@ -2,13 +2,14 @@
   lib,
   config,
   pkgs,
+  username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.beeper;
-  isDarwin = lib.hasSuffix "-darwin" system;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isDarwin isLinux;
 in
 {
   options.apps.beeper = {

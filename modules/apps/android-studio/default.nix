@@ -4,11 +4,12 @@
   pkgs,
   username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.android-studio;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isLinux;
 in
 {
   options.apps.android-studio = {

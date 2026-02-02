@@ -4,12 +4,12 @@
   pkgs,
   username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.vscode;
-  isDarwin = lib.hasSuffix "-darwin" system;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isDarwin isLinux;
 in
 {
   options.apps.vscode = {

@@ -9,7 +9,7 @@
 }:
 let
   cfg = config.apps.i3;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isLinux;
 in
 {
   options.apps.i3 = {

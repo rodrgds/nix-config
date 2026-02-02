@@ -3,11 +3,13 @@
   config,
   pkgs,
   username,
+  system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.git;
-  isDarwin = pkgs.stdenv.isDarwin;
+  inherit (constants) isDarwin;
 in
 {
   options.apps.git = {

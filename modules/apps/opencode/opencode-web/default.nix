@@ -4,11 +4,12 @@
   pkgs,
   inputs,
   username,
+  constants,
   ...
 }:
 let
   cfg = config.apps.opencode-web;
-  isLinux = pkgs.stdenv.isLinux;
+  inherit (constants) isLinux;
 
   # Only define systemd service config on Linux
   systemdConfig = lib.optionalAttrs isLinux {

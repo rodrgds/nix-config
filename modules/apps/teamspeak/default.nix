@@ -2,13 +2,14 @@
   lib,
   config,
   pkgs,
+  username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.teamspeak;
-  isDarwin = lib.hasSuffix "-darwin" system;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isDarwin isLinux;
 in
 {
   options.apps.teamspeak = {

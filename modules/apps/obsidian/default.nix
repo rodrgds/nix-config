@@ -4,12 +4,12 @@
   pkgs,
   username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.obsidian;
-  isDarwin = lib.hasSuffix "-darwin" system;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isDarwin isLinux;
 in
 {
   options.apps.obsidian = {

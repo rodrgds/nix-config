@@ -2,13 +2,14 @@
   lib,
   config,
   pkgs,
+  username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.microsoft-edge;
-  isDarwin = lib.hasSuffix "-darwin" system;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isDarwin isLinux;
 in
 {
   options.apps.microsoft-edge = {

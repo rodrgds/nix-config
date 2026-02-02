@@ -3,12 +3,12 @@
   config,
   pkgs,
   username,
-  system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.flatpak;
-  isLinux = lib.hasSuffix "-linux" system;
+  inherit (constants) isLinux;
 in
 {
   options.apps.flatpak = {

@@ -4,12 +4,12 @@
   pkgs,
   username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.flameshot;
-  isLinux = lib.hasSuffix "-linux" system;
-  isDarwin = lib.hasSuffix "-darwin" system;
+  inherit (constants) isLinux isDarwin;
 in
 {
   options.apps.flameshot = {

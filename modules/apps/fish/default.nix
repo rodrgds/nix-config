@@ -3,12 +3,13 @@
   config,
   pkgs,
   username,
+  system,
   constants,
   ...
 }:
 let
   cfg = config.apps.fish;
-  isDarwin = pkgs.stdenv.isDarwin;
+  inherit (constants) isDarwin;
 in
 {
   options.apps.fish = {

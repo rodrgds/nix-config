@@ -6,13 +6,12 @@
   pkgs,
   username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.apps.syncthing;
-  isLinux = lib.hasSuffix "-linux" system;
-  isDarwin = lib.hasSuffix "-darwin" system;
-  homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
+  inherit (constants) isLinux isDarwin homeDir;
 in
 {
   options.apps.syncthing = {

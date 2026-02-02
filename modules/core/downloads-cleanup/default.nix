@@ -3,12 +3,12 @@
   config,
   username,
   system,
+  constants,
   ...
 }:
 let
   cfg = config.core.downloads-cleanup;
-  isDarwin = lib.hasSuffix "-darwin" system;
-  homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
+  inherit (constants) isDarwin homeDir;
 in
 {
   options.core.downloads-cleanup = {
