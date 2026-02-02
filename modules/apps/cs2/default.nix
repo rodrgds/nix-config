@@ -262,7 +262,7 @@ in
                   wrappers = [
                     (lib.getExe pkgs.gamemode)
                     (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
-                    (lib.getExe pkgs.mangohud)
+                    # (lib.getExe pkgs.mangohud)
                   ];
                   args = [
                     "cs2-wrapper"
