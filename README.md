@@ -36,6 +36,11 @@ This is my personal configuration for both NixOS (desktop) and macOS (MacBook) u
    ```bash
    xcode-select --install
    ```
+4. **Install Homebrew** (needed for secrets and apps):
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+   Follow the on-screen instructions and add Homebrew to your PATH.
 
 ## Deployment Guide
 
@@ -144,17 +149,7 @@ git clone https://github.com/yourusername/nix-config.git ~/.config/home
 cd ~/.config/home
 ```
 
-### Step 4: Install Homebrew (macOS Only)
-
-Homebrew must be installed **before** running nix-darwin, as the nix-homebrew module manages Homebrew but doesn't install it initially.
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-Follow the on-screen instructions. After installation, you may need to add Homebrew to your PATH (the installer will tell you exactly what to run).
-
-### Step 5: Deploy
+### Step 4: Deploy
 
 #### macOS (rgo-laptop)
 
@@ -186,7 +181,7 @@ sudo nixos-install --flake .#rgo-desktop
 sudo nixos-rebuild switch --flake ~/.config/home#rgo-desktop
 ```
 
-### Step 6: Verify Secrets
+### Step 5: Verify Secrets
 
 After deployment, verify secrets are decrypted:
 

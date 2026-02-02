@@ -1,5 +1,5 @@
-# Syncthing - File synchronization for NixOS
-# Uses systemd service
+# Syncthing - File synchronization
+# Uses systemd service on NixOS, launchd on macOS
 {
   lib,
   config,
@@ -10,8 +10,9 @@
 }:
 let
   cfg = config.apps.syncthing;
-  homeDir = "/home/${username}";
   isLinux = lib.hasSuffix "-linux" system;
+  isDarwin = lib.hasSuffix "-darwin" system;
+  homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
 in
 {
   options.apps.syncthing = {
@@ -45,6 +46,14 @@ in
             };
           };
         };
+      })
+      
+      (lib.optionalAttrs isDarwin {
+        # Install Syncthing via Homebrew on macOS
+        # Note: The Homebrew cask includes a launchd service that can be enabled with:
+        #   brew services start syncthing
+        # Or manually via: open -a Syncthing
+        homebrew.casks = [ "syncthing-app" ];
       })
     ]
   );

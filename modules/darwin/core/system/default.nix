@@ -42,8 +42,8 @@ in
         ApplePressAndHoldEnabled = false;
         KeyRepeat = 2;
         InitialKeyRepeat = 15;
-        "com.apple.swipescrolldirection" = false;
-        "com.apple.trackpad.scaling" = 2.0;
+        "com.apple.swipescrolldirection" = true;
+        "com.apple.trackpad.scaling" = 1.0;
         AppleInterfaceStyle = "Dark";
         AppleMeasurementUnits = "Centimeters";
         AppleMetricUnits = 1;
@@ -80,6 +80,18 @@ in
         ShowDayOfWeek = true;
         ShowDate = 1;
       };
+
+      # Custom preferences
+      CustomSystemPreferences = {
+        # Disable Spotlight Cmd+Space shortcut (to use Raycast instead)
+        "com.apple.symbolichotkeys" = {
+          AppleSymbolicHotKeys = {
+            "64" = {
+              enabled = false;
+            };
+          };
+        };
+      };
     };
 
     # Keyboard settings
@@ -113,12 +125,15 @@ in
     # Enable Fish shell
     programs.fish.enable = true;
 
-    # User configuration
+    # User configuration - set Fish as the default shell
     users.users.${username} = {
       name = username;
       home = "/Users/${username}";
       shell = pkgs.fish;
     };
+
+    # Ensure Fish is in /etc/shells and set as login shell
+    environment.shells = [ pkgs.fish ];
 
     # Home-manager state version
     home-manager.users.${username} = {

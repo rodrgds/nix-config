@@ -4,6 +4,7 @@
   config,
   pkgs,
   username,
+  system,
   ...
 }:
 let
@@ -33,13 +34,16 @@ let
   # Check if file is a shell script that needs bash prefix for Fish compatibility
   isShellScript = name: lib.hasSuffix ".sh" name;
 
+  # Determine home directory based on platform
+  homeDir = if lib.hasSuffix "-darwin" system then "/Users/${username}" else "/home/${username}";
+
   scriptAliases = lib.mapAttrs' (
     name: content:
     let
       aliasName = getAliasName name;
       # Point to source location in repo so aliases work immediately
       # (home-manager also installs to ~/.config/home/scripts/ for PATH access)
-      scriptPath = "/home/${username}/.config/home/modules/scripts/${name}";
+      scriptPath = "${homeDir}/.config/home/modules/scripts/${name}";
       # Prefix with 'bash ' for .sh scripts to ensure Fish compatibility
       aliasValue = if isShellScript name then "bash ${scriptPath}" else scriptPath;
     in
@@ -54,7 +58,7 @@ in
   config = lib.mkIf cfg.enable {
     # Add scripts directory to PATH
     environment.sessionVariables = {
-      PATH = lib.mkForce "/home/${username}/.config/home/scripts:$PATH";
+      PATH = lib.mkForce "${homeDir}/.config/home/scripts:$PATH";
     };
 
     # Create shell aliases for all scripts + manual aliases
@@ -64,15 +68,15 @@ in
       "v" = "nvim";
       "glog" = "git log --oneline --graph --decorate --all";
       "ll" = "ls -laFh";
-      "rebuild" = "bash /home/${username}/.config/home/modules/scripts/rebuild.sh";
+      "rebuild" = "bash ${homeDir}/.config/home/modules/scripts/rebuild.sh";
       "encrypt-secrets" =
-        "bash -c 'cd /home/${username}/.config/home/secrets && nix-shell -p sops --run \"sops --encrypt secrets_plain.yaml\" > secrets.yaml && rm -f secrets_plain.yaml'";
+        "bash -c 'cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops --encrypt secrets_plain.yaml\" > secrets.yaml && rm -f secrets_plain.yaml'";
       "decrypt-secrets" =
-        "bash -c 'cd /home/${username}/.config/home/secrets && nix-shell -p sops --run \"sops --decrypt secrets.yaml\"'";
+        "bash -c 'cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops --decrypt secrets.yaml\"'";
       "decrypt-to-file" =
-        "bash -c 'cd /home/${username}/.config/home/secrets && nix-shell -p sops --run \"sops --decrypt secrets.yaml\" > secrets_plain.yaml && echo \"Decrypted to secrets_plain.yaml - edit and run encrypt-secrets when done\"'";
+        "bash -c 'cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops --decrypt secrets.yaml\" > secrets_plain.yaml && echo \"Decrypted to secrets_plain.yaml - edit and run encrypt-secrets when done\"'";
       "edit-secrets" =
-        "bash -c 'cd /home/${username}/.config/home/secrets && nix-shell -p sops --run \"sops secrets.yaml\"'";
+        "bash -c 'cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops secrets.yaml\"'";
       "rescrobbled-logs" = "journalctl --user -u rescrobbled.service -f";
     };
 

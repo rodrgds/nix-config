@@ -19,9 +19,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # JankyBorders is installed via homebrew in the homebrew module
-    # We configure it through launchd service
+    # Install JankyBorders via Homebrew
+    homebrew.brews = [ "borders" ];
 
+    # Configure JankyBorders through launchd service
     launchd.user.agents.jankyborders = {
       serviceConfig = {
         Label = "com.user.jankyborders";
