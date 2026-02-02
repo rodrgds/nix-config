@@ -38,9 +38,9 @@ in
 
         sops.templates."rescrobbled-config.toml" = {
           content = ''
-            lastfm-key = "''${config.sops.placeholder.lastfm_api_key or ""}"
-            lastfm-secret = "''${config.sops.placeholder.lastfm_secret or ""}"
-            lastfm-user = "''${config.sops.placeholder.lastfm_username or ""}"
+            lastfm-key = "''${config.sops.placeholder.lastfm_api_key}"
+            lastfm-secret = "''${config.sops.placeholder.lastfm_secret}"
+            lastfm-user = "''${config.sops.placeholder.lastfm_username}"
             player-whitelist = [ "chromium" ]
             min-play-time = 30
           '';

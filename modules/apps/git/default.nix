@@ -27,7 +27,7 @@ in
           settings = {
             user = {
               name = "rgo";
-              email = config.sops.placeholder.user_email or "user@example.com";
+              email = config.sops.placeholder.user_email;
             };
             init.defaultBranch = "main";
             pull.rebase = true;
