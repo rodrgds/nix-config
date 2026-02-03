@@ -7,9 +7,14 @@
 }:
 let
   cfg = config.darwin.core.karabiner;
-  
-  # Karabiner configuration for remapping ± key to backtick/tilde
+
+  # Karabiner configuration for remapping ± (Section) key to backtick/tilde
   karabinerConfig = {
+    global = {
+      check_for_updates_on_startup = false;
+      show_in_menu_bar = true;
+      show_profile_name_in_menu_bar = false;
+    };
     profiles = [
       {
         name = "Default";
@@ -18,11 +23,12 @@ let
         complex_modifications = {
           rules = [
             {
-              description = "Remap ± key to backtick (`) and Shift+± to tilde (~)";
+              description = "Remap ± (§) key to backtick (`) and Shift+± to tilde (~)";
               manipulators = [
                 {
                   type = "basic";
                   from = {
+                    # "non_us_backslash" is the technical name for the ISO §/± key
                     key_code = "non_us_backslash";
                     modifiers = {
                       optional = ["any"];
@@ -51,24 +57,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Install Karabiner-Elements via Homebrew
     homebrew.casks = [ "karabiner-elements" ];
 
-    # Create the Karabiner configuration file
     home-manager.users.${username} = {
-      home.file."Library/Application Support/Karabiner-Elements/karabiner.json".text = 
-        builtins.toJSON karabinerConfig;
+      xdg.configFile."karabiner/karabiner.json".text = builtins.toJSON karabinerConfig;
     };
-
-    # Ensure Karabiner-Elements is started on login
-    system.activationScripts.postActivation.text = lib.mkAfter ''
-      # Restart Karabiner-Elements to pick up new configuration
-      if pgrep -x "Karabiner-Elements" > /dev/null; then
-        echo "Restarting Karabiner-Elements to apply new configuration..."
-        killall "Karabiner-Elements" 2>/dev/null || true
-        sleep 1
-        open -a "Karabiner-Elements"
-      fi
-    '';
   };
 }

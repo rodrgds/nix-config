@@ -19,7 +19,7 @@ in
       # Dock settings
       dock = {
         autohide = true;
-        show-recents = false;
+        show-recents = true;
         minimize-to-application = true;
         mru-spaces = false;
         tilesize = 48;
