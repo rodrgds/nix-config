@@ -6,7 +6,11 @@ let
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
 in
 {
-  # Typography - used across multiple modules
+  # User information
+  fullname = "Rodrigo Dias";
+  email = "me@rgo.pt";
+  
+  # Typography
   fonts = {
     primary = "JetBrainsMono Nerd Font";
     ui = "Bricolage Grotesque";
@@ -17,7 +21,7 @@ in
     };
   };
 
-  # Color scheme (Gruvbox) - used across multiple modules
+  # Color scheme (Gruvbox)
   colors = {
     # Background colors
     bg0 = "#282828";
@@ -46,7 +50,7 @@ in
     orangeBright = "#fe8019";
   };
 
-  # Display settings - used across multiple modules
+  # Display settings
   display = {
     dpi = 96;
     opacity = 0.90;
@@ -55,9 +59,9 @@ in
   # Platform detection
   inherit isDarwin isLinux;
 
-  # Home directory - platform aware (Linux vs macOS)
+  # Home directory
   inherit homeDir;
 
-  # Scripts directory - used across multiple modules
+  # Scripts directory
   scriptDir = "${homeDir}/.config/home/modules/scripts";
 }

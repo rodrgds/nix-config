@@ -9,7 +9,7 @@
 }:
 let
   cfg = config.apps.git;
-  inherit (constants) isDarwin;
+  inherit (constants) isDarwin fullname email;
 in
 {
   options.apps.git = {
@@ -26,8 +26,8 @@ in
           enable = true;
           settings = {
             user = {
-              name = config.sops.placeholder.user_full_name;
-              email = config.sops.placeholder.user_email;
+              name = fullname;
+              email = email;
             };
             init.defaultBranch = "main";
             pull.rebase = true;
