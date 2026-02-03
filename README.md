@@ -42,6 +42,19 @@ This is my personal configuration for both NixOS (desktop) and macOS (MacBook) u
    ```
    Follow the on-screen instructions and add Homebrew to your PATH.
 
+#### macOS: Open apps once
+
+Some macOS apps require being opened manually the first time so you can grant system permissions (Accessibility, Full Disk Access, Screen Recording, Files and Folders, etc.). Open each app once and accept any security prompts so the configuration and integrations apply correctly. Common examples:
+
+- Raycast
+- Karabiner
+- Aerospace (window manager)
+- Syncthing
+- JankyBorders
+- Other GUI apps that integrate with system permissions
+
+If an app doesn't behave as expected, check System Settings → Privacy & Security and enable the necessary permissions.
+
 ## Deployment Guide
 
 ### Step 1: SOPS Secrets Setup (Required First!)
