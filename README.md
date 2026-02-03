@@ -203,7 +203,7 @@ cat ~/.config/sops/age/keys.txt
 | **Package Source** | nixpkgs | nixpkgs + Homebrew |
 | **System Services** | systemd | launchd / Homebrew services |
 | **Window Borders** | i3 built-in | JankyBorders |
-| **Screenshot Tool** | Flameshot | CleanShot X |
+| **Screenshot Tool** | Flameshot | Flameshot (via Homebrew) |
 | **Gaming** | Steam, CS2, Wine | Not available |
 | **File Sync** | Syncthing (systemd) | Syncthing (Homebrew) |
 | **VPN** | Tailscale (service) | Tailscale (Homebrew) |
@@ -223,7 +223,6 @@ These are identical on both platforms:
 These install via Homebrew on macOS:
 - **Aerospace** - Window manager (replaces i3)
 - **JankyBorders** - Window borders
-- **CleanShot X** - Screenshots (replaces Flameshot)
 - **Raycast** - Launcher
 - **Microsoft Edge** - Browser
 - **Ghostty** - Terminal
