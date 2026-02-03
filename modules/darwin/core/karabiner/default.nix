@@ -19,7 +19,7 @@ let
       {
         name = "Default";
         selected = true;
-        simple_modifications = [];
+        simple_modifications = [ ];
         complex_modifications = {
           rules = [
             {
@@ -31,7 +31,7 @@ let
                     # "non_us_backslash" is the technical name for the ISO §/± key
                     key_code = "non_us_backslash";
                     modifiers = {
-                      optional = ["any"];
+                      optional = [ "any" ];
                     };
                   };
                   to = [

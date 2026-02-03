@@ -8,7 +8,7 @@
 }:
 let
   cfg = config.apps.cs2;
-  inherit (constants) isLinux scriptsDir;
+  inherit (constants) isLinux scriptDir;
 in
 {
   options.apps.cs2 = {
@@ -263,7 +263,7 @@ in
                     (lib.getExe pkgs.gamemode)
                     (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
                     # (lib.getExe pkgs.mangohud)
-                    "${scriptsDir}/cs2-wrapper.sh"
+                    "${scriptDir}/cs2-wrapper.sh"
                   ];
                   args = [
                     "%command%"
