@@ -6,5 +6,6 @@
     ./networking
     ./fonts
     ./homebrew
+    ./karabiner
   ];
 }

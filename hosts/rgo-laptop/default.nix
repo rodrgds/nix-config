@@ -16,6 +16,7 @@
   darwin.core.networking.enable = true;
   darwin.core.fonts.enable = true;
   darwin.core.homebrew.enable = true;
+  darwin.core.karabiner.enable = true;
 
   # Allow unfree packages on macOS
   nixpkgs.config.allowUnfree = true;
