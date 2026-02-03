@@ -30,8 +30,6 @@ in
             lastfm_secret = { };
             lastfm_username = { };
             openai_api_key = { };
-            user_full_name = { };
-            user_email = { };
             location_latitude = { };
             location_longitude = { };
           };
