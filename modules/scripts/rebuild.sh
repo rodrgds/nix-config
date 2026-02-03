@@ -109,7 +109,7 @@ elif [ "$REBUILD_TARGET" = "laptop" ]; then
         echo "✓ Initial build successful! darwin-rebuild is now available."
         echo "Future rebuilds can use: darwin-rebuild switch --flake .#rgo-laptop"
     else
-        if darwin-rebuild switch --flake .#rgo-laptop; then
+        if sudo darwin-rebuild switch --flake .#rgo-laptop; then
             echo "✓ Rebuild successful!"
             
             # Commit if auto-commit flag is set and there are changes
