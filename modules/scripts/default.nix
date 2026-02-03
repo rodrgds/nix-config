@@ -51,6 +51,7 @@ let
 
   # Common aliases for both platforms
   commonAliases = scriptAliases // {
+    "h" = "cd ${homeDir}/.config/home";
     "v" = "nvim";
     "glog" = "git log --oneline --graph --decorate --all";
     "ll" = "ls -laFh";
