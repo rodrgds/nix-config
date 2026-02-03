@@ -108,7 +108,7 @@ in
 
             # Window management
             # Use AppleScript to send Cmd+Q for proper app quitting on macOS
-            alt-q = 'exec-and-forget osascript -e "tell application \"System Events\" to keystroke \"q\" using command down"'
+            alt-q = "close --quit-if-last-window"
             alt-f = 'fullscreen'
             alt-space = 'layout floating tiling'
 
