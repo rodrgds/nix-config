@@ -18,6 +18,12 @@
   darwin.core.homebrew.enable = true;
   darwin.core.karabiner.enable = true;
 
+  # Enable scripts (rebuild command and aliases)
+  scripts.enable = true;
+
+  # Enable secrets management
+  secrets.enable = true;
+
   # Allow unfree packages on macOS
   nixpkgs.config.allowUnfree = true;
 
@@ -47,6 +53,7 @@
 
   # Development
   apps.nodejs.enable = true; # Node.js with npm config
+  apps.bun.enable = true; # Bun JavaScript runtime
   apps.python.enable = true; # Python with pip config
   apps.vscode.enable = true; # VSCode: (unfree, available in nixpkgs)
   apps.opencode.enable = true; # CLI tool with gruvbox theme
@@ -82,7 +89,6 @@
   # APPS THAT DON'T WORK ON DARWIN (NixOS-only)
   # ============================================
   # - apps.i3, apps.bumblebee-status, apps.dunst, redshift (X11)
-  # - apps.cleanshot (macOS-only, replaced by Flameshot)
 
   # User configuration (already set in system module, but can be overridden here)
   # users.users.${username} = {

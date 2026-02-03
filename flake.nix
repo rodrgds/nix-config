@@ -135,6 +135,10 @@
             {
               nixpkgs.overlays = [ (import ./packages { inherit inputs; }) ];
             }
+            # Core modules (cross-platform)
+            ./modules/core
+            ./modules/scripts
+            ./secrets
             # App modules (with cross-platform support)
             ./modules/apps
             # Darwin-specific modules
