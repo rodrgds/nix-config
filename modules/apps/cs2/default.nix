@@ -40,28 +40,27 @@ in
             voice_scale "0.45";
 
             // Crosshair settings
-            cl_crosshair_drawoutline "1";
-            cl_crosshair_dynamic_maxdist_splitratio "0.3";
-            cl_crosshair_dynamic_splitalpha_innermod "1";
-            cl_crosshair_dynamic_splitalpha_outermod "0.5";
-            cl_crosshair_dynamic_splitdist "7";
-            cl_crosshair_friendly_warning "1";
-            cl_crosshair_outlinethickness "1.19165";
-            cl_crosshair_recoil "1";
-            cl_crosshair_sniper_width "0";
-            cl_crosshair_t "0";
+            cl_crosshairgap "-4";
+            cl_crosshair_outlinethickness "1";
+            cl_crosshaircolor_r "0";
+            cl_crosshaircolor_g "255";
+            cl_crosshaircolor_b "255";
             cl_crosshairalpha "255";
-            cl_crosshaircolor "5";
-            cl_crosshaircolor_b "0";
-            cl_crosshaircolor_g "135";
-            cl_crosshaircolor_r "255";
-            cl_crosshairdot "0";
-            cl_crosshairgap "-3";
-            cl_crosshairgap_useweaponvalue "0";
-            cl_crosshairsize "2";
-            cl_crosshairstyle "4";
+            cl_crosshair_dynamic_splitdist "3";
+            cl_crosshair_recoil "true";
+            cl_fixedcrosshairgap "3";
+            cl_crosshaircolor "4";
+            cl_crosshair_drawoutline "false";
+            cl_crosshair_dynamic_splitalpha_innermod "0";
+            cl_crosshair_dynamic_splitalpha_outermod "1";
+            cl_crosshair_dynamic_maxdist_splitratio "1";
             cl_crosshairthickness "1";
-            cl_crosshairusealpha "1";
+            cl_crosshairdot "false";
+            cl_crosshairgap_useweaponvalue "false";
+            cl_crosshairusealpha "true";
+            cl_crosshair_t "false";
+            cl_crosshairstyle "4";
+            cl_crosshairsize "1";
 
             // Viewmodel settings
             viewmodel_fov "68";

@@ -9,7 +9,7 @@ in
   # User information
   fullname = "Rodrigo Dias";
   email = "me@rgo.pt";
-  
+
   # Typography
   fonts = {
     primary = "JetBrainsMono Nerd Font";
