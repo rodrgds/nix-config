@@ -26,7 +26,7 @@ in
           enable = true;
           settings = {
             user = {
-              name = "rgo";
+              name = config.sops.placeholder.user_full_name;
               email = config.sops.placeholder.user_email;
             };
             init.defaultBranch = "main";
