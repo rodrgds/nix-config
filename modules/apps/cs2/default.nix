@@ -8,7 +8,7 @@
 }:
 let
   cfg = config.apps.cs2;
-  inherit (constants) isLinux scriptDir;
+  inherit (constants) isLinux moduleDir;
 in
 {
   options.apps.cs2 = {
@@ -27,10 +27,6 @@ in
 
         home.file.".local/share/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg/simulate.cfg".source =
           ./simulate.cfg;
-
-        home.file."scripts/cs2-wrapper.sh".source = ./cs2-wrapper.sh;
-        home.file."scripts/cs2-gsi-server.py".source = ./cs2-gsi-server.py;
-        home.file."scripts/cs2-arduino-bridge.py".source = ./cs2-arduino-bridge.py;
 
         # home.file.".local/share/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg/gamestate_integration_score.cfg".text =
         #   ''
@@ -83,7 +79,7 @@ in
                     (lib.getExe pkgs.gamemode)
                     (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
                     # (lib.getExe pkgs.mangohud)
-                    "${scriptDir}/cs2-wrapper.sh"
+                    "${moduleDir}/apps/cs2/wrapper.sh"
                   ];
                   args = [
                     "%command%"

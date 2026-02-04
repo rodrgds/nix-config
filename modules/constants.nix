@@ -56,12 +56,10 @@ in
     opacity = 0.90;
   };
 
-  # Platform detection
   inherit isDarwin isLinux;
 
-  # Home directory
   inherit homeDir;
 
-  # Scripts directory
   scriptDir = "${homeDir}/.config/home/modules/scripts";
+  moduleDir = "${homeDir}/.config/home/modules";
 }
