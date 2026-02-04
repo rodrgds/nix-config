@@ -38,6 +38,12 @@ in
             snd_rear_headphone_position "90";
             snd_front_headphone_position "45.0";
             voice_scale "0.45";
+            snd_duckerattacktime "0.5";
+            snd_duckerreleasetime "2.5";
+            snd_duckerthreshold "0.15";
+            snd_ducktovolume "0.55";
+            snd_mute_losefocus "1";
+            snd_mute_mvp_music_live_players "0";
 
             // Crosshair settings
             cl_crosshairgap "-4";
@@ -114,6 +120,8 @@ in
             cl_interp_ratio "1";
             cl_updaterate "128";
             cl_cmdrate "128";
+            net_maxroutable "1200";
+            mm_dedicated_search_maxping "150";
 
             // HUD & UI - Orange color
             hud_scaling "0.85";
@@ -125,18 +133,42 @@ in
             cl_hud_color_g "136";
             cl_hud_color_b "0";
             cl_draw_only_deathnotices "0";
+            cl_teamid_overhead_mode "2";
+            hud_showtargetid "1";
+            cl_sanitize_player_names "0";
+            cl_show_clan_in_death_notice "1";
+            cl_teammate_colors_show "1";
 
             // Performance
             fps_max "0";
             fps_max_ui "120";
             engine_low_latency_sleep_after_client_tick "1";
             r_drawtracers_firstperson "1";
+            r_player_visibility_mode "1";
 
             // Buy binds
             bind "kp_ins" "buy vest;";
             bind "kp_end" "buy ak47; buy m4a1;";
             bind "kp_downarrow" "buy awp;";
             bind "kp_pgdn" "buy vest; buy vesthelm; buy defuser;";
+
+            // Miscellaneous
+            con_enable "1";
+            con_allownotify "1";
+            gameinstructor_enable "0";
+            cl_use_opens_buy_menu "1";
+            cl_dm_buyrandomweapons "1";
+            cl_autohelp "1";
+            cl_showloadout "1";
+            cl_show_observer_crosshair "2";
+            cl_sniper_delay_unscope "0";
+            spec_show_xray "1";
+            spec_replay_autostart "1";
+            closecaption "0";
+            cl_timeout "30";
+            tv_nochat "0";
+            sv_voiceenable "1";
+            voice_modenable "1";
 
             // Volume control
             bind "j" "incrementvar volume 0 1 0.1";
