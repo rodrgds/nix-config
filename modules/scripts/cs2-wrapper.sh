@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-stretched
+SCRIPT_DIR="$HOME/scripts"
+
+bash "${SCRIPT_DIR}/stretched.sh"
 
 "$@"
 
-fullres
+bash "${SCRIPT_DIR}/fullres.sh"
