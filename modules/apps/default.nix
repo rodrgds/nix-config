@@ -53,6 +53,7 @@
     ./gamemode
     ./cs2
     ./prismlauncher
+    ./lunarclient
     ./wine
     ./winetricks
     ./mangohud
