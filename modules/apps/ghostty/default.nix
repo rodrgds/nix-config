@@ -20,6 +20,8 @@ let
     window-padding-y = 5;
     shell-integration = "detect";
     shell-integration-features = "cursor,sudo,title";
+    clipboard-paste-protection = false;
+    confirm-close-surface = false;
   };
 in
 {
