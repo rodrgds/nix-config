@@ -22,7 +22,7 @@ in
         environment.systemPackages = [ pkgs.teamspeak6-client ];
       })
       (lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "teamspeak-client" ];
+        homebrew.casks = [ "teamspeak-client@beta" ];
       })
     ]
   );
