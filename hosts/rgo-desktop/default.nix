@@ -87,7 +87,7 @@
   apps.gamemode.enable = true;
   apps.cs2.enable = true;
   apps.prismlauncher.enable = true;
-  apps.lunarclient.enable = true;
+  # apps.lunarclient.enable = true;
   apps.wine.enable = true;
   apps.winetricks.enable = true;
   apps.mangohud.enable = true;
