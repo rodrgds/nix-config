@@ -56,14 +56,20 @@ let
     "glog" = "git log --oneline --graph --decorate --all";
     "ll" = "ls -laFh";
     "rebuild" = "bash ${homeDir}/.config/home/modules/scripts/rebuild.sh";
-    "encrypt_secrets" =
-      "bash -c 'cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops --encrypt secrets_plain.yaml\" > secrets.yaml && rm -f secrets_plain.yaml'";
-    "decrypt_secrets" =
-      "bash -c 'export SOPS_AGE_KEY_FILE=\"${homeDir}/.config/sops/age/keys.txt\" && cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops --decrypt secrets.yaml\"'";
+    "rebuild-vps" = "${homeDir}/.config/home/modules/scripts/rebuild-vps.sh";
+
+    # Legacy aliases (default to main secrets.yaml)
+    "encrypt_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh encrypt secrets";
+    "decrypt_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt secrets";
     "decrypt_to_file" =
-      "bash -c 'export SOPS_AGE_KEY_FILE=\"${homeDir}/.config/sops/age/keys.txt\" && cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops --decrypt secrets.yaml\" > secrets_plain.yaml && echo \"Decrypted to secrets_plain.yaml - edit and run encrypt-secrets when done\"'";
-    "edit_secrets" =
-      "bash -c 'export SOPS_AGE_KEY_FILE=\"${homeDir}/.config/sops/age/keys.txt\" && cd ${homeDir}/.config/home/secrets && nix-shell -p sops --run \"sops secrets.yaml\"'";
+      "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt-to-file secrets";
+    "edit_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh edit secrets";
+
+    # New flexible aliases - usage: decrypt secrets | decrypt vps-secrets
+    "decrypt" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt";
+    "encrypt" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh encrypt";
+    "decrypt-file" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt-to-file";
+    "edit-encrypted" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh edit";
   };
 
   # Linux-specific aliases

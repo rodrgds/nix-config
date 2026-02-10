@@ -299,6 +299,21 @@ darwin-rebuild switch --flake ~/.config/home#rgo-laptop
 
 # NixOS
 sudo nixos-rebuild switch --flake ~/.config/home#rgo-desktop
+
+# VPS (after NixOS is installed + secrets available)
+rebuild-vps
+# (reads `rgo_vps_ip` from sops)
+# nixos-rebuild switch --flake ~/.config/home#rgo-vps --target-host rgo@$(sops --decrypt --extract '["rgo_vps_ip"]' ~/.config/home/secrets/secrets.yaml)
+```
+
+### Hetzner VPS install (nixos-anywhere)
+```bash
+# First-time install (will wipe the server)
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#rgo-vps \
+  --target-host root@<server-ip> \
+  --build-on local \
+  --no-substitute-on-destination
 ```
 
 ### Secrets Management

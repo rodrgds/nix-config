@@ -11,29 +11,116 @@
 let
   cfg = config.secrets;
   inherit (constants) homeDir;
+
+  # Determine secrets file and list based on host type
+  vpsSecretsFile = ./vps-secrets.yaml;
+  mainSecretsFile = ./secrets.yaml;
+  secretsFile = if cfg.isVps then vpsSecretsFile else mainSecretsFile;
+
+  vpsSecretNames = [
+    # N8N
+    "n8n_encryption_key"
+    # Uni Easy (separate postgres project)
+    "unieasy_postgres_user"
+    "unieasy_postgres_password"
+    "unieasy_postgres_db"
+    # Umami
+    "umami_db_user"
+    "umami_db_password"
+    "umami_db_name"
+    "umami_app_secret"
+    # Ghost
+    "ghost_db_user"
+    "ghost_db_password"
+    "ghost_db_root_password"
+    "ghost_db_name"
+    "ghost_mailgun_user"
+    "ghost_mailgun_password"
+    # Vaultwarden
+    "vaultwarden_admin_token"
+    # Shlink
+    "shlink_api_key"
+    "shlink_db_password"
+    # YOURLS
+    "yourls_db_user"
+    "yourls_db_password"
+    "yourls_db_root_password"
+    "yourls_admin_password"
+    "yourls_admin_user"
+    # Postiz
+    "postiz_jwt_secret"
+    "postiz_postgres_password"
+    "postiz_redis_password"
+    "postiz_db_name"
+    "postiz_db_user"
+    "postiz_discord_id"
+    "postiz_discord_secret"
+    "postiz_discord_token"
+    "postiz_instagram_id"
+    "postiz_instagram_secret"
+    "postiz_linkedin_id"
+    "postiz_linkedin_secret"
+    "postiz_mastodon_id"
+    "postiz_mastodon_secret"
+    "postiz_openai_key"
+    "postiz_threads_id"
+    "postiz_threads_secret"
+    "postiz_tiktok_id"
+    "postiz_tiktok_secret"
+    "postiz_x_api"
+    "postiz_x_secret"
+    "postiz_youtube_id"
+    "postiz_youtube_secret"
+  ];
+
+  mainSecretNames = [
+    "lastfm_api_key"
+    "lastfm_secret"
+    "lastfm_username"
+    "openai_api_key"
+    "location_latitude"
+    "location_longitude"
+    "rgo_vps_ip"
+  ];
+
+  # Build secrets attrset from list of names
+  buildSecrets = names: lib.listToAttrs (map (name: lib.nameValuePair name { }) names);
 in
 {
   options.secrets = {
     enable = lib.mkEnableOption "Enable secrets management with sops-nix";
+    isVps = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Use VPS-specific secrets file";
+    };
   };
 
-  config = lib.mkIf cfg.enable {
-    home-manager.users.${username} =
-      { config, ... }:
-      {
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      # System-level sops configuration (for VPS services)
+      (lib.mkIf cfg.isVps {
         sops = {
-          age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
-          defaultSopsFile = ./secrets.yaml;
-
-          secrets = {
-            lastfm_api_key = { };
-            lastfm_secret = { };
-            lastfm_username = { };
-            openai_api_key = { };
-            location_latitude = { };
-            location_longitude = { };
-          };
+          age.keyFile = "/root/.config/sops/age/keys.txt";
+          defaultSopsFile = vpsSecretsFile;
+          secrets = buildSecrets vpsSecretNames;
         };
-      };
-  };
+      })
+
+      # Home-manager sops configuration (for personal machines only)
+      # VPS doesn't need HM sops - system-level sops handles all VPS secrets,
+      # and the user-level service can't read /root/.config/sops/age/keys.txt
+      (lib.mkIf (!cfg.isVps) {
+        home-manager.users.${username} =
+          { config, ... }:
+          {
+            sops = {
+              age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
+              defaultSopsFile = mainSecretsFile;
+              secrets = buildSecrets mainSecretNames;
+            };
+          };
+      })
+    ]
+  );
 }

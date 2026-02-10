@@ -62,4 +62,9 @@ in
 
   scriptDir = "${homeDir}/.config/home/modules/scripts";
   moduleDir = "${homeDir}/.config/home/modules";
+
+  sshPublicKeys = {
+    rgo-laptop = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDC/Jjb+539tc/YzVy7RqNVv8YoPlO8d+BPbvEnJkNQ6 rgo@rgo-laptop";
+    rgopc = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINK2FzW5OZRry66mr9+mpoaoT/506XUv7D9agrcCwZkl rgo@rgopc";
+  };
 }

@@ -7,6 +7,7 @@
     ./alacritty
     ./fish
     ./starship
+    ./ssh
 
     # Development
     ./git

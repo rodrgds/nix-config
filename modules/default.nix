@@ -5,6 +5,7 @@
     ./apps
     ./core
     ./scripts
+    ./services
     ../secrets
   ];
 }

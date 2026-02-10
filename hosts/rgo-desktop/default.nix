@@ -42,6 +42,7 @@
   apps.fish.enable = true;
   apps.starship.enable = true;
   apps.git.enable = true;
+  apps.ssh.enable = true;
   apps.neovim.enable = true;
   apps.thunar.enable = true;
 
@@ -87,7 +88,7 @@
   apps.gamemode.enable = true;
   apps.cs2.enable = true;
   apps.prismlauncher.enable = true;
-  # apps.lunarclient.enable = true;
+  apps.lunarclient.enable = true;
   apps.wine.enable = true;
   apps.winetricks.enable = true;
   apps.mangohud.enable = true;

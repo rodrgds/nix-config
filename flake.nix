@@ -35,6 +35,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     steam-config-nix = {
       url = "github:different-name/steam-config-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -58,6 +63,7 @@
       home-manager,
       nix-homebrew,
       sops-nix,
+      disko,
       steam-config-nix,
       vicinae,
       ...
@@ -91,6 +97,10 @@
             ./modules
             # Host-specific configuration
             ./hosts/${hostname}
+            # Disk partitioning/module (only when a host imports disko config)
+            disko.nixosModules.disko
+            # sops-nix for system-level secrets
+            sops-nix.nixosModules.sops
             # Home-manager as NixOS module
             home-manager.nixosModules.home-manager
             {
@@ -175,6 +185,11 @@
       nixosConfigurations.rgo-desktop = mkNixosSystem {
         system = "x86_64-linux";
         hostname = "rgo-desktop";
+      };
+
+      nixosConfigurations.rgo-vps = mkNixosSystem {
+        system = "x86_64-linux";
+        hostname = "rgo-vps";
       };
 
       # Darwin configurations
