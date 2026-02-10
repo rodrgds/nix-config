@@ -109,6 +109,22 @@
         "type": "github"
       }
     },
+    "edu": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770394907,
+        "narHash": "sha256-g59zh9D0UizHKUNJpomHBLZP4x2jYuw8klvzza19fCU=",
+        "owner": "rodrgds",
+        "repo": "edu",
+        "rev": "bf21829cfb74881d8f9136d97e0f18d8dd1de148",
+        "type": "github"
+      },
+      "original": {
+        "owner": "rodrgds",
+        "repo": "edu",
+        "type": "github"
+      }
+    },
     "elemental-wine-source": {
       "flake": false,
       "locked": {
@@ -441,6 +457,22 @@
         "type": "github"
       }
     },
+    "personal-website": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770752967,
+        "narHash": "sha256-9xGSkBScTNUULK5e+uuJqadvIvyWIcfKyTm4bXVrqTs=",
+        "owner": "rodrgds",
+        "repo": "personal-website",
+        "rev": "05fbe28d8d46c51f8a45fb1da1f11a4b0b074f34",
+        "type": "github"
+      },
+      "original": {
+        "owner": "rodrgds",
+        "repo": "personal-website",
+        "type": "github"
+      }
+    },
     "plugin-loader": {
       "flake": false,
       "locked": {
@@ -458,11 +490,13 @@
         "affinity-nix": "affinity-nix",
         "android-nixpkgs": "android-nixpkgs",
         "disko": "disko",
+        "edu": "edu",
         "home-manager": "home-manager",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-stable": "nixpkgs-stable",
+        "personal-website": "personal-website",
         "sops-nix": "sops-nix",
         "steam-config-nix": "steam-config-nix",
         "vicinae": "vicinae",

@@ -50,6 +50,14 @@
   vps.teamspeak.enable = true;
   vps.postiz.enable = false;
 
+  # Websites
+  vps.websites.enable = true;
+  vps.pocketbase.enable = false;
+  vps.deploy.enable = false;
+
+  # CMS
+  vps.directus.enable = true;
+
   # Your user module sets fish as the login shell.
   programs.fish.enable = true;
 

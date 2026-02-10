@@ -53,6 +53,16 @@
       url = "github:vicinaehq/extensions";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    edu = {
+      url = "github:rodrgds/edu";
+      flake = false;
+    };
+
+    personal-website = {
+      url = "github:rodrgds/personal-website";
+      flake = false;
+    };
   };
 
   outputs =

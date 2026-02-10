@@ -71,6 +71,20 @@ let
     "postiz_x_secret"
     "postiz_youtube_id"
     "postiz_youtube_secret"
+    # Directus CMS
+    "directus_key"
+    "directus_secret"
+    "directus_admin_email"
+    "directus_admin_password"
+    # Website
+    "website_hevy_api_key"
+    "website_lastfm_api_key"
+    "website_lastfm_username"
+    "website_trakt_client_id"
+    "website_trakt_client_secret"
+    "website_tmdb_api_key"
+    "website_directus_url"
+    "website_directus_access_token"
   ];
 
   mainSecretNames = [

@@ -18,6 +18,10 @@
     ./shlink
     ./teamspeak
     ./postiz
+    ./websites
+    ./pocketbase
+    ./deploy
+    ./directus
   ];
 
   options.vps.enableAll = lib.mkEnableOption "Enable all VPS services (Caddy reverse proxy + containerized apps)";
