@@ -16,7 +16,6 @@
     ./ghost
     ./vaultwarden
     ./shlink
-    ./yourls
     ./teamspeak
     ./postiz
   ];

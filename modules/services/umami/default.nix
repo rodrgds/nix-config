@@ -27,7 +27,7 @@ in
     # Create persistent directories
     systemd.tmpfiles.rules = [
       "d /var/lib/umami 0750 root root -"
-      "d /var/lib/umami/postgres 0750 999 999 -"
+      "d /var/lib/umami/postgres 0700 70 70 -"
       "d /var/backup/umami 0750 root root -"
     ];
 
