@@ -56,11 +56,15 @@ in
         pkgs.git
         pkgs.nodejs
         pkgs.vips
+        pkgs.glib
+        pkgs.cairo
+        pkgs.pango
       ];
 
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
+        EnvironmentFile = config.sops.templates."personal-site-env".path;
         StateDirectory = "personal-site";
         WorkingDirectory = "/var/lib/personal-site";
         MemoryHigh = "2G";
