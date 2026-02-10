@@ -22,6 +22,7 @@
     ./pocketbase
     ./deploy
     ./directus
+    ./immich-public-proxy
   ];
 
   options.vps.enableAll = lib.mkEnableOption "Enable all VPS services (Caddy reverse proxy + containerized apps)";

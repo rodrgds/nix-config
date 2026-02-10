@@ -58,6 +58,9 @@
   # CMS
   vps.directus.enable = true;
 
+  # Other services
+  vps.immich-public-proxy.enable = false;
+
   # Your user module sets fish as the login shell.
   programs.fish.enable = true;
 
