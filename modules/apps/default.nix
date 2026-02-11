@@ -13,6 +13,7 @@
     ./git
     ./opencode
     ./vscode
+    ./zed
     ./arduino
     ./nodejs
     ./bun

@@ -48,6 +48,7 @@
 
   # Development
   apps.vscode.enable = true;
+  apps.zed.enable = true;
   apps.arduino.enable = true;
   apps.nodejs.enable = true;
   apps.bun.enable = true;
