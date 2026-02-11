@@ -39,13 +39,12 @@
   # Enable server services infrastructure
   vps.enableAll = false;
   vps.caddy.enable = true;
-  vps.postgres.enable = true;  # Shared PostgreSQL for umami and ghost
   services.podman.enable = true;
 
   # Services ON
   vps.n8n.enable = true;
   vps.umami.enable = true;
-  vps.ghost.enable = true;
+  vps.ghost.enable = false;  # Disabled - Ghost dropped PostgreSQL support
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
