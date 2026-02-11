@@ -21,9 +21,6 @@
   # Enable scripts (rebuild command and aliases)
   scripts.enable = true;
 
-  # Enable secrets management
-  secrets.enable = true;
-
   # Allow unfree packages on macOS
   nixpkgs.config.allowUnfree = true;
 
@@ -48,6 +45,7 @@
   apps.ghostty.enable = true; # Config via home-manager
   apps.fish.enable = true; # Gruvbox plugin, fzf, macOS Homebrew PATH setup
   apps.git.enable = true; # Git config, osxkeychain credential helper
+  apps.ssh.enable = true; # SSH client configuration
   apps.neovim.enable = true; # Neovim with EDITOR env var
   apps.starship.enable = true; # Starship prompt with Fish integration
 

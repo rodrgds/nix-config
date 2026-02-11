@@ -26,6 +26,9 @@
   core.xserver.enable = true;
   core.nvidia.enable = true;
   core.peripherals.enable = true;
+
+  # Disable wpa_supplicant WiFi (desktop has no wireless adapter)
+  networking.wireless.enable = lib.mkForce false;
   apps.syncthing.enable = true;
   core.printing.enable = true;
   core.docker.enable = true;

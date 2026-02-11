@@ -23,6 +23,7 @@
     ./deploy
     ./directus
     ./immich-public-proxy
+    ../vps/postgres-shared  # Shared PostgreSQL for umami and ghost
   ];
 
   options.vps.enableAll = lib.mkEnableOption "Enable all VPS services (Caddy reverse proxy + containerized apps)";

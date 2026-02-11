@@ -39,6 +39,7 @@
   # Enable server services infrastructure
   vps.enableAll = false;
   vps.caddy.enable = true;
+  vps.postgres.enable = true;  # Shared PostgreSQL for umami and ghost
   services.podman.enable = true;
 
   # Services ON
@@ -92,6 +93,16 @@
   };
 
   security.sudo.wheelNeedsPassword = false;
+
+  # Limit systemd journal to save RAM and disk (VPS has no need for extensive logs)
+  services.journald.extraConfig = ''
+    SystemMaxUse=50M
+    SystemMaxFileSize=10M
+    RuntimeMaxUse=10M
+  '';
+
+  # Disable wpa_supplicant WiFi (VPS is ethernet-only, saves ~15 MB RAM)
+  networking.wireless.enable = lib.mkForce false;
 
   system.stateVersion = lib.mkDefault "24.11";
 }
