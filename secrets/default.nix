@@ -24,8 +24,6 @@ let
     "unieasy_postgres_user"
     "unieasy_postgres_password"
     "unieasy_postgres_db"
-    # Shared PostgreSQL
-    "shared_postgres_password"
     # Umami
     "umami_db_user"
     "umami_db_password"

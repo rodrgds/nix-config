@@ -112,11 +112,11 @@ in
       };
       "ghost-mysql-password" = {
         content = config.sops.placeholder.ghost_db_password;
-        mode = "0444";
+        mode = "0444"; # World-readable for container access
       };
       "ghost-mysql-root-password" = {
         content = config.sops.placeholder.ghost_db_root_password;
-        mode = "0444";
+        mode = "0444"; # World-readable for container access
       };
       "ghost-mailgun-user" = {
         content = config.sops.placeholder.ghost_mailgun_user;
