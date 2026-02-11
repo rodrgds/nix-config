@@ -49,16 +49,10 @@
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.postiz.enable = false;
-
-  # Websites
   vps.websites.enable = true;
   vps.pocketbase.enable = false;
   vps.deploy.enable = false;
-
-  # CMS
   vps.directus.enable = true;
-
-  # Other services
   vps.immich-public-proxy.enable = false;
 
   # Your user module sets fish as the login shell.
