@@ -14,6 +14,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = [ pkgs.nodejs ];
+    environment.systemPackages = [
+      pkgs.nodejs
+      pkgs.glib
+      pkgs.libglvnd
+    ];
   };
 }
