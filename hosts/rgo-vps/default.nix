@@ -51,8 +51,8 @@
   # Services OFF
   vps.unieasy.enable = false;
   vps.postiz.enable = false;
-  vps.websites.enable = false;
   vps.pocketbase.enable = false;
+  vps.websites.enable = false;
   vps.deploy.enable = false;
   vps.immich-public-proxy.enable = false;
 
