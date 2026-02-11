@@ -41,18 +41,19 @@
   vps.caddy.enable = true;
   services.podman.enable = true;
 
-  # Enable individual services
+  # Services ON
   vps.n8n.enable = true;
-  vps.unieasy.enable = false;
   vps.umami.enable = true;
   vps.ghost.enable = true;
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
+  vps.directus.enable = true;
+  # Services OFF
+  vps.unieasy.enable = false;
   vps.postiz.enable = false;
-  vps.websites.enable = true;
+  vps.websites.enable = false;
   vps.pocketbase.enable = false;
   vps.deploy.enable = false;
-  vps.directus.enable = true;
   vps.immich-public-proxy.enable = false;
 
   # Your user module sets fish as the login shell.
