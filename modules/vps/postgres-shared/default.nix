@@ -67,8 +67,14 @@ in
         Type = "oneshot";
         ExecStart = pkgs.writeShellScript "shared-postgres-setup" ''
           set -e
-          # Wait for postgres to be ready
-          ${pkgs.podman}/bin/podman exec shared-postgres pg_isready -U postgres -t 30
+          # Wait for postgres to be ready (with retries)
+          for i in $(seq 1 30); do
+            if ${pkgs.podman}/bin/podman exec shared-postgres pg_isready -U postgres -t 2 >/dev/null 2>&1; then
+              break
+            fi
+            echo "Waiting for PostgreSQL to be ready... ($i/30)"
+            ${pkgs.coreutils}/bin/sleep 2
+          done
 
           # Create databases and users for each service
           ${pkgs.podman}/bin/podman exec shared-postgres psql -U postgres -v ON_ERROR_STOP=1 <<-EOSQL
