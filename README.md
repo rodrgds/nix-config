@@ -360,6 +360,10 @@ See [NixOS/nix#10892](https://github.com/NixOS/nix/issues/10892) for fix instruc
 ### First build takes forever
 This is normal - it's downloading and building everything. Subsequent builds will be much faster.
 
+## TODO
+
+- [ ] Use [bun2nix](https://nix-community.github.io/bun2nix/) for managing Bun packages in Nix
+
 ## Credits
 
 Inspired by various NixOS and nix-darwin configurations in the community.
