@@ -44,11 +44,11 @@
   # Services ON
   vps.n8n.enable = true;
   vps.umami.enable = true;
-  vps.ghost.enable = false;  # Disabled - Ghost dropped PostgreSQL support
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
   # Services OFF
+  vps.ghost.enable = true;
   vps.unieasy.enable = false;
   vps.postiz.enable = false;
   vps.pocketbase.enable = false;

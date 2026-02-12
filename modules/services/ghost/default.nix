@@ -1,8 +1,3 @@
-# Ghost blog
-# Modern publishing platform
-#
-# Using MariaDB Alpine for lighter memory footprint than MySQL 8.0
-# MariaDB 11.4 Alpine: ~200-300 MB, MySQL 8.0: ~455 MB
 {
   config,
   lib,
