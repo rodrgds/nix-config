@@ -25,13 +25,13 @@ in
     systemd.tmpfiles.rules = [
       "d /var/lib/ghost 0750 root root -"
       "d /var/lib/ghost/content 0750 1000 1000 -"
-      "d /var/lib/ghost/mariadb 0750 999 999 -"
+      "d /var/lib/ghost/mysql 0750 999 999 -"
       "d /var/backup/ghost 0750 root root -"
     ];
 
-    # MariaDB database for Ghost (lighter than MySQL 8.0)
-    virtualisation.oci-containers.containers.ghost-mariadb = {
-      image = "docker.io/mariadb:11.4";
+    # MySQL database for Ghost
+    virtualisation.oci-containers.containers.ghost-mysql = {
+      image = "docker.io/mysql:8.0";
 
       environment = {
         MYSQL_USER = config.sops.placeholder.ghost_db_user;
@@ -41,12 +41,12 @@ in
       };
 
       volumes = [
-        "/var/lib/ghost/mariadb:/var/lib/mysql"
+        "/var/lib/ghost/mysql:/var/lib/mysql"
       ];
 
       extraOptions = [
         "--network=podman"
-        "--health-cmd=mariadbd --user=root --password=$(/cat /run/secrets/mysql_root_password) ping"
+        "--health-cmd=mysqladmin ping -h 127.0.0.1"
         "--health-interval=5s"
         "--health-timeout=20s"
         "--health-retries=10"
@@ -62,7 +62,7 @@ in
       environment = {
         url = "https://${cfg.domain}";
         database__client = "mysql";
-        database__connection__host = "ghost-mariadb";
+        database__connection__host = "ghost-mysql";
       };
 
       environmentFiles = [
@@ -77,7 +77,7 @@ in
         "127.0.0.1:${toString ghostPort}:2368"
       ];
 
-      dependsOn = [ "ghost-mariadb" ];
+      dependsOn = [ "ghost-mysql" ];
 
       extraOptions = [
         "--network=podman"
@@ -103,7 +103,7 @@ in
           mail__options__auth__user=${config.sops.placeholder.ghost_mailgun_user}
           mail__options__auth__pass=${config.sops.placeholder.ghost_mailgun_password}
         '';
-        mode = "0444";
+        mode = "0444"; # World-readable for container access
       };
       "ghost-mysql-password" = {
         content = config.sops.placeholder.ghost_db_password;
@@ -115,17 +115,17 @@ in
       };
       "ghost-mailgun-user" = {
         content = config.sops.placeholder.ghost_mailgun_user;
-        mode = "0444";
+        mode = "0444"; # World-readable for container access
       };
       "ghost-mailgun-password" = {
         content = config.sops.placeholder.ghost_mailgun_password;
-        mode = "0444";
+        mode = "0444"; # World-readable for container access
       };
     };
 
-    # MySQL/MariaDB backup service
-    systemd.services.ghost-mariadb-backup = {
-      description = "Backup Ghost MariaDB database";
+    # MySQL backup service
+    systemd.services.ghost-mysql-backup = {
+      description = "Backup Ghost MySQL database";
       serviceConfig = {
         Type = "oneshot";
         ExecStart = pkgs.writeShellScript "ghost-backup" ''
@@ -135,7 +135,7 @@ in
           ${pkgs.coreutils}/bin/mkdir -p "$BACKUP_DIR"
 
           # Dump to temporary file, then compress
-          ${pkgs.podman}/bin/podman exec ghost-mariadb mysqldump \
+          ${pkgs.podman}/bin/podman exec ghost-mysql mysqldump \
             -u root \
             -p"$(${pkgs.coreutils}/bin/cat /run/secrets/mysql_root_password)" \
             "$GHOST_DB_NAME" \
@@ -153,7 +153,7 @@ in
       };
     };
 
-    systemd.timers.ghost-mariadb-backup = {
+    systemd.timers.ghost-mysql-backup = {
       description = "Daily Ghost database backup";
       wantedBy = [ "timers.target" ];
       timerConfig = {
