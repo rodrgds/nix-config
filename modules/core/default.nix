@@ -16,13 +16,13 @@ in
     description = "Enable OpenClaw AI assistant";
   };
 
-  config = lib.mkIf config.services.openclaw.enable {
-    sops.secrets = {
-      openclaw_telegram_token = { };
-      openclaw_zai_api_key = { };
-      openclaw_gateway_token = { };
-    };
-  };
+  # config = lib.mkIf config.services.openclaw.enable {
+  #   sops.secrets = {
+  #     openclaw_telegram_token = { };
+  #     openclaw_zai_api_key = { };
+  #     openclaw_gateway_token = { };
+  #   };
+  # };
 
   imports = [
     # Cross-platform modules

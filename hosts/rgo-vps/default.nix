@@ -16,7 +16,7 @@
   networking.hostName = "rgo-vps";
 
   # Add nix-openclaw overlay for openclaw package
-  nixpkgs.overlays = [ inputs.nix-openclaw.overlays.default ];
+  # nixpkgs.overlays = [ inputs.nix-openclaw.overlays.default ];
 
   # Enable a minimal, server-friendly subset of your modules.
   # Note: Don't use core.boot here - it enables systemd-boot (UEFI),
@@ -53,7 +53,7 @@
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
   # Services OFF
-  vps.ghost.enable = false;
+  vps.ghost.enable = true;
   vps.unieasy.enable = false;
   vps.postiz.enable = false;
   vps.pocketbase.enable = false;
@@ -99,58 +99,80 @@
   security.sudo.wheelNeedsPassword = false;
 
   # OpenClaw AI assistant configuration
-  home-manager.users.${username} = {
-    programs.openclaw = {
-      enable = true;
+  # home-manager.users.${username} = {
+  #   programs.openclaw = {
+  #     enable = true;
 
-      config = {
-        gateway = {
-          mode = "local";
-          bind = "tailnet";
-          auth = {
-            tokenFile = "/run/secrets/openclaw_gateway_token";
-          };
-        };
+  #     config = {
+  #       gateway = {
+  #         mode = "local";
+  #         bind = "loopback";
+  #         tailscale = {
+  #           mode = "serve";
+  #         };
+  #         auth = {
+  #           mode = "token";
+  #           tokenFile = "/run/secrets/openclaw_gateway_token";
+  #           allowTailscale = true;
+  #         };
+  #       };
 
-        channels.telegram = {
-          tokenFile = "/run/secrets/openclaw_telegram_token";
-          allowFrom = [ constants.telegramChatId ];
-        };
+  #       channels.telegram = {
+  #         tokenFile = "/run/secrets/openclaw_telegram_token";
+  #         allowFrom = [ constants.telegramChatId ];
+  #       };
 
-        agents = {
-          defaults = {
-            model = {
-              primary = "zai/glm-4.7";
-            };
-            workspace = "/home/${username}/.openclaw/workspace";
-          };
-        };
+  #       agents = {
+  #         defaults = {
+  #           model = {
+  #             primary = "zai/glm-4.7";
+  #           };
+  #           workspace = "/home/${username}/.openclaw/workspace";
+  #         };
+  #       };
 
-        env = {
-          vars = {
-            ZAI_API_KEY = "/run/secrets/openclaw_zai_api_key";
-          };
-        };
-      };
+  #       env = {
+  #         vars = {
+  #           ZAI_API_KEY = "/run/secrets/openclaw_zai_api_key";
+  #         };
+  #       };
+  #     };
 
-      # plugins = [
-      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/summarize"; }
-      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/peekaboo"; }
-      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/oracle"; }
-      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/sag"; }
-      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/camsnap"; }
-      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/gogcli"; }
-      # ];
+  #     # plugins = [
+  #     #   { source = "github:openclaw/nix-steipete-tools?dir=tools/summarize"; }
+  #     #   { source = "github:openclaw/nix-steipete-tools?dir=tools/peekaboo"; }
+  #     #   { source = "github:openclaw/nix-steipete-tools?dir=tools/oracle"; }
+  #     #   { source = "github:openclaw/nix-steipete-tools?dir=tools/sag"; }
+  #     #   { source = "github:openclaw/nix-steipete-tools?dir=tools/camsnap"; }
+  #     #   { source = "github:openclaw/nix-steipete-tools?dir=tools/gogcli"; }
+  #     # ];
 
-      instances.default = {
-        enable = true;
-        package = pkgs.openclaw;
-        stateDir = "/home/${username}/.openclaw";
-        workspaceDir = "/home/${username}/.openclaw/workspace";
-        launchd.enable = false;
-      };
-    };
-  };
+  #     instances.default = {
+  #       enable = true;
+  #       package = pkgs.openclaw;
+  #       stateDir = "/home/${username}/.openclaw";
+  #       workspaceDir = "/home/${username}/.openclaw/workspace";
+  #       launchd.enable = false;
+  #     };
+  #   };
+  # };
+
+  # Tailscale Serve for OpenClaw
+  # systemd.services.tailscale-serve-openclaw = {
+  #   description = "Tailscale Serve for OpenClaw";
+  #   after = [ "tailscaled.service" ];
+  #   wants = [ "tailscaled.service" ];
+  #   serviceConfig = {
+  #     Type = "oneshot";
+  #     RemainAfterExit = true;
+  #     User = "root";
+  #     ExecStart = "${pkgs.tailscale}/bin/tailscale serve --bg http://127.0.0.1:18789";
+  #     ExecStop = "${pkgs.tailscale}/bin/tailscale serve off";
+  #     StandardOutput = "journal";
+  #     StandardError = "journal";
+  #   };
+  #   wantedBy = [ "multi-user.target" ];
+  # };
 
   # Limit systemd journal to save RAM and disk (VPS has no need for extensive logs)
   services.journald.extraConfig = ''

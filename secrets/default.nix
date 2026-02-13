@@ -86,9 +86,9 @@ let
     "website_directus_url"
     "website_directus_access_token"
     # OpenClaw
-    "openclaw_telegram_token"
-    "openclaw_zai_api_key"
-    "openclaw_gateway_token"
+    # "openclaw_telegram_token"
+    # "openclaw_zai_api_key"
+    # "openclaw_gateway_token"
   ];
 
   mainSecretNames = [
@@ -105,23 +105,23 @@ let
   buildSecrets = names: lib.listToAttrs (map (name: lib.nameValuePair name { }) names);
 
   # OpenClaw secrets need to be readable by the user
-  openclawSecrets = {
-    openclaw_telegram_token = {
-      owner = username;
-      group = "users";
-      mode = "0400";
-    };
-    openclaw_zai_api_key = {
-      owner = username;
-      group = "users";
-      mode = "0400";
-    };
-    openclaw_gateway_token = {
-      owner = username;
-      group = "users";
-      mode = "0400";
-    };
-  };
+  # openclawSecrets = {
+  #   openclaw_telegram_token = {
+  #     owner = username;
+  #     group = "users";
+  #     mode = "0400";
+  #   };
+  #   openclaw_zai_api_key = {
+  #     owner = username;
+  #     group = "users";
+  #     mode = "0400";
+  #   };
+  #   openclaw_gateway_token = {
+  #     owner = username;
+  #     group = "users";
+  #     mode = "0400";
+  #   };
+  # };
 in
 {
   options.secrets = {
@@ -140,7 +140,8 @@ in
         sops = {
           age.keyFile = "/root/.config/sops/age/keys.txt";
           defaultSopsFile = vpsSecretsFile;
-          secrets = (buildSecrets vpsSecretNames) // openclawSecrets;
+          # secrets = (buildSecrets vpsSecretNames) // openclawSecrets;
+          secrets = buildSecrets vpsSecretNames;
         };
       })
 

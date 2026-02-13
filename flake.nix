@@ -64,9 +64,9 @@
       flake = false;
     };
 
-    nix-openclaw = {
-      url = "github:openclaw/nix-openclaw";
-    };
+    # nix-openclaw = {
+    #   url = "github:openclaw/nix-openclaw";
+    # };
   };
 
   outputs =
@@ -80,7 +80,7 @@
       disko,
       steam-config-nix,
       vicinae,
-      nix-openclaw,
+      # nix-openclaw,
       ...
     }@inputs:
     let
@@ -137,7 +137,7 @@
                   sops-nix.homeManagerModules.sops
                   steam-config-nix.homeModules.default
                   vicinae.homeManagerModules.default
-                  nix-openclaw.homeManagerModules.openclaw
+                  # nix-openclaw.homeManagerModules.openclaw
                 ];
               };
             }
