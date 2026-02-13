@@ -110,6 +110,47 @@
         };
       };
 
+      channels = {
+        telegram = {
+          tokenFile = "/run/secrets/openclaw_telegram_token";
+          allowFrom = [ constants.telegramChatId ];
+        };
+      };
+
+      agents = {
+        defaults = {
+          model = {
+            primary = "zai/glm-4.7";
+          };
+          workspace = "/home/${username}/.openclaw/workspace";
+        };
+      };
+
+      env = {
+        vars = {
+          ZAI_API_KEY = "/run/secrets/openclaw_zai_api_key";
+        };
+      };
+
+    instances.default = {
+      enable = true;
+      stateDir = "/home/${username}/.openclaw";
+      workspaceDir = "/home/${username}/.openclaw/workspace";
+      launchd.enable = false;
+    };
+  };
+  home-manager.users.${username} = {
+    programs.openclaw.enable = true;
+
+    programs.openclaw.config = {
+      gateway = {
+        mode = "local";
+        bind = "tailnet";
+        auth = {
+          tokenFile = "/run/secrets/openclaw_gateway_token";
+        };
+      };
+
       channels.telegram = {
         tokenFile = "/run/secrets/openclaw_telegram_token";
         allowFrom = [ constants.telegramChatId ];
