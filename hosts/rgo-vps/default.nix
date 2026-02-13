@@ -4,6 +4,7 @@
   lib,
   inputs,
   username,
+  pkgs,
   ...
 }:
 {
@@ -99,82 +100,55 @@
 
   # OpenClaw AI assistant configuration
   home-manager.users.${username} = {
-    programs.openclaw.enable = true;
+    programs.openclaw = {
+      enable = true;
 
-    programs.openclaw.config = {
-      gateway = {
-        mode = "local";
-        bind = "tailnet";
-        auth = {
-          tokenFile = "/run/secrets/openclaw_gateway_token";
+      config = {
+        gateway = {
+          mode = "local";
+          bind = "tailnet";
+          auth = {
+            tokenFile = "/run/secrets/openclaw_gateway_token";
+          };
         };
-      };
 
-      channels = {
-        telegram = {
+        channels.telegram = {
           tokenFile = "/run/secrets/openclaw_telegram_token";
           allowFrom = [ constants.telegramChatId ];
         };
-      };
 
-      agents = {
-        defaults = {
-          model = {
-            primary = "zai/glm-4.7";
+        agents = {
+          defaults = {
+            model = {
+              primary = "zai/glm-4.7";
+            };
+            workspace = "/home/${username}/.openclaw/workspace";
           };
-          workspace = "/home/${username}/.openclaw/workspace";
         };
-      };
 
-      env = {
-        vars = {
-          ZAI_API_KEY = "/run/secrets/openclaw_zai_api_key";
-        };
-      };
-
-    instances.default = {
-      enable = true;
-      stateDir = "/home/${username}/.openclaw";
-      workspaceDir = "/home/${username}/.openclaw/workspace";
-      launchd.enable = false;
-    };
-  };
-  home-manager.users.${username} = {
-    programs.openclaw.enable = true;
-
-    programs.openclaw.config = {
-      gateway = {
-        mode = "local";
-        bind = "tailnet";
-        auth = {
-          tokenFile = "/run/secrets/openclaw_gateway_token";
-        };
-      };
-
-      channels.telegram = {
-        tokenFile = "/run/secrets/openclaw_telegram_token";
-        allowFrom = [ constants.telegramChatId ];
-      };
-
-      agents = {
-        defaults = {
-          model = {
-            primary = "zai/glm-4.7";
+        env = {
+          vars = {
+            ZAI_API_KEY = "/run/secrets/openclaw_zai_api_key";
           };
         };
       };
 
-      env = {
-        vars = {
-          ZAI_API_KEY = "/run/secrets/openclaw_zai_api_key";
-        };
-      };
-    };
+      # plugins = [
+      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/summarize"; }
+      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/peekaboo"; }
+      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/oracle"; }
+      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/sag"; }
+      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/camsnap"; }
+      #   { source = "github:openclaw/nix-steipete-tools?dir=tools/gogcli"; }
+      # ];
 
-    programs.openclaw.instances.default = {
-      enable = true;
-      stateDir = "/home/${username}/.openclaw";
-      workspaceDir = "/home/${username}/.openclaw/workspace";
+      instances.default = {
+        enable = true;
+        package = pkgs.openclaw;
+        stateDir = "/home/${username}/.openclaw";
+        workspaceDir = "/home/${username}/.openclaw/workspace";
+        launchd.enable = false;
+      };
     };
   };
 

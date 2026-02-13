@@ -103,6 +103,25 @@ let
 
   # Build secrets attrset from list of names
   buildSecrets = names: lib.listToAttrs (map (name: lib.nameValuePair name { }) names);
+
+  # OpenClaw secrets need to be readable by the user
+  openclawSecrets = {
+    openclaw_telegram_token = {
+      owner = username;
+      group = "users";
+      mode = "0400";
+    };
+    openclaw_zai_api_key = {
+      owner = username;
+      group = "users";
+      mode = "0400";
+    };
+    openclaw_gateway_token = {
+      owner = username;
+      group = "users";
+      mode = "0400";
+    };
+  };
 in
 {
   options.secrets = {
@@ -121,7 +140,7 @@ in
         sops = {
           age.keyFile = "/root/.config/sops/age/keys.txt";
           defaultSopsFile = vpsSecretsFile;
-          secrets = buildSecrets vpsSecretNames;
+          secrets = (buildSecrets vpsSecretNames) // openclawSecrets;
         };
       })
 

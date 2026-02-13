@@ -12,7 +12,6 @@ in
   options.vps.caddy = {
     enable = lib.mkEnableOption "Caddy reverse proxy";
 
-    # Internal ports for services (not exposed publicly)
     internalPorts = lib.mkOption {
       type = lib.types.attrsOf lib.types.int;
       default = { };
@@ -24,7 +23,6 @@ in
     services.caddy = {
       enable = true;
 
-      # Virtual hosts for each service
       virtualHosts = {
         # n8n - workflow automation
         "n8n.rgo.pt" = {
