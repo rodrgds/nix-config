@@ -92,7 +92,7 @@ in
     useCustomImage = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Use custom n8n image with Chromium and node-vibrant";
+      description = "Use custom n8n image with Chromium and node-vibrant (auto-builds on first start)";
     };
   };
 
@@ -152,6 +152,33 @@ in
     #     "--mount=type=bind,source=${config.sops.templates.n8n-postgres-password.path},target=/run/secrets/postgres_password,ro"
     #   ];
     # };
+
+    # Auto-build custom image systemd service
+    systemd.services.n8n-custom-image-build = lib.mkIf cfg.useCustomImage {
+      description = "Build custom n8n image with Chromium";
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "build-n8n-custom" ''
+          if ! ${pkgs.podman}/bin/podman image exists localhost/n8n-custom:latest 2>/dev/null; then
+            echo "🔨 Building custom n8n image with Chromium and node-vibrant..."
+            cd /etc/n8n-custom
+            ${pkgs.podman}/bin/podman build -t localhost/n8n-custom:latest .
+            echo "✅ Custom n8n image built successfully!"
+          else
+            echo "✅ Custom n8n image already exists"
+          fi
+        '';
+      };
+      wantedBy = [ "multi-user.target" ];
+      before = [ "podman-n8n.service" ];
+    };
+
+    # Add dependency to podman-n8n service
+    systemd.services.podman-n8n = lib.mkIf cfg.useCustomImage {
+      after = [ "n8n-custom-image-build.service" ];
+      requires = [ "n8n-custom-image-build.service" ];
+    };
 
     # n8n application
     virtualisation.oci-containers.containers.n8n = {

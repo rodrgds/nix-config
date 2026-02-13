@@ -206,6 +206,185 @@ cat ~/.config/sops/age/keys.txt
 # They're available as files in ~/.config/sops/decrypted/
 ```
 
+## VPS Migration Guide
+
+### Setting Up a New VPS (Hetzner Cloud)
+
+When migrating to a new VPS or setting up a fresh one, follow these steps:
+
+#### 1. Deploy NixOS with nixos-anywhere
+
+```bash
+# First-time install (will WIPE the server!)
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#rgo-vps \
+  --target-host root@<new-server-ip> \
+  --build-on local \
+  --no-substitute-on-destination
+```
+
+#### 2. Generate Age Key for Secrets
+
+The new VPS needs its own age key to decrypt secrets:
+
+**On the NEW VPS:**
+```bash
+ssh rgo@<new-server-ip>
+
+# Generate age key
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+
+# Copy the PUBLIC key (starts with age1...)
+cat ~/.config/sops/age/keys.txt | grep "public key"
+# Example: # public key: age1s7whd543hee9awste3derwmc57t7yjdwn0jzrs43d5nt9v9wrc4qdtt2l7
+```
+
+**On your LOCAL machine:**
+```bash
+cd ~/.config/home
+
+# Edit .sops.yaml and add the new VPS key
+sops secrets/.sops.yaml
+```
+
+Add public key to `secrets/.sops.yaml`.
+
+**Re-encrypt secrets and copy key:**
+```bash
+# Re-encrypt with new key
+sops updatekeys secrets/secrets.yaml
+sops updatekeys secrets/vps-secrets.yaml
+
+# Commit changes
+git add secrets/.sops.yaml secrets/secrets.yaml secrets/vps-secrets.yaml
+git commit -m "Add new VPS age key"
+git push
+
+# Copy key to root (for system secrets)
+ssh rgo@<new-server-ip> "sudo mkdir -p /root/.config/sops/age && sudo cp ~/.config/sops/age/keys.txt /root/.config/sops/age/ && sudo chmod 600 /root/.config/sops/age/keys.txt"
+```
+
+#### 3. Update VPS IP in Secrets
+
+```bash
+# Edit secrets.yaml with new VPS IP
+sops secrets/secrets.yaml
+# Update: rgo_vps_ip: <new-ip-address>
+
+git add secrets/secrets.yaml
+git commit -m "Update VPS IP"
+git push
+```
+
+#### 4. Rebuild VPS
+
+```bash
+rebuild-vps
+```
+
+### Migrating Data from Old VPS to New VPS
+
+**Prerequisites:**
+- SSH access to both VPS (old and new)
+- Age key setup complete on new VPS
+
+#### Stop Services on New VPS
+
+```bash
+ssh rgo@<new-server-ip> "sudo systemctl stop podman-n8n podman-vaultwarden podman-umami podman-shlink podman-directus podman-teamspeak podman-ghost podman-postiz podman-unieasy 2>/dev/null; echo Services stopped"
+```
+
+#### Set Up SSH Keys for Data Transfer
+
+You need passwordless SSH from old VPS to new VPS for rsync to work with sudo.
+
+**On OLD VPS:**
+```bash
+ssh rgo@<old-server-ip>
+
+# Generate SSH key (if not exists)
+ssh-keygen -t ed25519 -C "vps-migration" -f ~/.ssh/id_ed25519 -N ""
+
+# Copy public key to clipboard
+cat ~/.ssh/id_ed25519.pub
+```
+
+**On NEW VPS:**
+```bash
+ssh rgo@<new-server-ip>
+
+# Add the public key to authorized_keys
+echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
+
+# Also add to root for sudo rsync
+sudo mkdir -p /root/.ssh
+sudo bash -c 'echo "PASTE_PUBLIC_KEY_HERE" >> /root/.ssh/authorized_keys'
+sudo chmod 600 /root/.ssh/authorized_keys
+sudo chmod 700 /root/.ssh
+```
+
+**Test the connection from OLD VPS:**
+```bash
+ssh rgo@<new-server-ip> echo "SSH works!"
+```
+
+#### Copy Service Data
+
+**SSH into OLD VPS and run:**
+
+```bash
+ssh rgo@<old-server-ip>
+
+# Set variables (for fish shell)
+set OLD_IP "<old-server-ip>"
+set NEW_IP "<new-server-ip>"
+
+# Copy service data (example: n8n)
+# The --rsync-path="sudo rsync" flag is REQUIRED for permissions
+sudo rsync -avz --delete --rsync-path="sudo rsync" /var/lib/n8n/ rgo@{$NEW_IP}:/var/lib/n8n/
+
+# Repeat for other services (vaultwarden, umami, etc.)
+# Pattern: sudo rsync -avz --delete --rsync-path="sudo rsync" /var/lib/<service>/ rgo@{$NEW_IP}:/var/lib/<service>/
+```
+
+#### Fix Permissions on New VPS
+
+```bash
+ssh rgo@<new-server-ip> "
+sudo chown -R root:root /var/lib/vaultwarden /var/lib/shlink /var/lib/caddy 2>/dev/null
+sudo chown -R 999:999 /var/lib/n8n/postgres 2>/dev/null
+sudo chown -R 70:70 /var/lib/umami/postgres 2>/dev/null
+sudo chown -R 1000:1000 /var/lib/directus /var/lib/n8n/data 2>/dev/null
+sudo chown -R 9987:9987 /var/lib/teamspeak 2>/dev/null
+sudo chown -R root:root /var/lib/tailscale 2>/dev/null
+echo 'Permissions fixed'
+"
+```
+
+#### Restart Services
+
+```bash
+ssh rgo@<new-server-ip> "sudo systemctl restart podman-vaultwarden podman-n8n podman-umami podman-shlink podman-directus podman-teamspeak 2>/dev/null; echo Services restarted"
+```
+
+#### Verify Migration
+
+```bash
+ssh rgo@<new-server-ip>
+
+# Check for failed services
+sudo systemctl list-units --state=failed --no-pager | grep podman
+
+# Check disk space
+df -h
+
+# Check service logs (example for vaultwarden)
+sudo podman logs vaultwarden
+```
+
+**Note:** Copy data from `/var/lib/<service>/` directories, not `/var/lib/containers/` (container images are rebuilt automatically).
+
 ## Platform-Specific Details
 
 ### What's Different Between Platforms?
