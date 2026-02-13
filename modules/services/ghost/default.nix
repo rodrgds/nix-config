@@ -81,7 +81,7 @@ in
 
       extraOptions = [
         "--network=podman"
-        "--health-cmd='echo ok'"
+        "--health-cmd=echo ok"
         "--health-interval=5s"
         "--health-timeout=20s"
         "--health-retries=10"

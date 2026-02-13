@@ -53,7 +53,7 @@
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
   # Services OFF
-  vps.ghost.enable = true;
+  vps.ghost.enable = false;
   vps.unieasy.enable = false;
   vps.postiz.enable = false;
   vps.pocketbase.enable = false;
