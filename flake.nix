@@ -63,6 +63,10 @@
       url = "github:rodrgds/personal-website";
       flake = false;
     };
+
+    nix-openclaw = {
+      url = "github:openclaw/nix-openclaw";
+    };
   };
 
   outputs =
@@ -76,10 +80,12 @@
       disko,
       steam-config-nix,
       vicinae,
+      nix-openclaw,
       ...
     }@inputs:
     let
       # Common settings across all systems
+      lib = nixpkgs.lib;
       username = "rgo";
       fullname = "Rodrigo Dias";
       mkConstants = system: import ./modules/constants.nix { inherit username system; };
@@ -92,6 +98,7 @@
           specialArgs = {
             inherit
               inputs
+              lib
               username
               fullname
               system
@@ -130,6 +137,7 @@
                   sops-nix.homeManagerModules.sops
                   steam-config-nix.homeModules.default
                   vicinae.homeManagerModules.default
+                  nix-openclaw.homeManagerModules.openclaw
                 ];
               };
             }
@@ -144,6 +152,7 @@
           specialArgs = {
             inherit
               inputs
+              lib
               username
               fullname
               system

@@ -2,6 +2,7 @@
 {
   constants,
   lib,
+  inputs,
   username,
   ...
 }:
@@ -12,6 +13,9 @@
   ];
 
   networking.hostName = "rgo-vps";
+
+  # Add nix-openclaw overlay for openclaw package
+  nixpkgs.overlays = [ inputs.nix-openclaw.overlays.default ];
 
   # Enable a minimal, server-friendly subset of your modules.
   # Note: Don't use core.boot here - it enables systemd-boot (UEFI),
@@ -92,6 +96,46 @@
   };
 
   security.sudo.wheelNeedsPassword = false;
+
+  # OpenClaw AI assistant configuration
+  home-manager.users.${username} = {
+    programs.openclaw.enable = true;
+
+    programs.openclaw.config = {
+      gateway = {
+        mode = "local";
+        bind = "tailnet";
+        auth = {
+          tokenFile = "/run/secrets/openclaw_gateway_token";
+        };
+      };
+
+      channels.telegram = {
+        tokenFile = "/run/secrets/openclaw_telegram_token";
+        allowFrom = [ constants.telegramChatId ];
+      };
+
+      agents = {
+        defaults = {
+          model = {
+            primary = "zai/glm-4.7";
+          };
+        };
+      };
+
+      env = {
+        vars = {
+          ZAI_API_KEY = "/run/secrets/openclaw_zai_api_key";
+        };
+      };
+    };
+
+    programs.openclaw.instances.default = {
+      enable = true;
+      stateDir = "/home/${username}/.openclaw";
+      workspaceDir = "/home/${username}/.openclaw/workspace";
+    };
+  };
 
   # Limit systemd journal to save RAM and disk (VPS has no need for extensive logs)
   services.journald.extraConfig = ''
