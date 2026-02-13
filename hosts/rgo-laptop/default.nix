@@ -7,7 +7,6 @@
 }:
 {
   imports = [
-    ./homebrew.nix # Host-specific Homebrew additions (optional)
     ./system.nix
   ];
 
@@ -53,6 +52,8 @@
   apps.nodejs.enable = true; # Node.js with npm config
   apps.bun.enable = true; # Bun JavaScript runtime
   apps.python.enable = true; # Python with pip config
+  apps.cocoapods.enable = true; # CocoaPods dependency manager (Homebrew on Darwin)
+  apps.m-cli.enable = true; # m-cli Swiss Army Knife for macOS (Homebrew on Darwin)
   apps.vscode.enable = true; # VSCode: (unfree, available in nixpkgs)
   apps.opencode.enable = true; # CLI tool with gruvbox theme
   apps.dbeaver.enable = true; # DBeaver database tool (available in nixpkgs)

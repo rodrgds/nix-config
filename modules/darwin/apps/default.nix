@@ -3,7 +3,9 @@
 {
   imports = [
     ./aerospace
+    ./cocoapods
     ./jankyborders
+    ./m-cli
     ./raycast
   ];
 }
