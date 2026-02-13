@@ -16,7 +16,6 @@ in
   };
 
   # Go to Settings -> Synchronization -> Renay Enable (turn OFF)
-
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
