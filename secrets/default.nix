@@ -85,6 +85,10 @@ let
     "website_tmdb_api_key"
     "website_directus_url"
     "website_directus_access_token"
+    # OpenClaw
+    "openclaw_telegram_token"
+    "openclaw_zai_api_key"
+    "openclaw_gateway_token"
   ];
 
   mainSecretNames = [
