@@ -53,7 +53,7 @@
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
   # Services OFF
-  vps.ghost.enable = true;
+  vps.ghost.enable = false;
   vps.unieasy.enable = false;
   vps.postiz.enable = false;
   vps.pocketbase.enable = false;
@@ -93,6 +93,7 @@
     openssh.authorizedKeys.keys = [
       constants.sshPublicKeys.rgo-laptop
       constants.sshPublicKeys.rgopc
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDkBMelc6Jj/FibjBJsgYYDkZ7J4+PX44+sqSY55yxWI rgo@rgo-vps"
     ];
   };
 

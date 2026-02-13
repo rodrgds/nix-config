@@ -9,7 +9,6 @@ in
   # User information
   fullname = "Rodrigo Dias";
   email = "me@rgo.pt";
-  telegramChatId = 5350412046;
 
   # Typography
   fonts = {
