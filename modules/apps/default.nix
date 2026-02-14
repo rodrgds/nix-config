@@ -12,6 +12,7 @@
     # Development
     ./git
     ./opencode
+    ./development-tools
     ./vscode
     ./zed
     ./arduino

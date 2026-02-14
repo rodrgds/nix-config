@@ -1,21 +1,14 @@
 {
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": "nil",
   "nix.serverSettings": {
-    "nixd": {
+    "nil": {
       "formatting": {
-        "command": ["/run/current-system/sw/bin/nixfmt"]
-      },
-      "options": {
-        "nixos": {
-          "expr": "(builtins.getFlake \"/home/rgo/.config/home\").nixosConfigurations.rgopc.options"
-        },
-        "home-manager": {
-          "expr": "(builtins.getFlake \"/home/rgo/.config/home\").nixosConfigurations.rgopc.options.home-manager.users.type.getSubOptions []"
-        }
+        "command": ["nixfmt"]
       }
     }
   },
-  "chat.tools.terminal.autoApprove": {
-    "./rebuild": true,
-    "nixfmt": true
+  "[nix]": {
+    "editor.formatOnSave": true
   }
 }
