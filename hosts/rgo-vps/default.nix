@@ -92,7 +92,7 @@
     extraGroups = [ "wheel" ];
     openssh.authorizedKeys.keys = [
       constants.sshPublicKeys.rgo-laptop
-      constants.sshPublicKeys.rgopc
+      constants.sshPublicKeys.rgo-desktop
     ];
   };
 
