@@ -49,6 +49,7 @@
   apps.starship.enable = true; # Starship prompt with Fish integration
 
   # Development
+  apps.development-tools.enable = true;
   apps.nodejs.enable = true; # Node.js with npm config
   apps.bun.enable = true; # Bun JavaScript runtime
   apps.python.enable = true; # Python with pip config

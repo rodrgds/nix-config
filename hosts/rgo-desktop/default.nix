@@ -51,6 +51,7 @@
   apps.thunar.enable = true;
 
   # Development
+  apps.development-tools.enable = true;
   apps.vscode.enable = true;
   apps.zed.enable = true;
   apps.arduino.enable = true;
