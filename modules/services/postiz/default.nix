@@ -9,7 +9,7 @@
 let
   cfg = config.vps.postiz;
 
-  postizPort = 5000;
+  postizPort = 4007;
 in
 {
   options.vps.postiz = {
@@ -40,7 +40,7 @@ in
 
       environment = {
         POSTGRES_USER = config.sops.placeholder.postiz_db_user;
-        POSTGRES_PASSWORD_FILE = "/run/secrets/postgres_password";
+        POSTGRES_PASSWORD = config.sops.placeholder.postiz_postgres_password;
         POSTGRES_DB = config.sops.placeholder.postiz_db_name;
       };
 
@@ -60,6 +60,10 @@ in
     # Redis for Postiz
     virtualisation.oci-containers.containers.postiz-redis = {
       image = "docker.io/redis:7.2";
+
+      volumes = [
+        "/var/lib/postiz/redis:/data"
+      ];
 
       extraOptions = [
         "--network=podman"

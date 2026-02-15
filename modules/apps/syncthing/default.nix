@@ -30,17 +30,17 @@ in
           overrideFolders = false;
           settings = {
             devices = {
-              desktop = {
+              rgo-desktop = {
                 id = "CNKRUHN-CHITMG4-ETZSAPP-3IT3JKN-EF4KYRU-KHNVAQZ-YCJWWBW-3GOO2AE";
               };
-              phone = {
+              rgo-phone = {
                 id = "I6N5XGX-CTB6R3E-WJ52CAT-ZIWPURA-W37CIKO-RDWCCZU-WC5D7IP-HN7HNAK";
               };
-              laptop = {
-                id = "PINUALU-HHT6V2C-PQY746A-UXY533A-FYQ3WR5-LRX5G6Q-VNSDUD2-HQEV3AT";
+              rgo-laptop = {
+                id = "ZEVRZIA-4O22UC5-5XPMEAD-HGW3WEZ-F7J6ZTU-USJCCNC-WAB72VT-QIOL6QV";
               };
-              personalVps = {
-                id = "ESNZ7DA-O4PMOHN-BUJG6B7-N7HWP5K-BZYSPDJ-GZNAUCH-UFNIGVA-VZSD7AJ";
+              rocco-vps = {
+                id = "TID5NPM-JQDU3NI-NTXRN63-JBTZCZ5-7NZJDDC-LOSUGAI-JH37KGI-C46INQC";
               };
             };
           };
