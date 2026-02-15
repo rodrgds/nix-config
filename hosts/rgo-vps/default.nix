@@ -52,8 +52,8 @@
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
-  vps.postiz.enable = false;
   # Services OFF
+  vps.postiz.enable = false;
   vps.ghost.enable = false;
   vps.unieasy.enable = false;
   vps.pocketbase.enable = false;
