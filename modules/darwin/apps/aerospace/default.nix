@@ -130,8 +130,8 @@ in
             # Screenshots (Flameshot)
              alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
 
-           # Launcher (Raycast instead of rofi/vicinae)
-           alt-d = 'exec-and-forget open -a Raycast'
+             # Launcher (Spotlight)
+             alt-d = "exec-and-forget osascript -e 'tell application \"System Events\" to keystroke space using {command down}'"
 
            # Lock screen (macOS native) - using alt+ctrl+l to avoid conflict with focus right
            alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'

@@ -80,18 +80,6 @@ in
         ShowDayOfWeek = true;
         ShowDate = 1;
       };
-
-      # Custom preferences
-      CustomSystemPreferences = {
-        # Disable Spotlight Cmd+Space shortcut (to use Raycast instead)
-        "com.apple.symbolichotkeys" = {
-          AppleSymbolicHotKeys = {
-            "64" = {
-              enabled = false;
-            };
-          };
-        };
-      };
     };
 
     # Keyboard settings
