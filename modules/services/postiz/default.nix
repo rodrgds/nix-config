@@ -10,6 +10,15 @@ let
   cfg = config.vps.postiz;
 
   postizPort = 4007;
+
+  temporalDynamicConfig = pkgs.writeText "development-sql.yaml" ''
+    limit.maxIDLength:
+      - value: 255
+        constraints: {}
+    system.forceSearchAttributesCacheRefreshOnRead:
+      - value: true # Dev setup only. Please don't turn this on in production.
+        constraints: {}
+  '';
 in
 {
   options.vps.postiz = {
@@ -58,7 +67,7 @@ in
 
     # Redis for Postiz
     virtualisation.oci-containers.containers.postiz-redis = {
-      image = "docker.io/redis:7.2";
+      image = "docker.io/redis:7.2-alpine";
 
       volumes = [
         "/var/lib/postiz/redis:/data"
@@ -193,7 +202,7 @@ in
 
     # Temporal PostgreSQL
     virtualisation.oci-containers.containers.postiz-temporal-postgresql = {
-      image = "docker.io/postgres:16";
+      image = "docker.io/postgres:16-alpine";
 
       environment = {
         POSTGRES_PASSWORD = "temporal";
@@ -223,6 +232,7 @@ in
         ES_SEEDS = "postiz-temporal-elasticsearch";
         ES_VERSION = "v7";
         TEMPORAL_NAMESPACE = "default";
+        DYNAMIC_CONFIG_FILE_PATH = "config/dynamicconfig/development-sql.yaml";
       };
 
       dependsOn = [
@@ -233,6 +243,7 @@ in
       extraOptions = [
         "--network=podman"
         "--expose=7233"
+        "--mount=type=bind,source=${temporalDynamicConfig},target=/etc/temporal/config/dynamicconfig/development-sql.yaml,ro"
       ];
     };
 
