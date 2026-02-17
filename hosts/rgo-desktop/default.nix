@@ -63,6 +63,7 @@
   apps.android-sdk.enable = true;
   apps.stripe-cli.enable = true;
   apps.dbeaver.enable = true;
+  apps.laravel.enable = true;
 
   # Desktop
   apps.i3.enable = true;
