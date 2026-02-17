@@ -98,7 +98,6 @@ let
     "openai_api_key"
     "location_latitude"
     "location_longitude"
-    "rgo_vps_ip"
   ];
 
   # Build secrets attrset from list of names

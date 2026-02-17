@@ -268,12 +268,11 @@ ssh rgo@<new-server-ip> "sudo mkdir -p /root/.config/sops/age && sudo cp ~/.conf
 #### 3. Update VPS IP in Secrets
 
 ```bash
-# Edit secrets.yaml with new VPS IP
+# Edit secrets.yaml if needed
 sops secrets/secrets.yaml
-# Update: rgo_vps_ip: <new-ip-address>
 
 git add secrets/secrets.yaml
-git commit -m "Update VPS IP"
+git commit -m "Update secrets"
 git push
 ```
 
@@ -481,8 +480,6 @@ sudo nixos-rebuild switch --flake ~/.config/home#rgo-desktop
 
 # VPS (after NixOS is installed + secrets available)
 rebuild-vps
-# (reads `rgo_vps_ip` from sops)
-# nixos-rebuild switch --flake ~/.config/home#rgo-vps --target-host rgo@$(sops --decrypt --extract '["rgo_vps_ip"]' ~/.config/home/secrets/secrets.yaml)
 ```
 
 ### Hetzner VPS install (nixos-anywhere)

@@ -47,13 +47,13 @@
   services.podman.enable = true;
 
   # Services ON
-  vps.n8n.enable = true;
   vps.umami.enable = true;
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
+  vps.postiz.enable = false; # enable in the future, but the system starts thrashing because of elasticsearch (it should have more RAM than it currently has, so I need to upgrade the machine)
   # Services OFF
-  vps.postiz.enable = false;
+  vps.n8n.enable = false;
   vps.ghost.enable = false;
   vps.unieasy.enable = false;
   vps.pocketbase.enable = false;
