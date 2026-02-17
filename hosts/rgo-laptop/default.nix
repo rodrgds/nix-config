@@ -66,7 +66,7 @@
 
   # Productivity
   apps.obsidian.enable = true; # Obsidian (unfree, available in nixpkgs)
-  apps.raycast.enable = true; # Launcher (Homebrew on Darwin)
+  # apps.raycast.enable = true; # Launcher (Homebrew on Darwin)
   apps.flameshot.enable = true; # Screenshots (Homebrew on Darwin)
 
   # Media

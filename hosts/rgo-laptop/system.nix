@@ -11,6 +11,7 @@
         "/Applications/Visual Studio Code.app"
         "/Applications/Ghostty.app"
         "/Applications/Obsidian.app"
+        "/Applications/Telegram.app"
         # "/Applications/Raycast.app"
       ];
     };
