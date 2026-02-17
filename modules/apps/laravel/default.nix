@@ -21,7 +21,7 @@ in
         environment.systemPackages = with pkgs; [
           php
           phpPackages.composer
-          phpPackages.gd
+          phpExtensions.gd
         ];
       })
     ]
