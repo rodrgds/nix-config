@@ -76,6 +76,11 @@ let
     "directus_secret"
     "directus_admin_email"
     "directus_admin_password"
+    # TRNDb Directus CMS
+    "trndb_key"
+    "trndb_secret"
+    "trndb_admin_email"
+    "trndb_admin_password"
     # Website
     "website_hevy_api_key"
     "website_lastfm_api_key"

@@ -22,6 +22,7 @@
     ./pocketbase
     ./deploy
     ./directus
+    ./trndb
     ./immich-public-proxy
   ];
 
