@@ -63,9 +63,6 @@ in
         DB_CLIENT = "postgres";
         DB_HOST = "directus-postgres";
         DB_PORT = "5432";
-        DB_DATABASE = config.sops.placeholder.directus_db_name;
-        DB_USER = config.sops.placeholder.directus_db_user;
-        DB_PASSWORD_FILE = "/run/secrets/db_password";
         PUBLIC_URL = "https://${cfg.domain}";
         CORS_ENABLED = "true";
       };
@@ -87,7 +84,6 @@ in
 
       extraOptions = [
         "--network=podman"
-        "--mount=type=bind,source=${config.sops.templates.directus-db-password.path},target=/run/secrets/db_password,ro"
         "--health-cmd=wget --no-verbose --tries=1 --spider http://127.0.0.1:8055/health"
         "--health-interval=5s"
         "--health-timeout=20s"
@@ -108,16 +104,15 @@ in
         content = config.sops.placeholder.directus_db_name;
         mode = "0444";
       };
-      "directus-db-password" = {
-        content = config.sops.placeholder.directus_db_password;
-        mode = "0444";
-      };
       "directus-env" = {
         content = ''
           KEY=${config.sops.placeholder.directus_key}
           SECRET=${config.sops.placeholder.directus_secret}
           ADMIN_EMAIL=${config.sops.placeholder.directus_admin_email}
           ADMIN_PASSWORD=${config.sops.placeholder.directus_admin_password}
+          DB_DATABASE=${config.sops.placeholder.directus_db_name}
+          DB_USER=${config.sops.placeholder.directus_db_user}
+          DB_PASSWORD=${config.sops.placeholder.directus_db_password}
         '';
         mode = "0444";
       };
