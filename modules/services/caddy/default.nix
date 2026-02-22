@@ -113,6 +113,34 @@ in
             }
           '';
         };
+
+        # Directus CMS
+        "directus.rgo.pt" = {
+          extraConfig = ''
+            reverse_proxy localhost:${toString (cfg.internalPorts.directus or 8055)}
+
+            header {
+              Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+              X-Content-Type-Options "nosniff"
+              X-Frame-Options "SAMEORIGIN"
+              X-XSS-Protection "1; mode=block"
+            }
+          '';
+        };
+
+        # TRNDb CMS
+        "trndb.rgo.pt" = {
+          extraConfig = ''
+            reverse_proxy localhost:${toString (cfg.internalPorts.trndb or 8056)}
+
+            header {
+              Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+              X-Content-Type-Options "nosniff"
+              X-Frame-Options "SAMEORIGIN"
+              X-XSS-Protection "1; mode=block"
+            }
+          '';
+        };
       };
     };
   };

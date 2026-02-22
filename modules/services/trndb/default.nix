@@ -66,17 +66,5 @@ in
     };
 
     vps.caddy.internalPorts.trndb = trndbPort;
-    services.caddy.virtualHosts."${cfg.domain}" = {
-      extraConfig = ''
-        reverse_proxy 127.0.0.1:${toString trndbPort}
-
-        header {
-          Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-          X-Content-Type-Options "nosniff"
-          X-Frame-Options "SAMEORIGIN"
-          X-XSS-Protection "1; mode=block"
-        }
-      '';
-    };
   };
 }
