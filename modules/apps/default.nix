@@ -11,6 +11,7 @@
 
     # Development
     ./git
+    ./gh
     ./opencode
     ./development-tools
     ./vscode
@@ -22,6 +23,8 @@
     ./python
     ./android-studio
     ./android-sdk
+    ./clion
+    ./virtualbox
     ./stripe-cli
     ./dbeaver
 

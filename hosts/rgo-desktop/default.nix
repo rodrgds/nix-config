@@ -46,6 +46,7 @@
   apps.fish.enable = true;
   apps.starship.enable = true;
   apps.git.enable = true;
+  apps.gh.enable = true;
   apps.ssh.enable = true;
   apps.neovim.enable = true;
   apps.thunar.enable = true;

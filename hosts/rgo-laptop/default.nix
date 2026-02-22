@@ -44,6 +44,7 @@
   apps.ghostty.enable = true; # Config via home-manager
   apps.fish.enable = true; # Gruvbox plugin, fzf, macOS Homebrew PATH setup
   apps.git.enable = true; # Git config, osxkeychain credential helper
+  apps.gh.enable = true; # GitHub CLI
   apps.ssh.enable = true; # SSH client configuration
   apps.neovim.enable = true; # Neovim with EDITOR env var
   apps.starship.enable = true; # Starship prompt with Fish integration
@@ -56,6 +57,8 @@
   apps.cocoapods.enable = true; # CocoaPods dependency manager (Homebrew on Darwin)
   apps.m-cli.enable = true; # m-cli Swiss Army Knife for macOS (Homebrew on Darwin)
   apps.vscode.enable = true; # VSCode: (unfree, available in nixpkgs)
+  apps.clion.enable = true; # CLion IDE (nixpkgs on Linux, Homebrew on Darwin)
+  apps.virtualbox.enable = true; # VirtualBox (nixpkgs on Linux, Homebrew on Darwin)
   apps.opencode.enable = true; # CLI tool with gruvbox theme
   apps.dbeaver.enable = true; # DBeaver database tool (available in nixpkgs)
 
