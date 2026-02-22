@@ -76,6 +76,9 @@ let
     "directus_secret"
     "directus_admin_email"
     "directus_admin_password"
+    "directus_db_user"
+    "directus_db_password"
+    "directus_db_name"
     # TRNDb Directus CMS
     "trndb_key"
     "trndb_secret"
