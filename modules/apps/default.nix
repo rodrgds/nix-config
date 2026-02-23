@@ -78,6 +78,7 @@
     ./obsidian
     ./qbittorrent
     ./vicinae
+    ./typst
 
     # System
     ./core-packages

@@ -114,6 +114,7 @@
   # Productivity
   apps.obsidian.enable = true;
   apps.qbittorrent.enable = true;
+  apps.typst.enable = true;
 
   # System
   apps.core-packages.enable = true;
