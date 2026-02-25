@@ -31,6 +31,7 @@ in
       taps = [
         "nikitabobko/tap" # For Aerospace
         "FelixKratz/formulae" # For JankyBorders
+        "gromgit/fuse" # For sshfs-mac
       ];
 
       # Brews (CLI tools installed via Homebrew)

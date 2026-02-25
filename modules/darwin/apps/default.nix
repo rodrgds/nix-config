@@ -3,6 +3,7 @@
 {
   imports = [
     ./aerospace
+    ./cap
     ./cocoapods
     ./jankyborders
     ./m-cli

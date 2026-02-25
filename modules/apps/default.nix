@@ -24,7 +24,7 @@
     ./android-studio
     ./android-sdk
     ./clion
-    ./virtualbox
+    ./virtualization
     ./stripe-cli
     ./dbeaver
 
