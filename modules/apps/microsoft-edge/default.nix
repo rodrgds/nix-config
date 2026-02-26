@@ -18,9 +18,9 @@ in
 
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
-      # Linux: Install via nixpkgs-stable (more reliable for unfree packages)
+      # Linux: Install via nixpkgs (only if on Linux)
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = with pkgs.stable; [
+        environment.systemPackages = with pkgs; [
           microsoft-edge
           # for PWAs to work
           (runCommand "microsoft-edge-stable-alias" { } ''
