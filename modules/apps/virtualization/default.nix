@@ -22,12 +22,12 @@ in
       {
         environment.systemPackages = [ pkgs.qemu ];
       }
-      
+
       # Linux: VirtualBox
       (lib.optionalAttrs isLinux {
         environment.systemPackages = [ pkgs.virtualbox ];
       })
-      
+
       # Darwin: UTM + FUSE (install in order: macfuse first, then sshfs-mac)
       # (lib.optionalAttrs isDarwin {
       #   homebrew.casks = [ "utm" ];

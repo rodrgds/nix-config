@@ -61,7 +61,7 @@
   apps.virtualization.enable = true; # QEMU + UTM (Darwin) / VirtualBox (Linux)
   apps.opencode.enable = true; # CLI tool with gruvbox theme
   apps.dbeaver.enable = true; # DBeaver database tool (available in nixpkgs)
-  apps.cap.enable = true; # Cap AI coding assistant
+  apps.cap.enable = true; # Cap screen recorder
 
   # Communication
   apps.telegram.enable = true; # Telegram Desktop (available in nixpkgs)

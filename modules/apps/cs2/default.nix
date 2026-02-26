@@ -69,40 +69,35 @@ in
         programs.steam.config = lib.mkIf isLinux {
           enable = true;
           closeSteam = true;
-          users."459248649" = {
-            id = 459248649;
-            apps = {
-              cs2-stretched = {
-                id = 730;
-                launchOptions = {
-                  wrappers = [
-                    (lib.getExe pkgs.gamemode)
-                    (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
-                    # (lib.getExe pkgs.mangohud)
-                    "${moduleDir}/apps/cs2/wrapper.sh"
-                  ];
-                  args = [
-                    "%command%"
-                    "-novid"
-                    "-nojoy"
-                    "+fps_max"
-                    "0"
-                    "+mat_queue_mode"
-                    "2"
-                    "+cl_forcepreload"
-                    "1"
-                    "+fps_max_menu"
-                    "60"
-                    "-fullscreen"
-                    "-h"
-                    "960"
-                    "-w"
-                    "1280"
-                    "+exec"
-                    "autoexec.cfg"
-                  ];
-                };
-              };
+          apps.cs2-stretched = {
+            id = 730;
+            launchOptions = {
+              wrappers = [
+                (lib.getExe pkgs.gamemode)
+                (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
+                # (lib.getExe pkgs.mangohud)
+                "${moduleDir}/apps/cs2/wrapper.sh"
+              ];
+              args = [
+                "%command%"
+                "-novid"
+                "-nojoy"
+                "+fps_max"
+                "0"
+                "+mat_queue_mode"
+                "2"
+                "+cl_forcepreload"
+                "1"
+                "+fps_max_menu"
+                "60"
+                "-fullscreen"
+                "-h"
+                "960"
+                "-w"
+                "1280"
+                "+exec"
+                "autoexec.cfg"
+              ];
             };
           };
         };

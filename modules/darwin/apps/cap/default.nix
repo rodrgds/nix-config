@@ -1,4 +1,4 @@
-# Cap - Open-source AI coding assistant
+# Cap - Screen recorder for macOS
 # Installed via Homebrew
 {
   lib,
@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.cap = {
-    enable = lib.mkEnableOption "Enable Cap AI coding assistant";
+    enable = lib.mkEnableOption "Enable Cap screen recorder";
   };
 
   config = lib.mkIf cfg.enable {
