@@ -84,6 +84,9 @@ let
     "trndb_secret"
     "trndb_admin_email"
     "trndb_admin_password"
+    "trndb_db_user"
+    "trndb_db_password"
+    "trndb_db_name"
     # Website
     "website_hevy_api_key"
     "website_lastfm_api_key"
