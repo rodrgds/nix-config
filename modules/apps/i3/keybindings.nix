@@ -72,5 +72,5 @@ in
   "Print" =
     "exec scrot ~/%Y-%m-%d-%T-screenshot.png && notify-send 'Screenshot saved to ~/$(date +%Y-%m-%d-%T)-screenshot.png'";
   "${mod}+d" = "exec vicinae toggle";
-  "${mod}+Shift+h" = "exec handy --toggle-transcription";
+  # "${mod}+Shift+h" = "exec handy --toggle-transcription";
 }

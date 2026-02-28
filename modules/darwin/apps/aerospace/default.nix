@@ -128,7 +128,7 @@ in
              alt-n = 'exec-and-forget open -a Finder'
 
              # Handy (speech-to-text)
-             alt-shift-h = 'exec-and-forget handy --toggle-transcription'
+             # alt-shift-h = 'exec-and-forget handy --toggle-transcription'
 
              # Screenshots (Flameshot)
              alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'

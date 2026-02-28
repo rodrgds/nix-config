@@ -3,9 +3,9 @@ let
   sharedPackages = with pkgs; [
     inter
     jetbrains-mono
-    iosevka
+    # iosevka
     nerd-fonts.jetbrains-mono
-    nerd-fonts.iosevka
+    # nerd-fonts.iosevka
     source-serif
     bangers
     bricolage-grotesque
