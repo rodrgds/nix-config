@@ -52,9 +52,9 @@
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
   vps.trndb.enable = true;
+  vps.n8n.enable = true;
   vps.postiz.enable = false; # enable in the future, but the system starts thrashing because of elasticsearch (it should have more RAM than it currently has, so I need to upgrade the machine)
   # Services OFF
-  vps.n8n.enable = false;
   vps.ghost.enable = false;
   vps.unieasy.enable = false;
   vps.pocketbase.enable = false;

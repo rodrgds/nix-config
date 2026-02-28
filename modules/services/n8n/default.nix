@@ -51,7 +51,7 @@ let
         && rm -rf /var/cache/apk/*
 
     # Install n8n and custom npm packages globally
-    RUN npm install -g n8n node-vibrant --unsafe-perm
+    RUN npm install -g n8n node-vibrant @vladmandic/face-api @tensorflow/tfjs-node sharp --unsafe-perm
 
     # Create node user with specific UID/GID to match volume permissions
     RUN deluser --remove-home node 2>/dev/null || true && \
@@ -211,7 +211,7 @@ in
         TZ = cfg.timezone;
 
         # Node/Puppeteer configuration for Chrome/Chromium support
-        NODE_FUNCTION_ALLOW_EXTERNAL = "*";
+        NODE_FUNCTION_ALLOW_EXTERNAL = "sharp,@vladmandic/face-api,@tensorflow/tfjs-node";
         NODE_FUNCTION_ALLOW_BUILTIN = "*";
         NODE_PATH = "/usr/local/lib/node_modules";
         NODE_ENV = "production";
