@@ -2,8 +2,6 @@
   lib,
   config,
   pkgs,
-  username,
-  system,
   constants,
   ...
 }:
@@ -39,19 +37,6 @@ in
             RunAtLoad = true;
             StandardOutPath = "/tmp/handy.log";
             StandardErrorPath = "/tmp/handy.error.log";
-          };
-        };
-
-        home-manager.users.${username} = {
-          homebrew.masApps = { };
-
-          information = {
-            note = ''
-              Handy is installed via Homebrew. After first launch:
-              1. Grant microphone and accessibility permissions when prompted
-              2. Configure your preferred keyboard shortcut in Handy Settings
-              3. Use Ctrl+Option+H (or your custom shortcut) to toggle transcription
-            '';
           };
         };
       })

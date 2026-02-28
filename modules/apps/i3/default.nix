@@ -102,7 +102,7 @@ in
                     always = false;
                   }
                   {
-                    command = "handy --start-hidden --no-tray";
+                    command = "handy --start-hidden";
                     always = true;
                     notification = false;
                   }
