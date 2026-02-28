@@ -13,14 +13,12 @@ in
     enable = lib.mkEnableOption "Enable fonts configuration";
     extraPackages = lib.mkOption {
       type = lib.types.listOf lib.types.package;
-      default = [];
+      default = [ ];
       description = "Additional font packages to install";
     };
   };
 
   config = lib.mkIf cfg.enable {
-    fonts.packages = fonts.sharedPackages
-      ++ fonts.linuxOnlyPackages
-      ++ cfg.extraPackages;
+    fonts.packages = fonts.sharedPackages ++ fonts.linuxOnlyPackages ++ cfg.extraPackages;
   };
 }

@@ -18,10 +18,8 @@ in
     environment.sessionVariables = {
       ANDROID_HOME = "$HOME/.android/sdk";
       ANDROID_SDK_ROOT = "$HOME/.android/sdk";
-      CAPACITOR_ANDROID_STUDIO_PATH = "${pkgs.android-studio}/bin/android-studio";
     };
 
-    # Shell aliases will be handled by the scripts module
     environment.shellAliases = {
       "copy" = "xclip -selection clipboard";
       "v" = "nvim";

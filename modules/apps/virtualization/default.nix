@@ -27,17 +27,20 @@ in
       (lib.optionalAttrs isLinux {
         environment.systemPackages = [ pkgs.virtualbox ];
       })
-      
+
       # Darwin: UTM + VirtualBox + FUSE (install in order: macfuse first, then sshfs-mac)
       (lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "utm" "virtualbox" ];
-      #   homebrew.onActivation = {
-      #     noAutoUpdate = true;
-      #     commands = [
-      #       "brew install --cask macfuse"
-      #       "brew install gromgit/fuse/sshfs-mac"
-      #     ];
-      #   };
+        homebrew.casks = [
+          "utm"
+          "virtualbox"
+        ];
+        #   homebrew.onActivation = {
+        #     noAutoUpdate = true;
+        #     commands = [
+        #       "brew install --cask macfuse"
+        #       "brew install gromgit/fuse/sshfs-mac"
+        #     ];
+        #   };
       })
     ]
   );
