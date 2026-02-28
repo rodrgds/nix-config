@@ -101,6 +101,11 @@ in
                     command = "flameshot";
                     always = false;
                   }
+                  {
+                    command = "handy --start-hidden --no-tray";
+                    always = true;
+                    notification = false;
+                  }
                 ];
                 keybindings = import ./keybindings.nix { inherit pkgs constants; };
                 workspaceOutputAssign = import ./workspaces.nix { };

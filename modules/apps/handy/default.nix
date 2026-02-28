@@ -27,6 +27,21 @@ in
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [ "handy" ];
 
+        launchd.user.agents.handy = {
+          serviceConfig = {
+            Label = "com.user.handy";
+            ProgramArguments = [
+              "/opt/homebrew/bin/handy"
+              "--start-hidden"
+              "--no-tray"
+            ];
+            KeepAlive = true;
+            RunAtLoad = true;
+            StandardOutPath = "/tmp/handy.log";
+            StandardErrorPath = "/tmp/handy.error.log";
+          };
+        };
+
         home-manager.users.${username} = {
           homebrew.masApps = { };
 
