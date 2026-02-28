@@ -272,6 +272,26 @@
         "type": "github"
       }
     },
+    "handy": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772160904,
+        "narHash": "sha256-JpqePSL9tHFGeuA+vklIIPZwC6PTwzzkoFxsZZoC984=",
+        "owner": "cjpais",
+        "repo": "Handy",
+        "rev": "1d4d6820f6139d1cba0eba3ad5ae830b6c5ebfc6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cjpais",
+        "repo": "Handy",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -411,11 +431,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1771369470,
-        "narHash": "sha256-0NBlEBKkN3lufyvFegY4TYv5mCNHbi5OmBDrzihbBMQ=",
+        "lastModified": 1771848320,
+        "narHash": "sha256-0MAd+0mun3K/Ns8JATeHT1sX28faLII5hVLq0L3BdZU=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "0182a361324364ae3f436a63005877674cf45efb",
+        "rev": "2fc6539b481e1d2569f25f8799236694180c0993",
         "type": "github"
       },
       "original": {
@@ -491,6 +511,7 @@
         "android-nixpkgs": "android-nixpkgs",
         "disko": "disko",
         "edu": "edu",
+        "handy": "handy",
         "home-manager": "home-manager",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",

@@ -91,5 +91,8 @@
     ./lamp
     ./laravel
     ./flatpak
+
+    # Handy
+    ./handy
   ];
 }

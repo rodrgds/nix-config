@@ -64,6 +64,11 @@
       flake = false;
     };
 
+    handy = {
+      url = "github:cjpais/Handy";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # nix-openclaw = {
     #   url = "github:openclaw/nix-openclaw";
     # };

@@ -122,12 +122,15 @@ in
            alt-minus = 'resize smart -50'
            alt-equal = 'resize smart +50'
 
-            # Application launching (using -n flag to always open new instances)
-            alt-enter = 'exec-and-forget open -na Ghostty'
-            alt-w = 'exec-and-forget open -na "Microsoft Edge"'
-            alt-n = 'exec-and-forget open -a Finder'
+             # Application launching (using -n flag to always open new instances)
+             alt-enter = 'exec-and-forget open -na Ghostty'
+             alt-w = 'exec-and-forget open -na "Microsoft Edge"'
+             alt-n = 'exec-and-forget open -a Finder'
 
-            # Screenshots (Flameshot)
+             # Handy (speech-to-text)
+             alt-shift-h = 'exec-and-forget handy --toggle-transcription'
+
+             # Screenshots (Flameshot)
              alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
 
              # Launcher (Spotlight)

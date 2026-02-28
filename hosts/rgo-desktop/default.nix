@@ -123,6 +123,14 @@
   # Opencode
   apps.opencode.enable = true;
 
+  # Handy
+  apps.handy.enable = true;
+
   # Vicinae
   apps.vicinae.enable = true;
+
+  # Use Python 3.12 instead of 3.13 (3.13 has failing tests in some packages)
+  # nixpkgs.config.packageOverrides = pkgs: {
+  #   python3 = pkgs.python312;
+  # };
 }

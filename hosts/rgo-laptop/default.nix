@@ -81,6 +81,9 @@
   # System
   apps.syncthing.enable = true; # File sync (systemd on NixOS, Homebrew on Darwin)
 
+  # Handy
+  apps.handy.enable = true; # Speech-to-text
+
   # ============================================
   # SYSTEM SERVICES (handled separately)
   # ============================================
