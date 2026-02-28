@@ -2,26 +2,24 @@
   lib,
   config,
   pkgs,
-  constants,
   ...
 }:
 let
+  fonts = import ../../../core/fonts/packages.nix { inherit pkgs; };
   cfg = config.darwin.core.fonts;
 in
 {
   options.darwin.core.fonts = {
     enable = lib.mkEnableOption "Enable Darwin fonts configuration";
+    extraPackages = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [];
+      description = "Additional font packages to install";
+    };
   };
 
   config = lib.mkIf cfg.enable {
-    # Font configuration for macOS
-    fonts.packages = with pkgs; [
-      # Nerd Fonts
-      nerd-fonts.jetbrains-mono
-      nerd-fonts.fira-code
-
-      # Other fonts
-      bricolage-grotesque
-    ];
+    fonts.packages = fonts.sharedPackages
+      ++ cfg.extraPackages;
   };
 }
