@@ -164,49 +164,36 @@ in
         ExecStart = pkgs.writeShellScript "build-n8n-custom" ''
           set -e
 
-          # Get current Dockerfile hash
           CURRENT_HASH=$(sha256sum /etc/n8n-custom/Dockerfile | cut -d' ' -f1)
           STORED_HASH_FILE="/var/lib/n8n/dockerfile-hash"
 
-          # Check if image exists and if Dockerfile changed
-          IMAGE_EXISTS=$(${pkgs.podman}/bin/podman image exists localhost/n8n-custom:latest 2>/dev/null && echo "yes" || echo "no")
-
-          if [ "$IMAGE_EXISTS" = "yes" ]; then
-            # Compare hash
-            if [ -f "$STORED_HASH_FILE" ]; then
-              STORED_HASH=$(cat "$STORED_HASH_FILE")
-              if [ "$CURRENT_HASH" = "$STORED_HASH" ]; then
-                echo "✅ Custom n8n image up to date (hash match)"
-                exit 0
-              fi
-              echo "🔄 Dockerfile changed, rebuilding..."
-              # Stop and remove old container
-              ${pkgs.podman}/bin/podman stop n8n 2>/dev/null || true
-              ${pkgs.podman}/bin/podman rm n8n 2>/dev/null || true
-              # Remove old image
-              ${pkgs.podman}/bin/podman rmi localhost/n8n-custom:latest 2>/dev/null || true
-            else
-              echo "⚠️ No hash file found, rebuilding..."
-              ${pkgs.podman}/bin/podman rmi localhost/n8n-custom:latest 2>/dev/null || true
+          # Check if rebuild is needed
+          if ${pkgs.podman}/bin/podman image exists localhost/n8n-custom:latest 2>/dev/null; then
+            if [ -f "$STORED_HASH_FILE" ] && [ "$(cat $STORED_HASH_FILE)" = "$CURRENT_HASH" ]; then
+              echo "✅ Custom n8n image up to date (hash match)"
+              exit 0
             fi
+            echo "🔄 Dockerfile changed, rebuilding..."
           else
-            echo "🔨 Building custom n8n image with Chromium and node-vibrant..."
+            echo "🔨 No existing image, building..."
           fi
+
+          # --- ALWAYS clean up BEFORE building to free space ---
+          ${pkgs.podman}/bin/podman stop n8n 2>/dev/null || true
+          ${pkgs.podman}/bin/podman rm n8n 2>/dev/null || true
+          ${pkgs.podman}/bin/podman rmi -f localhost/n8n-custom:latest 2>/dev/null || true
+
+          # Prune dangling layers/build cache left by failed attempts
+          ${pkgs.podman}/bin/podman system prune -f 2>/dev/null || true
 
           # Build new image
           cd /etc/n8n-custom
-          ${pkgs.podman}/bin/podman build -t localhost/n8n-custom:latest .
+          ${pkgs.podman}/bin/podman build --no-cache -t localhost/n8n-custom:latest .
 
-          # Save new hash
           echo "$CURRENT_HASH" > "$STORED_HASH_FILE"
-
           echo "✅ Custom n8n image built successfully!"
 
-          # Restart n8n service if it was running
-          if systemctl is-active --quiet podman-n8n.service 2>/dev/null; then
-            echo "🔄 Restarting n8n service..."
-            systemctl restart podman-n8n.service
-          fi
+          systemctl restart podman-n8n.service || true
         '';
       };
       wantedBy = [ "multi-user.target" ];
