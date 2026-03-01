@@ -53,7 +53,7 @@ let
 
     # Install n8n and custom npm packages globally
     # Using @tensorflow/tfjs (WASM) instead of tfjs-node to avoid Node 22 compatibility issues
-    RUN npm install -g n8n node-vibrant @vladmandic/face-api @tensorflow/tfjs sharp --unsafe-perm
+    RUN npm install -g n8n node-vibrant sharp @napi-rs/canvas --unsafe-perm
 
     # Create node user with specific UID/GID to match volume permissions
     RUN deluser --remove-home node 2>/dev/null || true && \
@@ -162,13 +162,50 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = pkgs.writeShellScript "build-n8n-custom" ''
-          if ! ${pkgs.podman}/bin/podman image exists localhost/n8n-custom:latest 2>/dev/null; then
-            echo "🔨 Building custom n8n image with Chromium and node-vibrant..."
-            cd /etc/n8n-custom
-            ${pkgs.podman}/bin/podman build -t localhost/n8n-custom:latest .
-            echo "✅ Custom n8n image built successfully!"
+          set -e
+
+          # Get current Dockerfile hash
+          CURRENT_HASH=$(sha256sum /etc/n8n-custom/Dockerfile | cut -d' ' -f1)
+          STORED_HASH_FILE="/var/lib/n8n/dockerfile-hash"
+
+          # Check if image exists and if Dockerfile changed
+          IMAGE_EXISTS=$(${pkgs.podman}/bin/podman image exists localhost/n8n-custom:latest 2>/dev/null && echo "yes" || echo "no")
+
+          if [ "$IMAGE_EXISTS" = "yes" ]; then
+            # Compare hash
+            if [ -f "$STORED_HASH_FILE" ]; then
+              STORED_HASH=$(cat "$STORED_HASH_FILE")
+              if [ "$CURRENT_HASH" = "$STORED_HASH" ]; then
+                echo "✅ Custom n8n image up to date (hash match)"
+                exit 0
+              fi
+              echo "🔄 Dockerfile changed, rebuilding..."
+              # Stop and remove old container
+              ${pkgs.podman}/bin/podman stop n8n 2>/dev/null || true
+              ${pkgs.podman}/bin/podman rm n8n 2>/dev/null || true
+              # Remove old image
+              ${pkgs.podman}/bin/podman rmi localhost/n8n-custom:latest 2>/dev/null || true
+            else
+              echo "⚠️ No hash file found, rebuilding..."
+              ${pkgs.podman}/bin/podman rmi localhost/n8n-custom:latest 2>/dev/null || true
+            fi
           else
-            echo "✅ Custom n8n image already exists"
+            echo "🔨 Building custom n8n image with Chromium and node-vibrant..."
+          fi
+
+          # Build new image
+          cd /etc/n8n-custom
+          ${pkgs.podman}/bin/podman build -t localhost/n8n-custom:latest .
+
+          # Save new hash
+          echo "$CURRENT_HASH" > "$STORED_HASH_FILE"
+
+          echo "✅ Custom n8n image built successfully!"
+
+          # Restart n8n service if it was running
+          if systemctl is-active --quiet podman-n8n.service 2>/dev/null; then
+            echo "🔄 Restarting n8n service..."
+            systemctl restart podman-n8n.service
           fi
         '';
       };
