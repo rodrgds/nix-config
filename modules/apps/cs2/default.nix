@@ -28,6 +28,9 @@ in
         home.file.".local/share/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg/simulate.cfg".source =
           ./simulate.cfg;
 
+        home.file.".local/share/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg/surf.cfg".source =
+          ./surf.cfg;
+
         # home.file.".local/share/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg/gamestate_integration_score.cfg".text =
         #   ''
         #     "GSI"
