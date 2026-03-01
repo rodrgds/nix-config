@@ -52,8 +52,9 @@ let
         && rm -rf /var/cache/apk/*
 
     # Install n8n and custom npm packages globally
-    # Using @tensorflow/tfjs (WASM) instead of tfjs-node to avoid Node 22 compatibility issues
-    RUN npm install -g n8n node-vibrant sharp @napi-rs/canvas --unsafe-perm
+    RUN npm install -g n8n node-vibrant sharp @napi-rs/canvas --unsafe-perm \
+      && npm cache clean --force \
+      && rm -rf /tmp/* /root/.npm
 
     # Create node user with specific UID/GID to match volume permissions
     RUN deluser --remove-home node 2>/dev/null || true && \
