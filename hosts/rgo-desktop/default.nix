@@ -122,6 +122,7 @@
 
   # Opencode
   apps.opencode.enable = true;
+  apps.gemini-cli.enable = true;
 
   # Handy
   apps.handy.enable = true;

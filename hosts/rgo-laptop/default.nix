@@ -60,6 +60,7 @@
   apps.clion.enable = true; # CLion IDE (nixpkgs on Linux, Homebrew on Darwin)
   apps.virtualization.enable = true; # QEMU + UTM (Darwin) / VirtualBox (Linux)
   apps.opencode.enable = true; # CLI tool with gruvbox theme
+  apps.gemini-cli.enable = true;
   apps.dbeaver.enable = true; # DBeaver database tool (available in nixpkgs)
   apps.cap.enable = true; # Cap screen recorder
 

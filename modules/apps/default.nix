@@ -13,6 +13,7 @@
     ./git
     ./gh
     ./opencode
+    ./gemini-cli
     ./development-tools
     ./vscode
     ./zed
