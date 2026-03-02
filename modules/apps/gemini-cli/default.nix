@@ -22,7 +22,7 @@ in
         environment.systemPackages = [ pkgs.gemini-cli ];
       })
       (lib.optionalAttrs isDarwin {
-        homebrew.packages = [ "gemini-cli" ];
+        homebrew.brews = [ "gemini-cli" ];
       })
     ]
   );
