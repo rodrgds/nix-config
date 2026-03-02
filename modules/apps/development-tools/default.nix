@@ -14,10 +14,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home-manager.users.${username} = {
-      home.packages = with pkgs; [
-        nil # Nix language server
-      ];
-    };
+    environment.systemPackages = with pkgs; [
+      nil # Nix language server
+    ];
   };
 }

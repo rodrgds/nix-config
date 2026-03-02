@@ -74,6 +74,7 @@
     ./teamspeak
     ./thunderbird
     ./anydesk
+    ./maestro
 
     # Productivity
     ./obsidian

@@ -110,6 +110,7 @@
   apps.teamspeak.enable = true;
   apps.thunderbird.enable = true;
   apps.anydesk.enable = true;
+  apps.maestro.enable = true;
 
   # Productivity
   apps.obsidian.enable = true;
