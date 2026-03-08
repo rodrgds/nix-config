@@ -39,8 +39,8 @@ in
               rgo-laptop = {
                 id = "ZEVRZIA-4O22UC5-5XPMEAD-HGW3WEZ-F7J6ZTU-USJCCNC-WAB72VT-QIOL6QV";
               };
-              rocco-vps = {
-                id = "TID5NPM-JQDU3NI-NTXRN63-JBTZCZ5-7NZJDDC-LOSUGAI-JH37KGI-C46INQC";
+              rgo-nas = {
+                id = "MH2IIBT-WT5WC3P-SLHCOFN-U5VAOEX-JGVK33L-PIBBT5Y-PWGXBY4-NVQBZA5";
               };
             };
           };
