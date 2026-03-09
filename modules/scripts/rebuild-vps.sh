@@ -8,6 +8,7 @@ nixos-rebuild switch \
   --flake "$HOME/.config/home#rgo-vps" \
   --target-host "rgo@rgo-vps" \
   --build-host "rgo@rgo-vps" \
-  --sudo
+  --sudo \
+  --ask-sudo-password
 
 echo "✅ Deployment complete!"

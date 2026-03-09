@@ -39,8 +39,10 @@ let
     # Vaultwarden
     "vaultwarden_admin_token"
     # Shlink
-    "shlink_api_key"
     "shlink_db_password"
+    "shlink_db_user"
+    "shlink_db_name"
+    "shlink_geolite_license_key"
     # YOURLS
     "yourls_db_user"
     "yourls_db_password"

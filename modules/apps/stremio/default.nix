@@ -20,7 +20,7 @@ in
     lib.mkMerge [
       # Linux: Install via nixpkgs
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.stremio ];
+        environment.systemPackages = [ pkgs.stremio-linux-shell ];
       })
       # Darwin: Install via Homebrew (only if on Darwin)
       (lib.optionalAttrs isDarwin {

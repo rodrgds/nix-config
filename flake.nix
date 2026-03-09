@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/master";
-    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-24.11";
+    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.11";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -65,7 +65,7 @@
     };
 
     handy = {
-      url = "github:cjpais/Handy";
+      url = "github:cjpais/Handy/2361b8511ccd91794bbbdba98f81742fdc6f7887";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
