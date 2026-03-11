@@ -22,9 +22,8 @@ in
         settings = {
           show_banner = false;
           use_grid_icons = true;
-          footer_mode = "25";
           float_precision = 2;
-          buffer_editor = "vim";
+          buffer_editor = "neovim";
           use_ansi_coloring = true;
           bracketed_paste = true;
           edit_mode = "vi";
