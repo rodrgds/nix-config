@@ -17,17 +17,17 @@ in
 
   config = lib.mkIf cfg.enable {
     home-manager.users.${username} = {
+      home.shell.enableNushellIntegration = true;
+
       programs.nushell = {
         enable = true;
         settings = {
           show_banner = false;
-          use_grid_icons = true;
           float_precision = 2;
           buffer_editor = "neovim";
           use_ansi_coloring = true;
           bracketed_paste = true;
           edit_mode = "vi";
-          shell_integration = true;
         };
         environmentVariables = {
           OPENCODE_ENABLE_EXA = "1";
@@ -35,6 +35,10 @@ in
         // lib.optionalAttrs isDarwin {
           PATH_EXTRA = "/opt/homebrew/bin:/opt/homebrew/sbin";
         };
+        extraConfig = ''
+          mkdir ($nu.data-dir | path join "vendor/autoload")
+          starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
+        '';
       };
     };
   };
