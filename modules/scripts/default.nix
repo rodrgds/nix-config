@@ -54,7 +54,7 @@ let
     "h" = "cd ${homeDir}/.config/home";
     "v" = "nvim";
     "glog" = "git log --oneline --graph --decorate --all";
-    "ll" = "ls -laFh";
+    "ll" = "ls -la";
     "rebuild" = "bash ${homeDir}/.config/home/modules/scripts/rebuild.sh";
     "rebuild-vps" = "${homeDir}/.config/home/modules/scripts/rebuild-vps.sh";
 
@@ -104,9 +104,6 @@ in
 
         # Set up shell aliases via home-manager (generic, works with all shells)
         home.shellAliases = commonAliases;
-
-        # Nushell-specific aliases
-        programs.nushell.shellAliases = commonAliases;
 
         # Add scripts to PATH
         home.sessionPath = [ "${homeDir}/.config/home/scripts" ];
