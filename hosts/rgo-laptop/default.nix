@@ -42,7 +42,7 @@
 
   # Terminal & Shell
   apps.ghostty.enable = true; # Config via home-manager
-  apps.fish.enable = true; # Gruvbox plugin, fzf, macOS Homebrew PATH setup
+  apps.nushell.enable = true; # Gruvbox plugin, fzf, macOS Homebrew PATH setup
   apps.git.enable = true; # Git config, osxkeychain credential helper
   apps.gh.enable = true; # GitHub CLI
   apps.ssh.enable = true; # SSH client configuration

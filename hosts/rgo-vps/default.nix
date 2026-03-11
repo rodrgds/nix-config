@@ -65,8 +65,8 @@
   vps.deploy.enable = false;
   vps.immich-public-proxy.enable = false;
 
-  # Your user module sets fish as the login shell.
-  programs.fish.enable = true;
+  # Your user module sets nushell as the login shell.
+  apps.nushell.enable = true;
 
   # Bootloader for Hetzner Cloud (BIOS/legacy boot)
   # Note: Using mkForce to override any defaults

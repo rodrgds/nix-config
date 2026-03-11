@@ -26,7 +26,7 @@ in
         "plugdev"
         "dialout"
       ];
-      shell = pkgs.fish;
+      shell = pkgs.nushell;
     };
 
     services.getty.autologinUser = username;

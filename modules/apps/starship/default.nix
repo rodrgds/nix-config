@@ -20,7 +20,7 @@ in
     home-manager.users.${username} = {
       programs.starship = {
         enable = true;
-        enableFishIntegration = true;
+        enableNushellIntegration = true;
         settings = {
           # Gruvbox Rainbow Preset
           # Inspired by Pastel Powerline and Tokyo Night

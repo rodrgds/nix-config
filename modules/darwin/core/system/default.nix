@@ -110,18 +110,18 @@ in
       };
     };
 
-    # Enable Fish shell
-    programs.fish.enable = true;
+    # Enable Nushell shell
+    programs.nushell.enable = true;
 
-    # User configuration - set Fish as the default shell
+    # User configuration - set Nushell as the default shell
     users.users.${username} = {
       name = username;
       home = "/Users/${username}";
-      shell = pkgs.fish;
+      shell = pkgs.nushell;
     };
 
-    # Ensure Fish is in /etc/shells and set as login shell
-    environment.shells = [ pkgs.fish ];
+    # Ensure Nushell is in /etc/shells and set as login shell
+    environment.shells = [ pkgs.nushell ];
 
     # Home-manager state version
     home-manager.users.${username} = {
