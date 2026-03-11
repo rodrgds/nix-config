@@ -30,7 +30,7 @@ in
           edit_mode = "vi";
           shell_integration = true;
         };
-        envVariables = {
+        environmentVariables = {
           OPENCODE_ENABLE_EXA = "1";
         } // lib.optionalAttrs isDarwin {
           PATH_EXTRA = "/opt/homebrew/bin:/opt/homebrew/sbin";
