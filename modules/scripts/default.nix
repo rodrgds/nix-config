@@ -105,6 +105,9 @@ in
         # Set up shell aliases via home-manager (generic, works with all shells)
         home.shellAliases = commonAliases;
 
+        # Nushell-specific aliases
+        programs.nushell.shellAliases = commonAliases;
+
         # Add scripts to PATH
         home.sessionPath = [ "${homeDir}/.config/home/scripts" ];
       };
