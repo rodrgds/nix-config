@@ -2,9 +2,7 @@
 {
   lib,
   config,
-  pkgs,
   username,
-  system,
   constants,
   ...
 }:
@@ -77,6 +75,27 @@ let
     "copy" = "xclip -selection clipboard";
     "rescrobbled-logs" = "journalctl --user -u rescrobbled.service -f";
   };
+
+  installedScripts = lib.mapAttrs' (
+    name: content:
+    lib.nameValuePair "scripts/${name}" {
+      text = content;
+      executable = true;
+    }
+  ) scripts;
+
+  mkHomeConfig = aliases: {
+    home.file = installedScripts;
+
+    # Set up shell aliases via home-manager (generic, works with all shells)
+    home.shellAliases = aliases;
+
+    # Nushell needs its own alias mapping.
+    programs.nushell.shellAliases = aliases;
+
+    # Add scripts to PATH
+    home.sessionPath = [ "${homeDir}/.config/home/scripts" ];
+  };
 in
 {
   options.scripts = {
@@ -93,36 +112,11 @@ in
     }
     # Merge with Darwin-specific configuration
     // lib.optionalAttrs isDarwin {
-      home-manager.users.${username} = {
-        home.file = lib.mapAttrs' (
-          name: content:
-          lib.nameValuePair "scripts/${name}" {
-            text = content;
-            executable = true;
-          }
-        ) scripts;
-
-        # Set up shell aliases via home-manager (generic, works with all shells)
-        home.shellAliases = commonAliases;
-
-        # Unfortunately nushell needs this:
-        programs.nushell.shellAliases = commonAliases;
-
-        # Add scripts to PATH
-        home.sessionPath = [ "${homeDir}/.config/home/scripts" ];
-      };
+      home-manager.users.${username} = mkHomeConfig commonAliases;
     }
     # Merge with Linux-specific home-manager configuration
     // lib.optionalAttrs isLinux {
-      home-manager.users.${username} = {
-        home.file = lib.mapAttrs' (
-          name: content:
-          lib.nameValuePair "scripts/${name}" {
-            text = content;
-            executable = true;
-          }
-        ) scripts;
-      };
+      home-manager.users.${username} = mkHomeConfig linuxAliases;
     }
   );
 }
