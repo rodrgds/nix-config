@@ -92,13 +92,13 @@ in
           shell_integration = true;
           render_right_prompt_on_last_line = false;
           hooks = {
-            pre_prompt = [{ code = "" }];
-            pre_execution = [{ code = "" }];
+            pre_prompt = [{ code = ""; }];
+            pre_execution = [{ code = ""; }];
             env_change = {
-              GOPATH = [{ code = "" }];
+              GOPATH = [{ code = ""; }];
             };
             display_output = "if (term size).columns >= 100 { table -e } else { table }";
-            command_not_found = { code = "" };
+            command_not_found = [{ code = ""; }];
           };
           menus = [
             {
