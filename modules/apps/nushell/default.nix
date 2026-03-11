@@ -30,17 +30,15 @@ in
           edit_mode = "vi";
           shell_integration = true;
         };
-        environmentVariables = {
-          OPENCODE_ENABLE_EXA = "1";
-        } // lib.optionalAttrs isDarwin {
-          PATH_EXTRA = "/opt/homebrew/bin:/opt/homebrew/sbin";
-        };
-
-        shellAliases = {
-          ll = "ls -la";
-          la = "ls -a";
-          l = "ls -l";
-        };
+        environmentVariables =
+          {
+            OPENCODE_ENABLE_EXA = "1";
+          }
+            lib.optionalAttrs
+            isDarwin
+            {
+              PATH_EXTRA = "/opt/homebrew/bin:/opt/homebrew/sbin";
+            };
       };
     };
   };

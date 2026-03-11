@@ -5,6 +5,7 @@
     # Terminal & Shell
     ./ghostty
     ./alacritty
+    ./fish
     ./nushell
     ./starship
     ./ssh
