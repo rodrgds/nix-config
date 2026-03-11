@@ -110,18 +110,12 @@ in
       };
     };
 
-    # Enable Nushell shell
-    programs.nushell.enable = true;
-
     # User configuration - set Nushell as the default shell
     users.users.${username} = {
       name = username;
       home = "/Users/${username}";
       shell = pkgs.nushell;
     };
-
-    # Ensure Nushell is in /etc/shells and set as login shell
-    environment.shells = [ pkgs.nushell ];
 
     # Home-manager state version
     home-manager.users.${username} = {

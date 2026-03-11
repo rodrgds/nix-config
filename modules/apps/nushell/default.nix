@@ -16,8 +16,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    programs.nushell.enable = lib.mkIf (!isDarwin) true;
-
     home-manager.users.${username} = {
       programs.nushell = {
         enable = true;
