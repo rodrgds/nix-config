@@ -40,7 +40,7 @@ in
                 id = "ZEVRZIA-4O22UC5-5XPMEAD-HGW3WEZ-F7J6ZTU-USJCCNC-WAB72VT-QIOL6QV";
               };
               rgo-openclaw = {
-                id = "MH2IIBT-WT5WC3P-SLHCOFN-U5VAOEX-JGVK33L-PIBBT5Y-PWGXBY4-NVQBZA5";
+                id = "X3J2265-7PNVAYL-NHNAAJC-OZLWWGQ-QIGL7X2-HIVIDP6-PGEMPIU-LQIFFQB";
               };
             };
           };
