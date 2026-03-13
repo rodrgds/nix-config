@@ -3,12 +3,10 @@
   config,
   pkgs,
   username,
-  constants,
   ...
 }:
 let
   cfg = config.apps.nushell;
-  inherit (constants) isDarwin;
 in
 {
   options.apps.nushell = {
@@ -21,24 +19,34 @@ in
 
       programs.nushell = {
         enable = true;
+
         settings = {
           show_banner = false;
-          float_precision = 2;
-          buffer_editor = "neovim";
+          buffer_editor = "nvim";
           use_ansi_coloring = true;
           bracketed_paste = true;
           edit_mode = "vi";
         };
+
         environmentVariables = {
           OPENCODE_ENABLE_EXA = "1";
         };
-        extraConfig = ''
-          mkdir ($nu.data-dir | path join "vendor/autoload")
-          starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
-        ''
-        + lib.optionalString isDarwin ''
-          # Add Homebrew to PATH on macOS
-          $env.PATH = ($env.PATH | split row ":" | prepend ["/opt/homebrew/bin" "/opt/homebrew/sbin"] | uniq)
+
+        extraEnv = lib.optionalString pkgs.stdenv.isDarwin ''
+          $env.PATH = (
+            $env.PATH
+            | default []
+            | if ($in | describe) == "string" { split row ":" } else { $in }
+            | prepend [
+                "/run/current-system/sw/bin"
+                "/nix/var/nix/profiles/default/bin"
+                ($env.HOME + "/.nix-profile/bin")
+                "/etc/profiles/per-user/${username}/bin"
+                "/opt/homebrew/bin"
+                "/opt/homebrew/sbin"
+              ]
+            | uniq
+          )
         '';
       };
     };

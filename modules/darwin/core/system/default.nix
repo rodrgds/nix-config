@@ -120,6 +120,8 @@ in
     # Ensure Nushell is in /etc/shells and set as login shell
     environment.shells = [ pkgs.nushell ];
 
+    home-manager.backupFileExtension = "hm-bak";
+
     # Home-manager state version
     home-manager.users.${username} = {
       home.stateVersion = "25.05";
