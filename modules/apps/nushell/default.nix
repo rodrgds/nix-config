@@ -31,13 +31,14 @@ in
         };
         environmentVariables = {
           OPENCODE_ENABLE_EXA = "1";
-        }
-        // lib.optionalAttrs isDarwin {
-          PATH_EXTRA = "/opt/homebrew/bin:/opt/homebrew/sbin";
         };
         extraConfig = ''
           mkdir ($nu.data-dir | path join "vendor/autoload")
           starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
+        ''
+        + lib.optionalString isDarwin ''
+          # Add Homebrew to PATH on macOS
+          $env.PATH = ($env.PATH | split row ":" | prepend ["/opt/homebrew/bin" "/opt/homebrew/sbin"] | uniq)
         '';
       };
     };
