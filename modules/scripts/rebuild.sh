@@ -102,7 +102,7 @@ elif [ "$REBUILD_TARGET" = "laptop" ]; then
     # Check if darwin-rebuild is available
     if ! command -v darwin-rebuild &> /dev/null; then
         echo "darwin-rebuild not found. Installing..."
-        if ! nix run nix-darwin/master#darwin-rebuild -- switch --flake .#rgo-laptop; then
+        if ! /run/current-system/sw/bin/nix run nix-darwin/master#darwin-rebuild -- switch --flake .#rgo-laptop; then
             echo "✗ Initial build failed!"
             exit 1
         fi
