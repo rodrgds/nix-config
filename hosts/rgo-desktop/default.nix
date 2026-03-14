@@ -18,7 +18,6 @@
   core.nix.enable = true;
   core.users.enable = true;
   core.locale.enable = true;
-  core.environment.enable = true;
   core.security.enable = true;
   core.system.enable = true;
   core.audio.enable = true;
