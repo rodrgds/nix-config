@@ -38,7 +38,6 @@ in
     ./networking
     ./boot
     ./audio
-    ./environment
     ./locale
     ./xserver
     ./nvidia

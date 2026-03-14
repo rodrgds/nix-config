@@ -8,6 +8,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    environment.pathsToLink = [ "/libexec" ];
+
     nix.settings.experimental-features = [
       "nix-command"
       "flakes"

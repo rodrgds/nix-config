@@ -23,8 +23,8 @@ in
         environment.systemPackages = [ pkgs.android-studio ];
 
         environment.sessionVariables = {
-          ANDROID_HOME = "$HOME/.android/sdk";
-          ANDROID_SDK_ROOT = "$HOME/.android/sdk";
+          ANDROID_HOME = "$HOME/Android/Sdk";
+          ANDROID_SDK_ROOT = "$HOME/Android/Sdk";
           CAPACITOR_ANDROID_STUDIO_PATH = "${pkgs.android-studio}/bin/android-studio";
         };
 
