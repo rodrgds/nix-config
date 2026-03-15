@@ -18,6 +18,7 @@
     ./development-tools
     ./vscode
     ./zed
+    ./antigravity
     ./arduino
     ./nodejs
     ./bun
