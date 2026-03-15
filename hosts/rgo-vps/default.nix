@@ -97,6 +97,7 @@
     openssh.authorizedKeys.keys = [
       constants.sshPublicKeys.rgo-laptop
       constants.sshPublicKeys.rgo-desktop
+      constants.sshPublicKeys.rgo-termix
     ];
   };
 
