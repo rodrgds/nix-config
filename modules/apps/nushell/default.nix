@@ -28,10 +28,6 @@ in
           edit_mode = "vi";
         };
 
-        environmentVariables = {
-          OPENCODE_ENABLE_EXA = "1";
-        };
-
         extraEnv = lib.optionalString pkgs.stdenv.isDarwin ''
           $env.PATH = (
             $env.PATH
