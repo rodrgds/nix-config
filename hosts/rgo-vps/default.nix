@@ -56,6 +56,7 @@
     enable = true;
     extraDomains = [ "ref.rgo.pt" ];
   };
+  vps.termix.enable = true;
   vps.postiz.enable = false; # enable in the future, but the system starts thrashing because of elasticsearch (it should have more RAM than it currently has, so I need to upgrade the machine)
   vps.ghost.enable = false;
   vps.unieasy.enable = false;

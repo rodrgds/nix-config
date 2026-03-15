@@ -24,6 +24,7 @@
     ./directus
     ./trndb
     ./immich-public-proxy
+    ./termix
   ];
 
   options.vps.enableAll = lib.mkEnableOption "Enable all VPS services (Caddy reverse proxy + containerized apps)";
