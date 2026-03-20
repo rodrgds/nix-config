@@ -22,9 +22,22 @@ in
       {
         programs.opencode = {
           enable = true;
+          skills = {
+            nushell = builtins.readFile ./nushell-skill.md;
+          };
           settings = {
             theme = "gruvbox";
             autoupdate = true;
+            mcp = {
+              svelte = {
+                type = "local";
+                command = [
+                  "npx"
+                  "-y"
+                  "@sveltejs/mcp"
+                ];
+              };
+            };
           };
         };
 

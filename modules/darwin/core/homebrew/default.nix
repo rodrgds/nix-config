@@ -39,7 +39,6 @@ in
         "mas" # Mac App Store CLI
       ];
 
-      
     };
   };
 }
