@@ -16,6 +16,9 @@
     ./opencode
     ./gemini-cli
     ./development-tools
+    ./graphviz
+    ./doxygen
+    ./golang
     ./vscode
     ./zed
     ./antigravity

@@ -52,6 +52,9 @@
 
   # Development
   apps.development-tools.enable = true;
+  apps.graphviz.enable = true;
+  apps.doxygen.enable = true;
+  apps.golang.enable = true;
   apps.vscode.enable = true;
   apps.zed.enable = true;
   apps.antigravity.enable = true;

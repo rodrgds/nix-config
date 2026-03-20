@@ -51,6 +51,9 @@
 
   # Development
   apps.development-tools.enable = true;
+  apps.graphviz.enable = true;
+  apps.doxygen.enable = true;
+  apps.golang.enable = true;
   apps.nodejs.enable = true; # Node.js with npm config
   apps.bun.enable = true; # Bun JavaScript runtime
   apps.python.enable = true; # Python with pip config
