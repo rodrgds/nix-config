@@ -39,10 +39,7 @@ in
         "mas" # Mac App Store CLI
       ];
 
-      # Darwin-specific Homebrew settings
-      caskArgs = {
-        no_quarantine = true;
-      };
+      
     };
   };
 }

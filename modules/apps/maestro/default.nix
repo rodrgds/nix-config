@@ -22,7 +22,8 @@ in
         environment.systemPackages = [ pkgs.maestro ];
       })
       (lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "maestro" ];
+        homebrew.taps = [ "mobile-dev-inc/tap" ];
+        homebrew.brews = [ "mobile-dev-inc/tap/maestro" ];
       })
     ]
   );
