@@ -117,7 +117,7 @@ in
           EDITOR = "nvim";
           VISUAL = "nvim";
           PAGER = "less -R";
-          LESS = "-R --use-color -Dd+r$Du+b";
+          LESS = "-R";
         };
 
         # Local variables
