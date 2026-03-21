@@ -93,6 +93,9 @@ let
     # Nushell needs its own alias mapping.
     programs.nushell.shellAliases = aliases;
 
+    # Zsh aliases
+    programs.zsh.shellAliases = aliases;
+
     # Add scripts to PATH
     home.sessionPath = [ "${homeDir}/.config/home/scripts" ];
   };

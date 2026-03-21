@@ -26,7 +26,7 @@ in
         "plugdev"
         "dialout"
       ];
-      shell = pkgs.nushell;
+      shell = pkgs.zsh;
     };
 
     services.getty.autologinUser = username;

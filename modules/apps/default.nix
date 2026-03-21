@@ -7,6 +7,7 @@
     ./alacritty
     ./fish
     ./nushell
+    ./zsh
     ./starship
     ./ssh
 

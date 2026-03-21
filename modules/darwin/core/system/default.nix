@@ -110,15 +110,15 @@ in
       };
     };
 
-    # User configuration - set Nushell as the default shell
+    # User configuration - set Zsh as the default shell
     users.users.${username} = {
       name = username;
       home = "/Users/${username}";
-      shell = pkgs.nushell;
+      shell = pkgs.zsh;
     };
 
-    # Ensure Nushell is in /etc/shells and set as login shell
-    environment.shells = [ pkgs.nushell ];
+    # Ensure Zsh is in /etc/shells and set as login shell
+    environment.shells = [ pkgs.zsh ];
 
     home-manager.backupFileExtension = "hm-bak";
 

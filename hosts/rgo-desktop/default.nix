@@ -42,7 +42,7 @@
 
   # Enable apps
   apps.ghostty.enable = true;
-  apps.nushell.enable = true;
+  apps.zsh.enable = true;
   apps.starship.enable = true;
   apps.git.enable = true;
   apps.gh.enable = true;

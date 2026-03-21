@@ -38,8 +38,6 @@ in
         # Disable fish greeting
         shellInit = ''
           set -g fish_greeting ""
-
-          set -gx OPENCODE_ENABLE_EXA 1
         ''
         + lib.optionalString isDarwin ''
           # Add Homebrew to PATH on macOS

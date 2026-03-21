@@ -42,12 +42,12 @@
 
   # Terminal & Shell
   apps.ghostty.enable = true; # Config via home-manager
-  apps.nushell.enable = true; # Gruvbox plugin, fzf, macOS Homebrew PATH setup
+  apps.zsh.enable = true; # Gruvbox theme, syntax highlighting, autosuggestions
   apps.git.enable = true; # Git config, osxkeychain credential helper
   apps.gh.enable = true; # GitHub CLI
   apps.ssh.enable = true; # SSH client configuration
   apps.neovim.enable = true; # Neovim with EDITOR env var
-  apps.starship.enable = true; # Starship prompt with Fish integration
+  apps.starship.enable = true; # Starship prompt with Zsh integration
 
   # Development
   apps.development-tools.enable = true;
