@@ -34,13 +34,15 @@ in
         nixpkgs.config.android_sdk.accept_license = true;
       })
       (lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "android-studio" ];
+        homebrew.casks = [ "android-studio" "temurin@21" ];
 
         environment.variables = {
           ANDROID_HOME = "$HOME/Library/Android/sdk";
           ANDROID_SDK_ROOT = "$HOME/Library/Android/sdk";
           CAPACITOR_ANDROID_STUDIO_PATH = "/Applications/Android Studio.app/Contents/MacOS/studio";
+          JAVA_HOME = "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home";
         };
+
       })
     ]
   );
