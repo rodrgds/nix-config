@@ -36,7 +36,8 @@ in
                 enable = true;
                 autoStart = true;
                 environment = {
-                  USE_LAYER_SHELL = "0";
+                  # TODO: window keeps going down as I open it idk why!
+                  USE_LAYER_SHELL = "1";
                   DISPLAY = ":0";
                   PATH = "/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin";
                   XDG_RUNTIME_DIR = "/run/user/1000";
@@ -48,6 +49,25 @@ in
                 consider_preedit = true;
                 pop_to_root_on_close = true;
                 search_files_in_root = true;
+
+                # Prevent drift by anchoring position and disabling persistence
+                remember_last_position = false;
+                launcher_window = {
+                  opacity = constants.display.opacity;
+                  position = {
+                    anchor = "top-center";
+                    offset_y = 0;
+                  };
+                };
+
+                # TODO: make this work haha
+                favourites = [
+                  "vscode-recents:open-recent"
+                  "clipboard-history:show"
+                  "it-tools:it-tools"
+                  "port-killer:kill-port"
+                ];
+
                 font = {
                   normal = {
                     size = constants.fonts.sizes.large;
@@ -59,9 +79,6 @@ in
                     name = "gruvbox-custom";
                     icon_theme = "Papirus";
                   };
-                };
-                launcher_window = {
-                  opacity = constants.display.opacity;
                 };
                 extensions = with inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system}; [
                   nix
