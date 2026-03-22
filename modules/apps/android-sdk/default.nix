@@ -11,7 +11,7 @@
 let
   cfg = config.apps.android-sdk;
   hostSystem = pkgs.stdenv.hostPlatform.system;
-  inherit (constants) isLinux;
+  inherit (constants) isLinux isDarwin;
 in
 {
   options.apps.android-sdk = {
@@ -34,6 +34,9 @@ in
             ]
           ))
         ];
+      })
+      (lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "android-platform-tools" ];
       })
     ]
   );
