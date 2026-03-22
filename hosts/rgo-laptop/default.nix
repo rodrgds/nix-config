@@ -67,6 +67,8 @@
   apps.gemini-cli.enable = true;
   apps.dbeaver.enable = true; # DBeaver database tool (available in nixpkgs)
   apps.cap.enable = true; # Cap screen recorder
+  apps.android-studio.enable = true;
+  apps.android-sdk.enable = true;
 
   # Communication
   apps.telegram.enable = true; # Telegram Desktop (available in nixpkgs)

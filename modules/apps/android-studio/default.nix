@@ -10,7 +10,7 @@
 let
   cfg = config.apps.android-studio;
   hostSystem = pkgs.stdenv.hostPlatform.system;
-  inherit (constants) isLinux;
+  inherit (constants) isLinux isDarwin;
 in
 {
   options.apps.android-studio = {
@@ -32,6 +32,15 @@ in
         };
 
         nixpkgs.config.android_sdk.accept_license = true;
+      })
+      (lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "android-studio" ];
+
+        environment.variables = {
+          ANDROID_HOME = "$HOME/Library/Android/sdk";
+          ANDROID_SDK_ROOT = "$HOME/Library/Android/sdk";
+          CAPACITOR_ANDROID_STUDIO_PATH = "/Applications/Android Studio.app/Contents/MacOS/studio";
+        };
       })
     ]
   );
