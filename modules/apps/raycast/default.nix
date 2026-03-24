@@ -17,7 +17,7 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       # Only available on Darwin via Homebrew
-      (lib.optionalAttrs (config.nixpkgs.hostPlatform.isDarwin or false) {
+      (lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin or false) {
         homebrew.casks = [ "raycast" ];
       })
       # Note: Not available for Linux (use rofi or similar)

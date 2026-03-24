@@ -34,7 +34,10 @@ in
         nixpkgs.config.android_sdk.accept_license = true;
       })
       (lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "android-studio" "temurin@21" ];
+        homebrew.casks = [
+          "android-studio"
+          "temurin@21"
+        ];
 
         environment.variables = {
           ANDROID_HOME = "$HOME/Library/Android/sdk";

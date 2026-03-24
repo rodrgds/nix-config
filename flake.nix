@@ -114,6 +114,7 @@
               system
               ;
             constants = mkConstants system;
+            devenvPkg = inputs.devenv.packages.${system}.default;
           };
           modules = [
             # Apply overlays
