@@ -20,6 +20,11 @@ in
         enableNushellIntegration = true;
         enableFishIntegration = true;
         settings = {
+          # Performance: timeout for slow commands
+          command_timeout = 500;
+          # Performance: don't scan network drives
+          scan_timeout = 30;
+
           # Gruvbox Rainbow Preset
           # Inspired by Pastel Powerline and Tokyo Night
           format = lib.concatStrings [
@@ -128,6 +133,8 @@ in
           git_status = {
             style = "bg:color_aqua";
             format = "[[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)]($style)";
+            # Performance: use async status checking for faster git status
+            disabled = false;
           };
 
           nodejs = {

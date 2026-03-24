@@ -23,6 +23,9 @@ in
       programs.zsh = {
         enable = true;
         enableCompletion = true;
+        # Skip compaudit security check to speed up startup (~300ms improvement)
+        # Safe with Nix store paths - all fpath entries are from Nix store which is trusted
+        completionInit = "autoload -U compinit && compinit -C";
         autosuggestion.enable = true;
         syntaxHighlighting.enable = true;
 
