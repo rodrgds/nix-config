@@ -23,7 +23,8 @@ in
       phpExtensions.curl
       phpExtensions.zip
       phpExtensions.pdo
-      phpExtensions.sqlite
+      phpExtensions.pdo_sqlite
+      phpExtensions.sqlite3
       phpExtensions.mysqlnd
       phpExtensions.redis
     ];
