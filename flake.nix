@@ -54,6 +54,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    devenv = {
+      url = "github:cachix/devenv";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     edu = {
       url = "github:rodrgds/edu";
       flake = false;
@@ -163,6 +168,7 @@
               system
               ;
             constants = mkConstants system;
+            devenvPkg = inputs.devenv.packages.${system}.default;
           };
           modules = [
             # Apply overlays

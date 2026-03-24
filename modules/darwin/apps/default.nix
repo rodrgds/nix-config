@@ -8,6 +8,5 @@
     ./jankyborders
     ./m-cli
     ./raycast
-    ./applesimutils
   ];
 }

@@ -70,7 +70,6 @@
   apps.cap.enable = true; # Cap screen recorder
   apps.android-studio.enable = true;
    apps.android-sdk.enable = true;
-   apps.applesimutils.enable = true; # AppleSimUtils for iOS Simulator automation (e2e testing)
 
   # Communication
   apps.telegram.enable = true; # Telegram Desktop (available in nixpkgs)
