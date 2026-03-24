@@ -2,6 +2,7 @@
   lib,
   config,
   pkgs,
+  devenvPkg,
   username,
   ...
 }:
@@ -14,9 +15,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [
-      nil # Nix language server
-      devenv
+    environment.systemPackages = [
+      pkgs.nil # Nix language server
+      pkgs.sqlite # SQLite database CLI
+      devenvPkg
     ];
   };
 }

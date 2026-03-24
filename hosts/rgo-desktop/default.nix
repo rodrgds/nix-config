@@ -63,6 +63,7 @@
   apps.bun.enable = true;
   apps.openjdk.enable = true;
   apps.python.enable = true;
+  apps.php.enable = true;
   apps.android-studio.enable = true;
   apps.android-sdk.enable = true;
   apps.stripe-cli.enable = true;

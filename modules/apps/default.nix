@@ -28,6 +28,7 @@
     ./bun
     ./openjdk
     ./python
+    ./php
     ./android-studio
     ./android-sdk
     ./clion
