@@ -111,6 +111,8 @@ let
     "openai_api_key"
     "location_latitude"
     "location_longitude"
+    "context7_api_key"
+    "github_pat"
   ];
 
   # Build secrets attrset from list of names

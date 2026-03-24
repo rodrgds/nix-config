@@ -18,13 +18,13 @@ in
     environment.systemPackages = [ pkgs.opencode ];
 
     home-manager.users.${username} =
-      { ... }:
+      { config, ... }:
       {
         programs.opencode = {
           enable = true;
-          skills = {
-            nushell = builtins.readFile ./nushell-skill.md;
-          };
+          skills = lib.mapAttrs (name: _: builtins.readFile (./skills + "/${name}")) (
+            lib.attrsets.filterAttrs (_: type: type == "regular") (builtins.readDir ./skills)
+          );
           settings = {
             theme = "gruvbox";
             autoupdate = true;
@@ -36,6 +36,13 @@ in
                   "-y"
                   "@sveltejs/mcp"
                 ];
+              };
+              context7 = {
+                type = "remote";
+                url = "https://mcp.context7.com/mcp";
+                headers = {
+                  CONTEXT7_API_KEY = config.sops.placeholder.context7_api_key;
+                };
               };
             };
           };

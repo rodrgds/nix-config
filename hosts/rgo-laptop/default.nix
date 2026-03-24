@@ -17,6 +17,12 @@
   darwin.core.homebrew.enable = true;
   darwin.core.karabiner.enable = true;
 
+  # Enable Nix configuration (cross-platform)
+  core.nix.enable = true;
+
+  # Enable secrets management with sops-nix
+  secrets.enable = true;
+
   # Enable scripts (rebuild command and aliases)
   scripts.enable = true;
 

@@ -27,10 +27,10 @@ in
   imports = [
     # Cross-platform modules
     ./downloads-cleanup
+    ./nix
   ]
   # Linux-only modules (NixOS-specific)
   ++ lib.optionals isLinux [
-    ./nix
     ./users
     ./security
     ./system
