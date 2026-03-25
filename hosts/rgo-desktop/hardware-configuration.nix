@@ -23,7 +23,10 @@
     "sd_mod"
   ];
   boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-amd" ];
+  boot.kernelModules = [
+    "kvm-amd"
+    "r8169"
+  ];
   boot.extraModulePackages = [ ];
 
   fileSystems."/" = {
