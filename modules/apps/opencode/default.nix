@@ -47,7 +47,7 @@ in
               exa = {
                 type = "remote";
                 url = "https://mcp.exa.ai/mcp";
-                env = {
+                headers = {
                   EXA_API_KEY = config.sops.placeholder.exa_api_key;
                 };
               };
