@@ -20,9 +20,11 @@ in
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
         environment.systemPackages = [ pkgs.gemini-cli ];
+        environment.variables.GEMINI_YOLO_MODE = "true";
       })
       (lib.optionalAttrs isDarwin {
         homebrew.brews = [ "gemini-cli" ];
+        environment.variables.GEMINI_YOLO_MODE = "true";
       })
     ]
   );
