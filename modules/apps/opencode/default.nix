@@ -44,6 +44,13 @@ in
                   CONTEXT7_API_KEY = config.sops.placeholder.context7_api_key;
                 };
               };
+              exa = {
+                type = "remote";
+                url = "https://mcp.exa.ai/mcp";
+                env = {
+                  EXA_API_KEY = config.sops.placeholder.exa_api_key;
+                };
+              };
             };
           };
         };

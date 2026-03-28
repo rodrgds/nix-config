@@ -112,6 +112,7 @@ let
     "location_latitude"
     "location_longitude"
     "context7_api_key"
+    "exa_api_key"
     "github_pat"
   ];
 
