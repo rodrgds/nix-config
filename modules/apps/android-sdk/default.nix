@@ -6,6 +6,7 @@
   username,
   system,
   constants,
+  homeDir,
   ...
 }:
 let
@@ -38,8 +39,8 @@ in
         ];
 
         environment.sessionVariables = {
-          ANDROID_HOME = "${androidSdk}";
-          ANDROID_SDK_ROOT = "${androidSdk}";
+          ANDROID_HOME = "${homeDir}/Android/Sdk";
+          ANDROID_SDK_ROOT = "${homeDir}/Android/Sdk";
           CAPACITOR_ANDROID_STUDIO_PATH = "${pkgs.android-studio}/bin/android-studio";
           VK_ICD_FILENAMES = "/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json";
           ANDROID_EMULATOR_USE_SYSTEM_LIBS = "1";
