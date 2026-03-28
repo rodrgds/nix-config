@@ -6,13 +6,12 @@
   username,
   system,
   constants,
-  homeDir,
   ...
 }:
 let
   cfg = config.apps.android-sdk;
   hostSystem = pkgs.stdenv.hostPlatform.system;
-  inherit (constants) isLinux isDarwin;
+  inherit (constants) isLinux isDarwin homeDir;
 
   androidSdk = inputs.android-nixpkgs.sdk.${hostSystem} (
     sdkPkgs: with sdkPkgs; [
