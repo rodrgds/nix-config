@@ -35,6 +35,7 @@ in
           androidSdk
           pkgs.android-tools
           pkgs.apksigner
+          pkgs.glib
         ];
 
         environment.sessionVariables = {
