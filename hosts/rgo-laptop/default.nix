@@ -99,6 +99,9 @@
   # Handy
   apps.handy.enable = true; # Speech-to-text
 
+  # Tunnels
+  apps.ngrok.enable = true; # ngrok tunnel tool
+
   # ============================================
   # SYSTEM SERVICES (handled separately)
   # ============================================
