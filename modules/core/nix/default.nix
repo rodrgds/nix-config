@@ -7,7 +7,7 @@
 }:
 let
   cfg = config.core.nix;
-  inherit (constants) isLinux homeDir;
+  inherit (constants) isLinux isDarwin homeDir;
 in
 {
   options.core.nix = {
@@ -32,8 +32,15 @@ in
 
       nix.gc = {
         automatic = true;
-        dates = "weekly";
         options = "--delete-older-than 30d";
+      }
+      // lib.optionalAttrs isLinux {
+        dates = "weekly";
+      }
+      // lib.optionalAttrs isDarwin {
+        interval = {
+          Weekday = 0;
+        };
       };
 
       nix.settings.auto-optimise-store = true;
