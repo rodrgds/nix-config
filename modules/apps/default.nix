@@ -95,6 +95,7 @@
     ./thunar
     ./syncthing
     ./synology-drive
+    ./ngrok
 
     # Optional
     ./lamp

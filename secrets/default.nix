@@ -114,6 +114,7 @@ let
     "context7_api_key"
     "exa_api_key"
     "github_pat"
+    "ngrok_auth_token"
   ];
 
   # Build secrets attrset from list of names

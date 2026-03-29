@@ -124,6 +124,7 @@
   # System
   apps.core-packages.enable = true;
   apps.synology-drive.enable = true;
+  apps.ngrok.enable = true;
 
   # Opencode
   apps.opencode.enable = true;
