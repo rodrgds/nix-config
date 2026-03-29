@@ -10,7 +10,7 @@
 }:
 let
   cfg = config.secrets;
-  inherit (constants) homeDir;
+  inherit (constants) homeDir isLinux;
 
   # Determine secrets file and list based on host type
   vpsSecretsFile = ./vps-secrets.yaml;
@@ -152,14 +152,16 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       # System-level sops configuration (for VPS services)
-      (lib.mkIf cfg.isVps {
-        sops = {
-          age.keyFile = "/root/.config/sops/age/keys.txt";
-          defaultSopsFile = vpsSecretsFile;
-          # secrets = (buildSecrets vpsSecretNames) // openclawSecrets;
-          secrets = buildSecrets vpsSecretNames;
-        };
-      })
+      # Only available on NixOS/Linux - darwin doesn't have system-level sops
+      (lib.optionalAttrs isLinux (
+        lib.mkIf cfg.isVps {
+          sops = {
+            age.keyFile = "/root/.config/sops/age/keys.txt";
+            defaultSopsFile = vpsSecretsFile;
+            secrets = buildSecrets vpsSecretNames;
+          };
+        }
+      ))
 
       # Home-manager sops configuration (for personal machines only)
       # VPS doesn't need HM sops - system-level sops handles all VPS secrets,
