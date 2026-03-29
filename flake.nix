@@ -183,6 +183,8 @@
             ./modules/apps
             # Darwin-specific modules
             ./modules/darwin
+            # Secrets management
+            ./secrets
             # Host-specific configuration
             ./hosts/${hostname}
             # Homebrew integration
