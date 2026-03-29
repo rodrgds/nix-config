@@ -91,25 +91,6 @@ in
     # Primary user for nix-darwin
     system.primaryUser = username;
 
-    # Nix settings
-    nix = {
-      settings = {
-        experimental-features = "nix-command flakes";
-      };
-      gc = {
-        automatic = true;
-        interval = {
-          Weekday = 0;
-          Hour = 2;
-          Minute = 0;
-        };
-        options = "--delete-older-than 7d";
-      };
-      optimise = {
-        automatic = true;
-      };
-    };
-
     # User configuration - set Zsh as the default shell
     users.users.${username} = {
       name = username;
