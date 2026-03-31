@@ -64,6 +64,7 @@
   vps.websites.enable = false;
   vps.deploy.enable = false;
   vps.immich-public-proxy.enable = false;
+  vps.openpost.enable = true;
 
   # Your user module sets zsh as the login shell.
   apps.zsh.enable = true;

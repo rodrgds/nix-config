@@ -57,11 +57,11 @@ let
     "rebuild-vps" = "${homeDir}/.config/home/modules/scripts/rebuild-vps.sh";
 
     # Legacy aliases (default to main secrets.yaml)
-    "encrypt_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh encrypt secrets";
-    "decrypt_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt secrets";
-    "decrypt_to_file" =
-      "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt-to-file secrets";
-    "edit_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh edit secrets";
+    # "encrypt_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh encrypt secrets";
+    # "decrypt_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt secrets";
+    # "decrypt_to_file" =
+    #   "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt-to-file secrets";
+    # "edit_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh edit secrets";
 
     # New flexible aliases - usage: decrypt secrets | decrypt vps-secrets
     "decrypt" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh decrypt";

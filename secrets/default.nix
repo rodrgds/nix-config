@@ -102,6 +102,16 @@ let
     # "openclaw_telegram_token"
     # "openclaw_zai_api_key"
     # "openclaw_gateway_token"
+    # OpenPost
+    "openpost_jwt_secret"
+    "openpost_encryption_key"
+    "openpost_twitter_client_id"
+    "openpost_twitter_client_secret"
+    "openpost_linkedin_client_id"
+    "openpost_linkedin_client_secret"
+    "openpost_threads_client_id"
+    "openpost_threads_client_secret"
+    "openpost_mastodon_servers"
   ];
 
   mainSecretNames = [

@@ -99,6 +99,21 @@ let
       '';
     };
 
+    # OpenPost - social media scheduler
+    "openpost.rgo.pt" = {
+      extraConfig = ''
+        reverse_proxy localhost:${toString (cfg.internalPorts.openpost or 8080)}
+
+        header {
+          Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+          X-Content-Type-Options "nosniff"
+          X-Frame-Options "SAMEORIGIN"
+          X-XSS-Protection "1; mode=block"
+          Referrer-Policy "strict-origin-when-cross-origin"
+        }
+      '';
+    };
+
     # Directus CMS
     "directus.rgo.pt" = {
       extraConfig = ''

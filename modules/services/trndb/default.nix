@@ -84,10 +84,11 @@ in
 
       extraOptions = [
         "--network=podman"
-        "--health-cmd=wget --no-verbose --tries=1 --spider http://127.0.0.1:8055/health"
-        "--health-interval=5s"
-        "--health-timeout=20s"
-        "--health-retries=10"
+        "--health-cmd=wget --no-verbose --tries=1 --spider http://127.0.0.1:8055/server/health || wget --no-verbose --tries=1 --spider http://127.0.0.1:8055/"
+        "--health-interval=30s"
+        "--health-timeout=10s"
+        "--health-retries=3"
+        "--health-start-period=60s"
       ];
     };
 
