@@ -27,8 +27,12 @@ in
         home-manager.users.${username} =
           { ... }:
           {
+            # to get auth for projects: gh auth refresh -s project
             programs.gh = {
               enable = true;
+              gitCredentialHelper = {
+                enable = true;
+              };
               settings = {
                 git_protocol = "ssh";
                 prompt = "enabled";
