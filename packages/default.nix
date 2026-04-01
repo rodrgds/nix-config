@@ -4,6 +4,7 @@ final: prev: {
   # Custom fonts
   bangers = prev.callPackage ./fonts/bangers { };
   bricolage-grotesque = prev.callPackage ./fonts/bricolage-grotesque { };
+  climate-crisis = prev.callPackage ./fonts/climate-crisis { };
 
   # DaVinci Resolve customization
   davinci-resolve-studio = (import ./davinci-resolve) final prev;

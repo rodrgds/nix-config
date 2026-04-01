@@ -9,6 +9,7 @@ let
     source-serif
     bangers
     bricolage-grotesque
+    climate-crisis
   ];
 
   linuxOnlyPackages = with pkgs; [
