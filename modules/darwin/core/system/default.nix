@@ -48,6 +48,8 @@ in
         AppleMeasurementUnits = "Centimeters";
         AppleMetricUnits = 1;
         AppleTemperatureUnit = "Celsius";
+        NSStatusItemSpacing = 2;
+        NSStatusItemSelectionPadding = 2;
       };
 
       # Trackpad settings
