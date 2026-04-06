@@ -56,6 +56,20 @@ in
               };
             };
           };
+          providers = {
+            ollama = {
+              "npm" = "@ai-sdk/openai-compatible";
+              "name" = "Ollama";
+              "options" = {
+                "baseURL" = "http://localhost:11434/v1";
+              };
+              "models" = {
+                "sorc/qwen3.5-claude-4.6-opus-q4:9b" = {
+                  "name" = "qwen3.5-max";
+                };
+              };
+            };
+          };
         };
 
         xdg.configFile."opencode/opencode.json".source =
