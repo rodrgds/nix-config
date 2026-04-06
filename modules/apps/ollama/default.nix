@@ -72,6 +72,8 @@ in
         '';
       })
       (lib.optionalAttrs isDarwin {
+        environment.systemPackages = [ ollamaPkg ];
+
         launchd.user.agents.ollama = {
           serviceConfig = {
             KeepAlive = true;
