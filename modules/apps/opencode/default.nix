@@ -25,6 +25,35 @@ in
           skills = lib.mapAttrs (name: _: builtins.readFile (./skills + "/${name}")) (
             lib.attrsets.filterAttrs (_: type: type == "regular") (builtins.readDir ./skills)
           );
+          commands = {
+            release = ''
+              # Release Command
+
+              Create a new release with conventional commits, tag, and GitHub release.
+
+              ## Steps
+
+              1. Run `git status` and `git diff --stat` to see all uncommitted changes
+              2. Run `git log --oneline -10` to see recent commit history
+              3. Run `git tag -l --sort=-v:refname | head -3` to find the latest tag
+              4. If there are uncommitted changes, group them logically and commit using conventional commits:
+                 - Review diffs with `git diff <files>`
+                 - Stage related files: `git add <files>`
+                 - Commit: `git commit -m "type(scope): description\n\nBody"`
+                 - Types: feat, fix, chore, docs, refactor, test, ci
+              5. Run `git push` to push all commits
+              6. Determine next version: increment patch from last tag (or minor/major if warranted)
+              7. Create annotated tag: `git tag -a v<version> -m "Release v<version>\n\n## Changes\n- ..."`
+              8. Push tag: `git push origin v<version>`
+              9. Create GitHub release: `gh release create v<version> --title "v<version>" --generate-notes`
+
+              ## Rules
+              - Group related changes into single commits
+              - Always push commits before tagging
+              - If no uncommitted changes, ask user what version to release
+              - Use `--generate-notes` flag for auto-generated release notes from commits OR, if you prefer, write custom release notes in the tag message body with all relevant changes listed since the last release.
+            '';
+          };
         };
 
         sops.templates."opencode-config".content = builtins.toJSON {
