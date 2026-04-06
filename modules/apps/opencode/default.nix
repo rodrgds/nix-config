@@ -25,36 +25,42 @@ in
           skills = lib.mapAttrs (name: _: builtins.readFile (./skills + "/${name}")) (
             lib.attrsets.filterAttrs (_: type: type == "regular") (builtins.readDir ./skills)
           );
-          settings = {
-            theme = "gruvbox";
-            autoupdate = true;
-            plugin = [ "@mohak34/opencode-notifier@latest" ];
-            mcp = {
-              svelte = {
-                type = "local";
-                command = [
-                  "npx"
-                  "-y"
-                  "@sveltejs/mcp"
-                ];
+        };
+
+        sops.templates."opencode-config".content = builtins.toJSON {
+          "$schema" = "https://opencode.ai/config.json";
+          autoupdate = true;
+          theme = "gruvbox";
+          plugin = [ "@mohak34/opencode-notifier@latest" ];
+          mcp = {
+            svelte = {
+              type = "local";
+              command = [
+                "npx"
+                "-y"
+                "@sveltejs/mcp"
+              ];
+            };
+            context7 = {
+              type = "remote";
+              url = "https://mcp.context7.com/mcp";
+              headers = {
+                CONTEXT7_API_KEY = config.sops.placeholder.context7_api_key;
               };
-              context7 = {
-                type = "remote";
-                url = "https://mcp.context7.com/mcp";
-                headers = {
-                  CONTEXT7_API_KEY = config.sops.placeholder.context7_api_key;
-                };
-              };
-              exa = {
-                type = "remote";
-                url = "https://mcp.exa.ai/mcp";
-                headers = {
-                  EXA_API_KEY = config.sops.placeholder.exa_api_key;
-                };
+            };
+            exa = {
+              type = "remote";
+              url = "https://mcp.exa.ai/mcp";
+              headers = {
+                EXA_API_KEY = config.sops.placeholder.exa_api_key;
               };
             };
           };
         };
+
+        xdg.configFile."opencode/opencode.json".source =
+          config.lib.file.mkOutOfStoreSymlink
+            config.sops.templates."opencode-config".path;
 
         xdg.configFile."opencode/opencode-notifier.json".text = builtins.toJSON {
           sound = true;

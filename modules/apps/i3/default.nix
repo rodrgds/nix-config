@@ -31,7 +31,7 @@ in
                 p.memory
                 p.date
                 p.time
-                p.progress
+                p.cpu
                 p.layout
                 p.uptime
                 p.shortcut

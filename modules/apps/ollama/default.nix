@@ -46,6 +46,30 @@ in
           loadModels = cfg.loadModels;
           environmentVariables = cfg.environmentVariables;
         };
+
+        # Work around intermittent Ollama key corruption that causes:
+        # "pull model manifest: ssh: no key found"
+        # If keys are invalid, remove them before startup so Ollama regenerates.
+        systemd.services.ollama.preStart = ''
+          keyDir=/var/lib/ollama/.ollama
+          priv="$keyDir/id_ed25519"
+          pub="$keyDir/id_ed25519.pub"
+
+          mkdir -p "$keyDir"
+
+          bad=0
+          if [ -e "$priv" ] && ! ${pkgs.openssh}/bin/ssh-keygen -l -f "$priv" >/dev/null 2>&1; then
+            bad=1
+          fi
+
+          if [ -e "$pub" ] && ! ${pkgs.openssh}/bin/ssh-keygen -l -f "$pub" >/dev/null 2>&1; then
+            bad=1
+          fi
+
+          if [ "$bad" -eq 1 ]; then
+            rm -f "$priv" "$pub"
+          fi
+        '';
       })
       (lib.optionalAttrs isDarwin {
         launchd.user.agents.ollama = {
