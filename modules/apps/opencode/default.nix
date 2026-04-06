@@ -45,13 +45,15 @@ in
               6. Determine next version: increment patch from last tag (or minor/major if warranted)
               7. Create annotated tag: `git tag -a v<version> -m "Release v<version>\n\n## Changes\n- ..."`
               8. Push tag: `git push origin v<version>`
-              9. Create GitHub release: `gh release create v<version> --title "v<version>" --generate-notes`
+              9. Create GitHub release: `gh release create v<version> --title "v<version>" --notes "..."`
 
               ## Rules
+
               - Group related changes into single commits
               - Always push commits before tagging
               - If no uncommitted changes, ask user what version to release
               - Use `--generate-notes` flag for auto-generated release notes from commits OR, if you prefer, write custom release notes in the tag message body with all relevant changes listed since the last release.
+              - Never use @ in release notes (GitHub interprets as user mentions)
             '';
           };
         };
