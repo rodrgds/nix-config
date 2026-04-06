@@ -2,13 +2,12 @@
   lib,
   config,
   pkgs,
-  username,
+  constants,
   ...
 }:
 let
   cfg = config.apps.ollama;
-  isDarwin = pkgs.stdenv.isDarwin;
-  isLinux = pkgs.stdenv.isLinux;
+  inherit (constants) isDarwin isLinux homeDir;
   ollamaPkg = if isDarwin then pkgs.ollama else pkgs.ollama-cuda;
 in
 {
@@ -38,9 +37,6 @@ in
 
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
-      {
-        environment.systemPackages = [ ollamaPkg ];
-      }
       (lib.optionalAttrs isLinux {
         services.ollama = {
           enable = true;
@@ -53,7 +49,6 @@ in
       })
       (lib.optionalAttrs isDarwin {
         launchd.user.agents.ollama = {
-          path = [ config.environment.systemPath ];
           serviceConfig = {
             KeepAlive = true;
             RunAtLoad = true;
