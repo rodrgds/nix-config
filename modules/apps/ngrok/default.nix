@@ -9,7 +9,8 @@
 let
   cfg = config.apps.ngrok;
   inherit (constants) homeDir isDarwin;
-  ngrokDir = if isDarwin then "${homeDir}/Library/Application Support/ngrok" else "${homeDir}/.config/ngrok";
+  ngrokDir =
+    if isDarwin then "${homeDir}/Library/Application Support/ngrok" else "${homeDir}/.config/ngrok";
 in
 {
   options.apps.ngrok = {
