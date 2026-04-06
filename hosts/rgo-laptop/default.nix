@@ -102,6 +102,9 @@
   # Tunnels
   apps.ngrok.enable = true; # ngrok tunnel tool
 
+  # AI
+  apps.ollama.enable = true; # Local LLM runner (Apple Silicon GPU)
+
   # ============================================
   # SYSTEM SERVICES (handled separately)
   # ============================================

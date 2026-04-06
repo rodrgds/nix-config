@@ -133,6 +133,9 @@
   # Handy
   apps.handy.enable = true;
 
+  # Ollama
+  apps.ollama.enable = true;
+
   # Vicinae
   apps.vicinae.enable = true;
 

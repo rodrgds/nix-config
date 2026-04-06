@@ -96,6 +96,7 @@
     ./syncthing
     ./synology-drive
     ./ngrok
+    ./ollama
 
     # Optional
     ./lamp
