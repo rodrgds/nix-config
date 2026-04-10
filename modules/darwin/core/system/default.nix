@@ -103,8 +103,6 @@ in
     # Ensure Zsh is in /etc/shells and set as login shell
     environment.shells = [ pkgs.zsh ];
 
-    home-manager.backupFileExtension = "hm-bak";
-
     # Home-manager state version
     home-manager.users.${username} = {
       home.stateVersion = "25.05";

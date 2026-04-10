@@ -36,7 +36,7 @@ in
       dmidecode
       smartmontools
       mesa-demos
-      xorg.xdpyinfo
+      xdpyinfo
       usbutils
       xclip
       dex

@@ -36,8 +36,6 @@ in
                 enable = true;
                 autoStart = true;
                 environment = {
-                  # TODO: window keeps going down as I open it idk why!
-                  USE_LAYER_SHELL = "1";
                   DISPLAY = ":0";
                   PATH = "/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin";
                   XDG_RUNTIME_DIR = "/run/user/1000";
