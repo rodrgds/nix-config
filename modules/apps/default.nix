@@ -35,6 +35,8 @@
     ./virtualization
     ./stripe-cli
     ./dbeaver
+    ./affinity
+    ./qdirstat
 
     # Desktop Environment
     ./i3
