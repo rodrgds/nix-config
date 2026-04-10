@@ -102,7 +102,7 @@ let
     # OpenPost - social media scheduler
     "openpost.rgo.pt" = {
       extraConfig = ''
-        reverse_proxy localhost:${toString (cfg.internalPorts.openpost or 8080)}
+        reverse_proxy localhost:${toString (cfg.internalPorts.openpost or 8090)}
 
         header {
           Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"

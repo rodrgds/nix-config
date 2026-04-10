@@ -49,7 +49,10 @@ in
         OPENPOST_PORT = toString openpostContainerPort;
         OPENPOST_DB_PATH = "/data/db/openpost.db";
         OPENPOST_MEDIA_PATH = "/data/media";
+        OPENPOST_MEDIA_URL = "/media";
         OPENPOST_FRONTEND_URL = "https://${cfg.domain}";
+        OPENPOST_CORS_EXTRA_ORIGINS = "https://${cfg.domain}";
+        OPENPOST_DISABLE_LINKEDIN_THREAD_REPLIES = "true";
         TZ = cfg.timezone;
       };
 
@@ -67,6 +70,10 @@ in
 
       extraOptions = [
         "--network=podman"
+        "--health-cmd=wget --spider http://localhost:${toString openpostContainerPort}/api/v1/health"
+        "--health-interval=30s"
+        "--health-timeout=3s"
+        "--health-retries=3"
       ];
     };
 
@@ -78,8 +85,10 @@ in
           ENCRYPTION_KEY=${config.sops.placeholder.openpost_encryption_key}
           TWITTER_CLIENT_ID=${config.sops.placeholder.openpost_twitter_client_id}
           TWITTER_CLIENT_SECRET=${config.sops.placeholder.openpost_twitter_client_secret}
+          TWITTER_REDIRECT_URI=https://${cfg.domain}/api/v1/accounts/x/callback
           LINKEDIN_CLIENT_ID=${config.sops.placeholder.openpost_linkedin_client_id}
           LINKEDIN_CLIENT_SECRET=${config.sops.placeholder.openpost_linkedin_client_secret}
+          LINKEDIN_REDIRECT_URI=https://${cfg.domain}/api/v1/accounts/linkedin/callback
           THREADS_CLIENT_ID=${config.sops.placeholder.openpost_threads_client_id}
           THREADS_CLIENT_SECRET=${config.sops.placeholder.openpost_threads_client_secret}
           THREADS_REDIRECT_URI=https://${cfg.domain}/api/v1/accounts/threads/callback
