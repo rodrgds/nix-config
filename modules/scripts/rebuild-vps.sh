@@ -3,7 +3,8 @@ set -e
 
 echo "🚀 Deploying to rgo-vps via Tailscale..."
 
-# Build and deploy remotely using Tailscale MagicDNS name
+# Build locally, deploy to VPS.
+# This avoids OOM failures on small VPS instances when heavy packages compile.
 nixos-rebuild switch \
   --flake "$HOME/.config/home#rgo-vps" \
   --target-host "rgo@rgo-vps" \
