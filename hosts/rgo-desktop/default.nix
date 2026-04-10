@@ -69,6 +69,7 @@
   apps.stripe-cli.enable = true;
   apps.dbeaver.enable = true;
   apps.laravel.enable = true;
+  apps.affinity.enable = true;
 
   # Desktop
   apps.i3.enable = true;
@@ -120,6 +121,7 @@
   apps.obsidian.enable = true;
   apps.qbittorrent.enable = true;
   apps.typst.enable = true;
+  apps.qdirstat.enable = true;
 
   # System
   apps.core-packages.enable = true;
@@ -134,7 +136,7 @@
   apps.handy.enable = true;
 
   # Ollama
-  apps.ollama.enable = true;
+  # apps.ollama.enable = true; # Disabled: flaky upstream tests causing build failures
 
   # Vicinae
   apps.vicinae.enable = true;

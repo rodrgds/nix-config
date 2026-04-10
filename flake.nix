@@ -2,7 +2,7 @@
   description = "NixOS and nix-darwin configuration with flakes and home-manager";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/master";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.11";
 
     home-manager = {
@@ -17,7 +17,6 @@
 
     nix-homebrew = {
       url = "github:zhaofengli/nix-homebrew";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     android-nixpkgs = {
@@ -56,7 +55,6 @@
 
     devenv = {
       url = "github:cachix/devenv";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     edu = {
@@ -135,6 +133,7 @@
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
+                backupFileExtension = "hm-bak";
                 extraSpecialArgs = {
                   inherit
                     inputs
@@ -195,6 +194,7 @@
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
+                backupFileExtension = "hm-bak";
                 extraSpecialArgs = {
                   inherit
                     inputs

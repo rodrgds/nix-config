@@ -76,6 +76,7 @@
   apps.cap.enable = true; # Cap screen recorder
   apps.android-studio.enable = true;
   apps.android-sdk.enable = true;
+  apps.affinity.enable = true;
 
   # Communication
   apps.telegram.enable = true; # Telegram Desktop (available in nixpkgs)
