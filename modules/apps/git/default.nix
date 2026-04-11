@@ -24,6 +24,11 @@ in
       {
         programs.git = {
           enable = true;
+          extraConfig = {
+            gpg.format = "ssh";
+            user.signingkey = "~/.ssh/id_ed25519.pub"; 
+            commit.gpgsign = true;
+          };
           settings = {
             user = {
               name = fullname;
