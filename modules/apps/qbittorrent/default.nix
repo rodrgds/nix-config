@@ -8,7 +8,7 @@
 }:
 let
   cfg = config.apps.qbittorrent;
-  inherit (constants) isLinux;
+  inherit (constants) isLinux isDarwin;
 in
 {
   options.apps.qbittorrent = {
@@ -19,6 +19,9 @@ in
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
         environment.systemPackages = [ pkgs.qbittorrent ];
+      })
+      (lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "qbittorrent" ];
       })
     ]
   );
