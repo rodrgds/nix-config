@@ -12,6 +12,7 @@
     ./ssh
 
     # Development
+    ./direnv
     ./git
     ./gh
     ./opencode

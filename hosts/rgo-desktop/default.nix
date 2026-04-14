@@ -51,6 +51,7 @@
   apps.thunar.enable = true;
 
   # Development
+  apps.direnv.enable = true;
   apps.development-tools.enable = true;
   apps.graphviz.enable = true;
   apps.doxygen.enable = true;
