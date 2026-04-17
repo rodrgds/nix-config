@@ -10,6 +10,7 @@
   imports = [
     ./caddy
     ./podman
+    ./adguardhome
     ./n8n
     ./unieasy
     ./umami

@@ -46,6 +46,7 @@
   services.podman.enable = true;
 
   # Services
+  vps.adguardhome.enable = true;
   vps.umami.enable = true;
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
