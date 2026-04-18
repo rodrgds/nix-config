@@ -14,17 +14,6 @@ in
 
     services.resolved = {
       enable = true;
-      settings = {
-        Resolve = {
-          DNSSEC = "true";
-          Domains = [ "~." ];
-          FallbackDNS = [
-            "1.1.1.1"
-            "1.0.0.1"
-          ];
-          DNSOverTLS = "false";
-        };
-      };
     };
 
     networking.firewall = {
@@ -35,6 +24,7 @@ in
     services.tailscale = {
       enable = true;
       useRoutingFeatures = "client";
+      extraUpFlags = [ "--accept-dns=true" ];
     };
   };
 }

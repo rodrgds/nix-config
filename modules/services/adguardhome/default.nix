@@ -26,12 +26,6 @@ in
   options.vps.adguardhome = {
     enable = lib.mkEnableOption "AdGuard Home network-wide ad blocker";
 
-    domain = lib.mkOption {
-      type = lib.types.str;
-      default = "dns.rgo.pt";
-      description = "Domain for AdGuard Home web interface";
-    };
-
     dnsBindHosts = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ "127.0.0.1" ];
@@ -98,6 +92,54 @@ in
             name = "Malicious URL Blocklist";
             id = 4;
           }
+          {
+            enabled = true;
+            url = "https://raw.githubusercontent.com/easylist/easylist/master/easylist/easylist_adservers.txt";
+            name = "EasyList";
+            id = 5;
+          }
+          {
+            enabled = true;
+            url = "https://raw.githubusercontent.com/easylist/easylist/master/easyprivacy/easyprivacy_trackingservers.txt";
+            name = "EasyPrivacy";
+            id = 6;
+          }
+          {
+            enabled = true;
+            url = "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt";
+            name = "uBlock filters - Ads, trackers, and more";
+            id = 7;
+          }
+          {
+            enabled = true;
+            url = "https://adguardteam.github.io/AdguardFilters/MobileFilter/sections/adservers.txt";
+            name = "AdGuard/uBO - Mobile Ads";
+            id = 8;
+          }
+          {
+            enabled = true;
+            url = "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/privacy.txt";
+            name = "AdGuard/uBO - URL Tracking Protection";
+            id = 9;
+          }
+          {
+            enabled = true;
+            url = "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/AdGuardHomeDisallowedIPs.txt";
+            name = "Block Outsider Intrusion into LAN";
+            id = 10;
+          }
+          {
+            enabled = true;
+            url = "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/annoyances-cookies.txt";
+            name = "EasyList/uBO - Cookie Notices";
+            id = 11;
+          }
+          {
+            enabled = true;
+            url = "https://adguardteam.github.io/AdguardFilters/SpanishFilter/sections/adservers.txt";
+            name = "es-es ar-ar br-br pt-pt: AdGuard Spanish/Portuguese";
+            id = 12;
+          }
         ];
 
         user_rules = [
@@ -113,23 +155,45 @@ in
           safe_search.enabled = false;
 
           blocked_services = {
-            ids = [ "twitter" ];
+            ids = [
+              "twitter"
+              "youtube"
+            ];
             schedule = {
-              time_zone = "Local";
-              sun = { start = "0s"; end = "13h"; };
-              mon = { start = "0s"; end = "13h"; };
-              tue = { start = "0s"; end = "13h"; };
-              wed = { start = "0s"; end = "13h"; };
-              thu = { start = "0s"; end = "13h"; };
-              fri = { start = "0s"; end = "13h"; };
-              sat = { start = "0s"; end = "13h"; };
+              time_zone = "Europe/Lisbon";
+              sun = {
+                start = "15h";
+                end = "24h";
+              };
+              mon = {
+                start = "15h";
+                end = "24h";
+              };
+              tue = {
+                start = "15h";
+                end = "24h";
+              };
+              wed = {
+                start = "15h";
+                end = "24h";
+              };
+              thu = {
+                start = "15h";
+                end = "24h";
+              };
+              fri = {
+                start = "15h";
+                end = "24h";
+              };
+              sat = {
+                start = "15h";
+                end = "24h";
+              };
             };
           };
         };
       };
     };
 
-    # Caddy reverse proxy for web dashboard
-    vps.caddy.internalPorts.${cfg.domain} = adguardPort;
   };
 }

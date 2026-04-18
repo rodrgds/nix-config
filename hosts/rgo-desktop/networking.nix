@@ -14,10 +14,6 @@
   };
 
   networking.defaultGateway = "192.168.1.254";
-  networking.nameservers = [
-    "1.1.1.1"
-    "8.8.8.8"
-  ];
 
   networking.hosts = {
     "192.168.1.100" = [ "synology" ];
