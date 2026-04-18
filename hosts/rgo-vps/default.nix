@@ -23,19 +23,6 @@
     "1.0.0.1"
   ];
 
-  services.resolved = {
-    dns = [
-      "9.9.9.9"
-      "149.112.112.112"
-      "1.1.1.1"
-      "1.0.0.1"
-    ];
-    fallbackDns = [
-      "8.8.8.8"
-      "8.8.4.4"
-    ];
-  };
-
   # Prevent tailscale from overriding host DNS configuration.
   services.tailscale.extraUpFlags = lib.mkForce [ "--accept-dns=false" ];
 
