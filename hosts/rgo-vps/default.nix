@@ -46,7 +46,14 @@
   services.podman.enable = true;
 
   # Services
-  vps.adguardhome.enable = true;
+  vps.adguardhome = {
+    enable = true;
+    dnsBindHosts = [
+      "127.0.0.1"
+      "46.224.132.97"
+      "100.69.139.47"
+    ];
+  };
   vps.umami.enable = true;
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
