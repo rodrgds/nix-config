@@ -34,7 +34,7 @@ in
 
     dnsBindHosts = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "127.0.0.1" ];
+      default = [ "0.0.0.0" ];
       description = "IP addresses AdGuard Home DNS should bind to";
     };
   };
@@ -73,63 +73,56 @@ in
           cache_ttl_min = 2400;
         };
 
+        filters = [
+          {
+            enabled = true;
+            url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt";
+            name = "AdGuard DNS filter";
+            id = 1;
+          }
+          {
+            enabled = true;
+            url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt";
+            name = "AdAway Default Blocklist";
+            id = 2;
+          }
+          {
+            enabled = true;
+            url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_9.txt";
+            name = "The Big List of Hacked Malware Web Sites";
+            id = 3;
+          }
+          {
+            enabled = true;
+            url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_11.txt";
+            name = "Malicious URL Blocklist";
+            id = 4;
+          }
+        ];
+
+        user_rules = [
+          "||shorts.youtube.com^"
+          "||youtube.com^$path=/shorts"
+          "||www.youtube.com^$path=/shorts"
+        ];
+
         filtering = {
           protection_enabled = true;
           filtering_enabled = true;
           parental_enabled = true;
           safe_search.enabled = false;
 
-          user_rules = [
-            "||shorts.youtube.com^"
-            "||youtube.com^$path=/shorts"
-            "||www.youtube.com^$path=/shorts"
-          ];
-
-          filters =
-            map
-              (url: {
-                enabled = true;
-                url = url;
-              })
-              [
-                "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt"
-                "https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt"
-                "https://adguardteam.github.io/HostlistsRegistry/assets/filter_9.txt"
-                "https://adguardteam.github.io/HostlistsRegistry/assets/filter_11.txt"
-              ];
-        };
-
-        blocked_services = {
-          ids = [ "twitter" ];
-          schedule = {
-            time_zone = "Local";
-            sun = {
-              start = "0s";
-              end = "13h";
-            };
-            mon = {
-              start = "0s";
-              end = "13h";
-            };
-            tue = {
-              start = "0s";
-              end = "13h";
-            };
-            wed = {
-              start = "0s";
-              end = "13h";
-            };
-            thu = {
-              start = "0s";
-              end = "13h";
-            };
-            fri = {
-              start = "0s";
-              end = "13h";
-            };
-            sat = {
-              start = "0s";
-              end = "13h";
+          blocked_services = {
+            ids = [ "twitter" ];
+            schedule = {
+              time_zone = "Local";
+              sun = { start = "0s"; end = "13h"; };
+              mon = { start = "0s"; end = "13h"; };
+              tue = { start = "0s"; end = "13h"; };
+              wed = { start = "0s"; end = "13h"; };
+              thu = { start = "0s"; end = "13h"; };
+              fri = { start = "0s"; end = "13h"; };
+              sat = { start = "0s"; end = "13h"; };
             };
           };
         };
