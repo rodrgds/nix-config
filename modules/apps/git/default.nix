@@ -3,13 +3,17 @@
   config,
   pkgs,
   username,
-  system,
   constants,
   ...
 }:
 let
   cfg = config.apps.git;
-  inherit (constants) isDarwin fullname email;
+  inherit (constants)
+    isDarwin
+    fullname
+    email
+    homeDir
+    ;
 in
 {
   options.apps.git = {
@@ -24,16 +28,14 @@ in
       {
         programs.git = {
           enable = true;
-          extraConfig = {
-            gpg.format = "ssh";
-            user.signingkey = "~/.ssh/id_ed25519.pub";
-            commit.gpgsign = true;
-          };
           settings = {
+            gpg.format = "ssh";
             user = {
               name = fullname;
               email = email;
+              signingKey = "${homeDir}/.ssh/id_ed25519.pub";
             };
+            commit.gpgsign = true;
             init.defaultBranch = "main";
             pull.rebase = true;
             push.autoSetupRemote = true;
