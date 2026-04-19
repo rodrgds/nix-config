@@ -56,10 +56,17 @@ in
           bind_hosts = cfg.dnsBindHosts;
           port = 53;
           upstream_dns = [
+            "https://cloudflare-dns.com/dns-query"
+            "https://dns.google/dns-query"
             "https://dns.quad9.net/dns-query"
             "https://dns.mullvad.net/dns-query"
+            "https://protective.joindns4.eu/dns-query"
           ];
           bootstrap_dns = [
+            "1.1.1.1"
+            "1.0.0.1"
+            "8.8.8.8"
+            "8.8.4.4"
             "9.9.9.9"
             "149.112.112.112"
           ];
@@ -140,6 +147,12 @@ in
             name = "es-es ar-ar br-br pt-pt: AdGuard Spanish/Portuguese";
             id = 12;
           }
+          {
+            enabled = true;
+            url = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.txt";
+            name = "HaGeZi Multi PRO";
+            id = 13;
+          }
         ];
 
         user_rules = [
@@ -158,35 +171,39 @@ in
             ids = [
               "twitter"
               "youtube"
+              "instagram"
+              "linkedin"
             ];
+            # AdGuard blocked_services.schedule is an inactivity window.
+            # 20h-24h means services are allowed at night and blocked during daytime.
             schedule = {
               time_zone = "Europe/Lisbon";
               sun = {
-                start = "15h";
+                start = "20h";
                 end = "24h";
               };
               mon = {
-                start = "15h";
+                start = "20h";
                 end = "24h";
               };
               tue = {
-                start = "15h";
+                start = "20h";
                 end = "24h";
               };
               wed = {
-                start = "15h";
+                start = "20h";
                 end = "24h";
               };
               thu = {
-                start = "15h";
+                start = "20h";
                 end = "24h";
               };
               fri = {
-                start = "15h";
+                start = "20h";
                 end = "24h";
               };
               sat = {
-                start = "15h";
+                start = "20h";
                 end = "24h";
               };
             };
