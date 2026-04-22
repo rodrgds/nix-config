@@ -23,9 +23,10 @@ in
         environment.systemPackages = [ pkgs.qemu ];
       }
 
-      # Linux: VirtualBox
+      # Linux: VirtualBox (uses NixOS module for kernel drivers)
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.virtualbox ];
+        virtualisation.virtualbox.host.enable = true;
+        users.users.${username}.extraGroups = [ "vboxusers" ];
       })
 
       # Darwin: UTM + VirtualBox + FUSE (install in order: macfuse first, then sshfs-mac)
