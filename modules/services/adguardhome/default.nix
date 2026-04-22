@@ -8,9 +8,10 @@
 # (not a podman container) since AdGuard Home is well-packaged in nixpkgs.
 #
 # FIRST-TIME SETUP:
-#   After deployment, the web dashboard is accessible at https://dns.rgo.pt
+#   After deployment, the web dashboard is accessible via Tailscale at
+#   http://<tailscale-ip>:3001 (only from the Tailscale network).
 #   The initial setup wizard will run on first access.
-#   To use your VPS as a DNS resolver, point your devices/router to the VPS IP on port 53.
+#   To use your VPS as a DNS resolver, point your devices to the Tailscale IP on port 53.
 #
 {
   config,
@@ -34,9 +35,25 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Open DNS port on firewall (both TCP and UDP)
-    networking.firewall.allowedTCPPorts = [ 53 ];
-    networking.firewall.allowedUDPPorts = [ 53 ];
+    # Only expose AdGuard Home on Tailscale and loopback interfaces.
+    # Port 53  = DNS (TCP+UDP)
+    # Port 3001 = Web dashboard
+    networking.firewall.interfaces = {
+      tailscale0 = {
+        allowedTCPPorts = [
+          53
+          adguardPort
+        ];
+        allowedUDPPorts = [ 53 ];
+      };
+      lo = {
+        allowedTCPPorts = [
+          53
+          adguardPort
+        ];
+        allowedUDPPorts = [ 53 ];
+      };
+    };
 
     # AdGuard Home service (native NixOS, not podman)
     services.adguardhome = {
