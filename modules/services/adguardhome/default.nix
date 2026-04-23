@@ -176,6 +176,7 @@ in
           "||shorts.youtube.com^"
           "||youtube.com^$path=/shorts"
           "||www.youtube.com^$path=/shorts"
+          "@@||music.youtube.com^"
         ];
 
         filtering = {
