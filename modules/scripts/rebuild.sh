@@ -54,7 +54,7 @@ esac
 if [ -n "$(git status --porcelain)" ]; then
     echo ""
     echo "=== Changes to commit ==="
-    git diff
+    git diff HEAD
     echo ""
     read -r -p "Commit these changes with message '$msg'? [y/N] " answer
     if [[ "$answer" =~ ^[Yy]$ ]]; then
