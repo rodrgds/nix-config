@@ -1,5 +1,4 @@
-{ }:
-{
+_: {
   focused = {
     background = "#d65d0e";
     border = "#d65d0e";

@@ -1,7 +1,7 @@
 { pkgs, constants }:
 let
   mod = "Mod4";
-  scriptDir = constants.scriptDir;
+  inherit (constants) scriptDir;
 in
 {
   "${mod}+1" = "workspace 1: ";

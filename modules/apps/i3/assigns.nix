@@ -1,5 +1,4 @@
-{ }:
-{
+_: {
   "1: " = [
     { class = "(?i)ghostty"; }
     { class = "(?i)alacritty"; }

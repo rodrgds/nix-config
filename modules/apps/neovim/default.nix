@@ -16,12 +16,10 @@ in
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ pkgs.neovim ];
 
-    home-manager.users.${username} =
-      { ... }:
-      {
-        home.sessionVariables = {
-          EDITOR = "nvim";
-        };
+    home-manager.users.${username} = _: {
+      home.sessionVariables = {
+        EDITOR = "nvim";
       };
+    };
   };
 }

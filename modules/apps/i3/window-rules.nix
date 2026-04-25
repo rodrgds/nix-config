@@ -1,5 +1,4 @@
-{ }:
-[
+_: [
   {
     command = "floating enable";
     criteria = {

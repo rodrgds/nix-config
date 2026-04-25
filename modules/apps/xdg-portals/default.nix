@@ -35,14 +35,12 @@ in
       })
 
       {
-        home-manager.users.${username} =
-          { ... }:
-          {
-            xdg.configFile."xdg-desktop-portal/portals.conf".text = ''
-              [preferred]
-              default=gtk
-            '';
-          };
+        home-manager.users.${username} = _: {
+          xdg.configFile."xdg-desktop-portal/portals.conf".text = ''
+            [preferred]
+            default=gtk
+          '';
+        };
       }
     ]
   );

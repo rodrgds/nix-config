@@ -12,7 +12,7 @@ let
   # Helper to convert hex color to 0x format for Aerospace
   toAerospaceColor = hex: "0xff${lib.strings.removePrefix "#" hex}";
 
-  colors = constants.colors;
+  inherit (constants) colors;
 in
 {
   options.darwin.apps.aerospace = {

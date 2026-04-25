@@ -44,96 +44,94 @@ in
       })
 
       {
-        home-manager.users.${username} =
-          { ... }:
-          {
-            xsession.windowManager.i3 = {
-              enable = true;
-              config = {
-                modifier = "Mod4";
-                terminal = "ghostty";
-                fonts = {
-                  names = [ constants.fonts.primary ];
-                  size = constants.fonts.sizes.normal;
-                };
-                gaps = {
-                  inner = 6;
-                  outer = 3;
-                };
-                startup = [
-                  {
-                    command = "dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_RUNTIME_DIR XDG_CURRENT_DESKTOP=i3";
-                    always = false;
-                    notification = false;
-                  }
-                  {
-                    command = "systemctl --user set-environment DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY XDG_CURRENT_DESKTOP=i3";
-                    always = false;
-                    notification = false;
-                  }
-                  {
-                    command = "xcompmgr";
-                    always = false;
-                    notification = false;
-                  }
-                  {
-                    command = "autotiling";
-                    always = true;
-                    notification = false;
-                  }
-                  {
-                    command = "dex --autostart --environment i3";
-                    always = false;
-                  }
-                  {
-                    command = "bash /home/${username}/.config/home/modules/scripts/show_random_wall.sh";
-                    always = true;
-                  }
-                  {
-                    command = "xinput set-prop \"Logitech USB Receiver\" \"libinput Middle Emulation Enabled\" 0";
-                    always = true;
-                  }
-                  {
-                    command = "xset s 480 dpms 600 600 600";
-                    always = false;
-                  }
-                  {
-                    command = "flameshot";
-                    always = false;
-                  }
-                  {
-                    command = "handy --start-hidden";
-                    always = true;
-                    notification = false;
-                  }
-                ];
-                keybindings = import ./keybindings.nix { inherit pkgs constants; };
-                workspaceOutputAssign = import ./workspaces.nix { };
-                assigns = import ./assigns.nix { };
-                window.commands = import ./window-rules.nix { };
-                colors = import ./colors.nix { };
-                bars = import ./bar.nix { inherit pkgs constants; };
+        home-manager.users.${username} = _: {
+          xsession.windowManager.i3 = {
+            enable = true;
+            config = {
+              modifier = "Mod4";
+              terminal = "ghostty";
+              fonts = {
+                names = [ constants.fonts.primary ];
+                size = constants.fonts.sizes.normal;
               };
-            };
-
-            xsession.enable = true;
-
-            xresources.properties = {
-              "Xft.dpi" = 96;
-              "Xft.autohint" = 0;
-              "Xft.lcdfilter" = "lcddefault";
-              "Xft.hintstyle" = "hintfull";
-              "Xft.hinting" = 1;
-              "Xft.antialias" = 1;
-              "Xft.rgba" = "rgb";
-            };
-
-            home.sessionVariables = {
-              GDK_SCALE = "1";
-              GDK_DPI_SCALE = "1";
-              QT_AUTO_SCREEN_SCALE_FACTOR = "1";
+              gaps = {
+                inner = 6;
+                outer = 3;
+              };
+              startup = [
+                {
+                  command = "dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_RUNTIME_DIR XDG_CURRENT_DESKTOP=i3";
+                  always = false;
+                  notification = false;
+                }
+                {
+                  command = "systemctl --user set-environment DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY XDG_CURRENT_DESKTOP=i3";
+                  always = false;
+                  notification = false;
+                }
+                {
+                  command = "xcompmgr";
+                  always = false;
+                  notification = false;
+                }
+                {
+                  command = "autotiling";
+                  always = true;
+                  notification = false;
+                }
+                {
+                  command = "dex --autostart --environment i3";
+                  always = false;
+                }
+                {
+                  command = "bash /home/${username}/.config/home/modules/scripts/show_random_wall.sh";
+                  always = true;
+                }
+                {
+                  command = "xinput set-prop \"Logitech USB Receiver\" \"libinput Middle Emulation Enabled\" 0";
+                  always = true;
+                }
+                {
+                  command = "xset s 480 dpms 600 600 600";
+                  always = false;
+                }
+                {
+                  command = "flameshot";
+                  always = false;
+                }
+                {
+                  command = "handy --start-hidden";
+                  always = true;
+                  notification = false;
+                }
+              ];
+              keybindings = import ./keybindings.nix { inherit pkgs constants; };
+              workspaceOutputAssign = import ./workspaces.nix { };
+              assigns = import ./assigns.nix { };
+              window.commands = import ./window-rules.nix { };
+              colors = import ./colors.nix { };
+              bars = import ./bar.nix { inherit pkgs constants; };
             };
           };
+
+          xsession.enable = true;
+
+          xresources.properties = {
+            "Xft.dpi" = 96;
+            "Xft.autohint" = 0;
+            "Xft.lcdfilter" = "lcddefault";
+            "Xft.hintstyle" = "hintfull";
+            "Xft.hinting" = 1;
+            "Xft.antialias" = 1;
+            "Xft.rgba" = "rgb";
+          };
+
+          home.sessionVariables = {
+            GDK_SCALE = "1";
+            GDK_DPI_SCALE = "1";
+            QT_AUTO_SCREEN_SCALE_FACTOR = "1";
+          };
+        };
       }
     ]
   );

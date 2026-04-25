@@ -23,23 +23,21 @@ in
       })
 
       {
-        home-manager.users.${username} =
-          { ... }:
-          {
-            systemd.user.services.dunst = lib.mkIf isLinux {
-              Unit = {
-                Description = "Dunst notification daemon";
-                PartOf = [ "graphical-session.target" ];
-              };
-              Install = {
-                WantedBy = [ "graphical-session.target" ];
-              };
-              Service = {
-                ExecStart = "${pkgs.dunst}/bin/dunst";
-                Restart = "always";
-              };
+        home-manager.users.${username} = _: {
+          systemd.user.services.dunst = lib.mkIf isLinux {
+            Unit = {
+              Description = "Dunst notification daemon";
+              PartOf = [ "graphical-session.target" ];
+            };
+            Install = {
+              WantedBy = [ "graphical-session.target" ];
+            };
+            Service = {
+              ExecStart = "${pkgs.dunst}/bin/dunst";
+              Restart = "always";
             };
           };
+        };
       }
     ]
   );

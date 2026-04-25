@@ -27,112 +27,110 @@ in
       })
 
       {
-        home-manager.users.${username} =
-          { ... }:
-          {
-            services.vicinae = lib.mkIf isLinux {
+        home-manager.users.${username} = _: {
+          services.vicinae = lib.mkIf isLinux {
+            enable = true;
+            systemd = {
               enable = true;
-              systemd = {
-                enable = true;
-                autoStart = true;
-                environment = {
-                  DISPLAY = ":0";
-                  PATH = "/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin";
-                  XDG_RUNTIME_DIR = "/run/user/1000";
-                  DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
-                };
-              };
-              settings = {
-                close_on_focus_loss = true;
-                consider_preedit = true;
-                pop_to_root_on_close = true;
-                search_files_in_root = true;
-
-                # Prevent drift by anchoring position and disabling persistence
-                remember_last_position = false;
-                launcher_window = {
-                  opacity = constants.display.opacity;
-                  position = {
-                    anchor = "top-center";
-                    offset_y = 0;
-                  };
-                };
-
-                # TODO: make this work haha
-                favourites = [
-                  "vscode-recents:open-recent"
-                  "clipboard-history:show"
-                  "it-tools:it-tools"
-                  "port-killer:kill-port"
-                ];
-
-                font = {
-                  normal = {
-                    size = constants.fonts.sizes.large;
-                    family = constants.fonts.ui;
-                  };
-                };
-                theme = {
-                  dark = {
-                    name = "gruvbox-custom";
-                    icon_theme = "Papirus";
-                  };
-                };
-                extensions = with inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system}; [
-                  nix
-                  vscode-recents
-                  port-killer
-                  it-tools
-                ];
+              autoStart = true;
+              environment = {
+                DISPLAY = ":0";
+                PATH = "/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin";
+                XDG_RUNTIME_DIR = "/run/user/1000";
+                DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
               };
             };
+            settings = {
+              close_on_focus_loss = true;
+              consider_preedit = true;
+              pop_to_root_on_close = true;
+              search_files_in_root = true;
 
-            home.file.".local/share/vicinae/themes/gruvbox-custom.toml".text = ''
-              [meta]
-              version = 1
-              name = "Gruvbox Custom"
-              description = "Custom Gruvbox dark theme for vicinae"
-              variant = "dark"
-              inherits = "vicinae-dark"
+              # Prevent drift by anchoring position and disabling persistence
+              remember_last_position = false;
+              launcher_window = {
+                inherit (constants.display) opacity;
+                position = {
+                  anchor = "top-center";
+                  offset_y = 0;
+                };
+              };
 
-              [colors.core]
-              background = "${constants.colors.bg0}"
-              foreground = "${constants.colors.fg0}"
-              secondary_background = "${constants.colors.bg1}"
-              border = "${constants.colors.bg2}"
-              accent = "${constants.colors.orange}"
+              # TODO: make this work haha
+              favourites = [
+                "vscode-recents:open-recent"
+                "clipboard-history:show"
+                "it-tools:it-tools"
+                "port-killer:kill-port"
+              ];
 
-              [colors.accents]
-              blue = "${constants.colors.blue}"
-              green = "${constants.colors.green}"
-              magenta = "${constants.colors.magenta}"
-              orange = "${constants.colors.orange}"
-              purple = "${constants.colors.magenta}"
-              red = "${constants.colors.red}"
-              yellow = "${constants.colors.yellow}"
-              cyan = "${constants.colors.cyan}"
-
-              [colors.input]
-              background = "${constants.colors.bg1}"
-              foreground = "${constants.colors.fg0}"
-              border = "${constants.colors.bg2}"
-              border_focus = "${constants.colors.orange}"
-              placeholder = "${constants.colors.fg2}"
-
-              [colors.list]
-              background = "${constants.colors.bg0}"
-              foreground = "${constants.colors.fg0}"
-              selected_background = "${constants.colors.bg2}"
-              selected_foreground = "${constants.colors.orangeBright}"
-              hover_background = "${constants.colors.bg2}"
-              hover_foreground = "${constants.colors.fg0}"
-
-              [colors.scrollbar]
-              track = "${constants.colors.bg1}"
-              thumb = "${constants.colors.fg2}"
-              thumb_hover = "${constants.colors.fg1}"
-            '';
+              font = {
+                normal = {
+                  size = constants.fonts.sizes.large;
+                  family = constants.fonts.ui;
+                };
+              };
+              theme = {
+                dark = {
+                  name = "gruvbox-custom";
+                  icon_theme = "Papirus";
+                };
+              };
+              extensions = with inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system}; [
+                nix
+                vscode-recents
+                port-killer
+                it-tools
+              ];
+            };
           };
+
+          home.file.".local/share/vicinae/themes/gruvbox-custom.toml".text = ''
+            [meta]
+            version = 1
+            name = "Gruvbox Custom"
+            description = "Custom Gruvbox dark theme for vicinae"
+            variant = "dark"
+            inherits = "vicinae-dark"
+
+            [colors.core]
+            background = "${constants.colors.bg0}"
+            foreground = "${constants.colors.fg0}"
+            secondary_background = "${constants.colors.bg1}"
+            border = "${constants.colors.bg2}"
+            accent = "${constants.colors.orange}"
+
+            [colors.accents]
+            blue = "${constants.colors.blue}"
+            green = "${constants.colors.green}"
+            magenta = "${constants.colors.magenta}"
+            orange = "${constants.colors.orange}"
+            purple = "${constants.colors.magenta}"
+            red = "${constants.colors.red}"
+            yellow = "${constants.colors.yellow}"
+            cyan = "${constants.colors.cyan}"
+
+            [colors.input]
+            background = "${constants.colors.bg1}"
+            foreground = "${constants.colors.fg0}"
+            border = "${constants.colors.bg2}"
+            border_focus = "${constants.colors.orange}"
+            placeholder = "${constants.colors.fg2}"
+
+            [colors.list]
+            background = "${constants.colors.bg0}"
+            foreground = "${constants.colors.fg0}"
+            selected_background = "${constants.colors.bg2}"
+            selected_foreground = "${constants.colors.orangeBright}"
+            hover_background = "${constants.colors.bg2}"
+            hover_foreground = "${constants.colors.fg0}"
+
+            [colors.scrollbar]
+            track = "${constants.colors.bg1}"
+            thumb = "${constants.colors.fg2}"
+            thumb_hover = "${constants.colors.fg1}"
+          '';
+        };
       }
     ]
   );

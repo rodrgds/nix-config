@@ -32,8 +32,8 @@ in
           settings = {
             gpg.format = "ssh";
             user = {
+              inherit email;
               name = fullname;
-              email = email;
               signingKey = "${homeDir}/.ssh/id_ed25519.pub";
             };
             commit.gpgsign = true;

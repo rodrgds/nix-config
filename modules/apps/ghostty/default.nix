@@ -35,28 +35,24 @@ in
       (lib.optionalAttrs isLinux {
         environment.systemPackages = [ pkgs.ghostty ];
 
-        home-manager.users.${username} =
-          { ... }:
-          {
-            programs.ghostty = {
-              enable = true;
-              settings = ghosttySettings;
-            };
+        home-manager.users.${username} = _: {
+          programs.ghostty = {
+            enable = true;
+            settings = ghosttySettings;
           };
+        };
       })
       # Darwin: Install via Homebrew and configure via home-manager (with package = null)
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [ "ghostty" ];
 
-        home-manager.users.${username} =
-          { ... }:
-          {
-            programs.ghostty = {
-              enable = true;
-              package = null;
-              settings = ghosttySettings;
-            };
+        home-manager.users.${username} = _: {
+          programs.ghostty = {
+            enable = true;
+            package = null;
+            settings = ghosttySettings;
           };
+        };
       })
     ]
   );

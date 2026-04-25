@@ -52,9 +52,18 @@ case "$TARGET" in
 esac
 
 if [ -n "$(git status --porcelain)" ]; then
-    git add -A
-    git commit -m "$msg"
-    echo "✓ Committed: $msg"
+    echo ""
+    echo "=== Changes to commit ==="
+    git diff
+    echo ""
+    read -r -p "Commit these changes with message '$msg'? [y/N] " answer
+    if [[ "$answer" =~ ^[Yy]$ ]]; then
+        git add -A
+        git commit -m "$msg"
+        echo "✓ Committed: $msg"
+    else
+        echo "✗ Commit skipped"
+    fi
 fi
 
 echo "✓ Rebuild successful!"

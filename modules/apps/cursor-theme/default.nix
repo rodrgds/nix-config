@@ -14,14 +14,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home-manager.users.${username} =
-      { ... }:
-      {
-        gtk.cursorTheme = {
-          package = pkgs.apple-cursor;
-          name = "macOS";
-          size = 28;
-        };
+    home-manager.users.${username} = _: {
+      gtk.cursorTheme = {
+        package = pkgs.apple-cursor;
+        name = "macOS";
+        size = 28;
       };
+    };
   };
 }

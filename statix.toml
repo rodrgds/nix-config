@@ -1,0 +1,4 @@
+# Statix lint configuration
+# repeated_keys is disabled because this codebase intentionally uses flat
+# assignment style for readability in host configs and service modules.
+disabled = ["repeated_keys"]

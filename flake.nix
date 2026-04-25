@@ -105,7 +105,7 @@
     }@inputs:
     let
       # Common settings across all systems
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
       username = "rgo";
       fullname = "Rodrigo Dias";
       mkConstants = system: import ./modules/constants.nix { inherit username system; };

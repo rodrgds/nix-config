@@ -16,23 +16,21 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home-manager.users.${username} =
-      { ... }:
-      {
-        home.packages = [ pkgs.synology-drive-client ];
+    home-manager.users.${username} = _: {
+      home.packages = [ pkgs.synology-drive-client ];
 
-        systemd.user.services.synology-drive = lib.mkIf isLinux {
-          Unit = {
-            Description = "Synology Drive Client";
-            After = [ "graphical-session-pre.target" ];
-          };
-          Service = {
-            Environment = "QT_STYLE_OVERRIDE=Fusion QT_QPA_PLATFORM=xcb";
-            ExecStart = "${pkgs.synology-drive-client}/bin/synology-drive autostart";
-            Restart = "on-failure";
-          };
-          Install.WantedBy = [ "graphical-session.target" ];
+      systemd.user.services.synology-drive = lib.mkIf isLinux {
+        Unit = {
+          Description = "Synology Drive Client";
+          After = [ "graphical-session-pre.target" ];
         };
+        Service = {
+          Environment = "QT_STYLE_OVERRIDE=Fusion QT_QPA_PLATFORM=xcb";
+          ExecStart = "${pkgs.synology-drive-client}/bin/synology-drive autostart";
+          Restart = "on-failure";
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
       };
+    };
   };
 }

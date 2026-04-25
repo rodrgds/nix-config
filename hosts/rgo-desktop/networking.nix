@@ -1,6 +1,5 @@
 # Host-specific networking configuration
-{ ... }:
-{
+_: {
   networking.hostName = "rgo-desktop";
 
   networking.interfaces.enp7s0 = {

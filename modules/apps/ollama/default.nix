@@ -41,10 +41,12 @@ in
         services.ollama = {
           enable = true;
           package = ollamaPkg;
-          host = cfg.host;
-          port = cfg.port;
-          loadModels = cfg.loadModels;
-          environmentVariables = cfg.environmentVariables;
+          inherit (cfg)
+            host
+            port
+            loadModels
+            environmentVariables
+            ;
         };
 
         # Work around intermittent Ollama key corruption that causes:

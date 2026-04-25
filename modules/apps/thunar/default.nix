@@ -21,10 +21,8 @@ in
       thunar-archive-plugin
     ];
 
-    home-manager.users.${username} =
-      { ... }:
-      {
-        # Thunar is configured through dconf/gsettings
-      };
+    home-manager.users.${username} = _: {
+      # Thunar is configured through dconf/gsettings
+    };
   };
 }

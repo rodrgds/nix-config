@@ -8,7 +8,7 @@
 }:
 let
   cfg = config.darwin.apps.jankyborders;
-  colors = constants.colors;
+  inherit (constants) colors;
 
   # Helper to convert hex color to 0x format
   toJankyColor = hex: "0xff${lib.strings.removePrefix "#" hex}";

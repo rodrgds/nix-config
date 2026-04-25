@@ -1,5 +1,4 @@
-{ }:
-[
+_: [
   {
     output = "DP-0";
     workspace = "1: ";

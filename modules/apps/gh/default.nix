@@ -24,21 +24,19 @@ in
         homebrew.brews = [ "gh" ];
       })
       {
-        home-manager.users.${username} =
-          { ... }:
-          {
-            # to get auth for projects: gh auth refresh -s project
-            programs.gh = {
+        home-manager.users.${username} = _: {
+          # to get auth for projects: gh auth refresh -s project
+          programs.gh = {
+            enable = true;
+            gitCredentialHelper = {
               enable = true;
-              gitCredentialHelper = {
-                enable = true;
-              };
-              settings = {
-                git_protocol = "ssh";
-                prompt = "enabled";
-              };
+            };
+            settings = {
+              git_protocol = "ssh";
+              prompt = "enabled";
             };
           };
+        };
       }
     ]
   );

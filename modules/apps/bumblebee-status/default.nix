@@ -17,10 +17,8 @@ in
     # The bumblebee-status package is already included in i3 module
     # This module handles the custom stopwatch script
 
-    home-manager.users.${username} =
-      { ... }:
-      {
-        home.file.".config/bumblebee-status/modules/stopwatch.py".source = ./bumblebee_stopwatch.py;
-      };
+    home-manager.users.${username} = _: {
+      home.file.".config/bumblebee-status/modules/stopwatch.py".source = ./bumblebee_stopwatch.py;
+    };
   };
 }
