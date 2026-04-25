@@ -51,6 +51,9 @@
   apps.neovim.enable = true;
   apps.thunar.enable = true;
 
+  # Nix tooling
+  apps.nix-tools.enable = true;
+
   # Development
   apps.direnv.enable = true;
   apps.development-tools.enable = true;

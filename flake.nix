@@ -72,6 +72,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    angrr = {
+      url = "github:linyinfeng/angrr";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # nix-openclaw = {
     #   url = "github:openclaw/nix-openclaw";
     # };
@@ -88,6 +98,8 @@
       disko,
       steam-config-nix,
       vicinae,
+      nix-index-database,
+      angrr,
       # nix-openclaw,
       ...
     }@inputs:
@@ -127,6 +139,10 @@
             disko.nixosModules.disko
             # sops-nix for system-level secrets
             sops-nix.nixosModules.sops
+            # nix-index-database for comma and command-not-found
+            nix-index-database.nixosModules.nix-index
+            # angrr for automatic GC root retention
+            angrr.nixosModules.angrr
             # Home-manager as NixOS module
             home-manager.nixosModules.home-manager
             {
@@ -186,6 +202,10 @@
             ./secrets
             # Host-specific configuration
             ./hosts/${hostname}
+            # nix-index-database for comma and command-not-found
+            nix-index-database.darwinModules.nix-index
+            # angrr for automatic GC root retention
+            angrr.darwinModules.angrr
             # Homebrew integration
             nix-homebrew.darwinModules.nix-homebrew
             # Home-manager as Darwin module

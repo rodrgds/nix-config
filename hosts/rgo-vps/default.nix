@@ -40,6 +40,8 @@
   core.system.enable = true;
   core.networking.enable = true;
 
+  apps.nix-tools.enable = true;
+
   # Headless defaults
   core.audio.enable = lib.mkForce false;
   core.xserver.enable = lib.mkForce false;

@@ -16,7 +16,6 @@ in
 
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [
-      pkgs.nil # Nix language server
       pkgs.sqlite # SQLite database CLI
       devenvPkg
     ];

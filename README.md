@@ -18,6 +18,7 @@ This is my personal configuration for both NixOS (desktop) and macOS (MacBook) u
 - **Gruvbox Theme** - Consistent theming across terminal, apps, and desktop
 - **Gaming Setup** - Steam, CS2, and various gaming tools (NixOS only)
 - **Development Environment** - Full setup for web, mobile, and systems development
+- **nix-tools** - Consolidated Nix tooling (nh, comma, angrr, nurl, nix-init, statix, nil, home-manager, nixfmt)
 
 ## Supported Systems
 
@@ -170,15 +171,20 @@ cd ~/.config/home
 ```bash
 cd ~/.config/home
 # Use this if you get "experimental-features" errors:
-nix --extra-experimental-features 'nix-command flakes' run nix-darwin/master#darwin-rebuild -- switch --flake .#rgo-laptop
+nix --extra-experimental-features 'nix-command flakes' run nix-darwin/master#darwin-rebuild -- switch --flake '.#rgo-laptop'
 
 # Or if flakes are already enabled:
-nix run nix-darwin/master#darwin-rebuild -- switch --flake .#rgo-laptop
+nix run nix-darwin/master#darwin-rebuild -- switch --flake '.#rgo-laptop'
 ```
 
-**Subsequent updates**:
+**Subsequent updates** (using nh):
 ```bash
-darwin-rebuild switch --flake ~/.config/home#rgo-laptop
+nh darwin switch ~/.config/home -H rgo-laptop
+```
+
+**Fallback** (if nh is not yet installed):
+```bash
+darwin-rebuild switch --flake "$HOME/.config/home#rgo-laptop"
 ```
 
 #### NixOS (rgo-desktop)
@@ -186,12 +192,17 @@ darwin-rebuild switch --flake ~/.config/home#rgo-laptop
 **First time only** (new installation):
 ```bash
 cd ~/.config/home
-sudo nixos-install --flake .#rgo-desktop
+sudo nixos-install --flake '.#rgo-desktop'
 ```
 
-**Subsequent updates**:
+**Subsequent updates** (using nh):
 ```bash
-sudo nixos-rebuild switch --flake ~/.config/home#rgo-desktop
+nh os switch ~/.config/home -H rgo-desktop
+```
+
+**Fallback** (if nh is not yet installed):
+```bash
+sudo nixos-rebuild switch --flake "$HOME/.config/home#rgo-desktop"
 ```
 
 ### Step 5: Verify Secrets
@@ -215,9 +226,9 @@ When migrating to a new VPS or setting up a fresh one, follow these steps:
 #### 1. Deploy NixOS with nixos-anywhere
 
 ```bash
-# First-time install (will WIPE the server!)
+# First-time install (will WIPE the server)
 nix run github:nix-community/nixos-anywhere -- \
-  --flake .#rgo-vps \
+  --flake '.#rgo-vps' \
   --target-host root@<new-server-ip> \
   --build-on local \
   --no-substitute-on-destination
@@ -472,21 +483,37 @@ If you fork this config, change:
 
 ### Rebuild
 ```bash
-# macOS
-darwin-rebuild switch --flake ~/.config/home#rgo-laptop
+# Desktop (NixOS)
+rebuild
 
-# NixOS
-sudo nixos-rebuild switch --flake ~/.config/home#rgo-desktop
+# Laptop (macOS)
+rebuild --laptop
 
 # VPS (after NixOS is installed + secrets available)
 rebuild-vps
+```
+
+**Fallback without nh:**
+```bash
+# NixOS
+sudo nixos-rebuild switch --flake "$HOME/.config/home#rgo-desktop"
+
+# macOS
+darwin-rebuild switch --flake "$HOME/.config/home#rgo-laptop"
+
+# VPS
+nixos-rebuild switch \
+  --flake "$HOME/.config/home#rgo-vps" \
+  --target-host rgo@rgo-vps \
+  --build-host rgo@rgo-vps \
+  --sudo
 ```
 
 ### Hetzner VPS install (nixos-anywhere)
 ```bash
 # First-time install (will wipe the server)
 nix run github:nix-community/nixos-anywhere -- \
-  --flake .#rgo-vps \
+  --flake '.#rgo-vps' \
   --target-host root@<server-ip> \
   --build-on local \
   --no-substitute-on-destination
@@ -513,11 +540,68 @@ nix flake update
 # Check flake
 nix flake check
 
-# Garbage collect
-nix-collect-garbage -d
+# Rebuild (auto-runs statix + nixfmt, auto-commits on success)
+rebuild
 
-# On macOS with nix-darwin
-darwin-rebuild switch --flake ~/.config/home#rgo-laptop
+# Clean up old generations and GC roots with nh
+nh clean all -k 3
+
+# Traditional garbage collect (fallback)
+nix-collect-garbage -d
+```
+
+### Nix Store Cleanup
+If your `/nix/store` is growing too large despite automatic GC, run these commands:
+
+```bash
+# 1. Delete old Home Manager generations
+home-manager expire-generations "-7 days"
+
+# 2. Delete old system generations (keeps current + last few)
+sudo nix-env -p /nix/var/nix/profiles/system --delete-generations +5
+
+# 3. Clean auto GC roots from direnv/develop shells
+sudo rm -rf /nix/var/nix/gcroots/auto/*
+
+# 4. Remove stale result symlinks in your home
+find ~ -maxdepth 4 -name "result" -type l -mtime +7 -delete 2>/dev/null
+
+# 5. Full GC + optimise
+sudo nix-collect-garbage -d
+sudo nix-store --optimise
+```
+
+For automatic cleanup, angrr is enabled on all systems and runs weekly to remove stale GC roots.
+
+### Nix Tools
+All Nix-specific tooling is bundled under the `apps.nix-tools` module:
+- **nh** - Better rebuild/cleanup CLI (`nh os switch`, `nh clean`)
+- **comma** - Run packages without installing (`, cowsay hello`)
+- **nix-index** - Find which package owns a file (`nix-locate bin/hello`)
+- **angrr** - Automatic GC root retention cleanup
+- **nurl** - Generate fetcher expressions from URLs
+- **nix-init** - Scaffold full Nix packages from URLs
+- **statix** - Lint Nix code for antipatterns
+- **nil** - Nix language server
+- **nixfmt** - Nix formatter
+- **home-manager** - Home-manager CLI
+
+```bash
+# Run a package without installing it
+, cowsay "hello"
+
+# Find which package owns a file
+nix-locate 'bin/hello'
+
+# Generate a fetcher expression from a URL
+nurl https://github.com/nix-community/patsh v0.2.0
+
+# Scaffold a full Nix package from a URL
+nix-init
+
+# Lint Nix files
+statix check .
+statix fix .
 ```
 
 ## Troubleshooting
@@ -539,6 +623,7 @@ This is normal - it's downloading and building everything. Subsequent builds wil
 ## TODO
 
 - [ ] Use [bun2nix](https://nix-community.github.io/bun2nix/) for managing Bun packages in Nix
+- [ ] Consider [flake-parts](https://flake.parts/) if flake outputs grow significantly (packages, devShells, checks, modules). Currently the flake is ~230 lines and readable without it.
 
 ## Credits
 

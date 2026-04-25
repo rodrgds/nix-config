@@ -12,6 +12,9 @@
     ./ssh
 
     # Development
+    ./nix-tools
+    ./comma
+    ./nh
     ./direnv
     ./git
     ./gh

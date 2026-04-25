@@ -28,6 +28,7 @@ in
     # Cross-platform modules
     ./downloads-cleanup
     ./nix
+    ./angrr
   ]
   # Linux-only modules (NixOS-specific)
   ++ lib.optionals isLinux [

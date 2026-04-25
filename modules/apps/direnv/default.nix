@@ -16,6 +16,9 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Enable system-level direnv on NixOS so angrr can hook into /etc/direnv/lib
+    programs.direnv.enable = lib.mkIf (!isDarwin) true;
+
     home-manager.users.${username} = {
       programs.direnv = {
         enable = true;

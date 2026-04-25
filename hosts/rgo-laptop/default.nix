@@ -26,6 +26,9 @@
   # Enable scripts (rebuild command and aliases)
   scripts.enable = true;
 
+  # Nix tooling
+  apps.nix-tools.enable = true;
+
   # Allow unfree packages on macOS
   nixpkgs.config.allowUnfree = true;
 
