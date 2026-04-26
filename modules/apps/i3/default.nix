@@ -105,12 +105,12 @@ in
                   notification = false;
                 }
               ];
-              keybindings = import ./keybindings.nix { inherit pkgs constants; };
-              workspaceOutputAssign = import ./workspaces.nix { };
-              assigns = import ./assigns.nix { };
-              window.commands = import ./window-rules.nix { };
-              colors = import ./colors.nix { };
-              bars = import ./bar.nix { inherit pkgs constants; };
+              keybindings = import ./_helpers/keybindings.nix { inherit pkgs constants; };
+              workspaceOutputAssign = import ./_helpers/workspaces.nix { };
+              assigns = import ./_helpers/assigns.nix { };
+              window.commands = import ./_helpers/window-rules.nix { };
+              colors = import ./_helpers/colors.nix { };
+              bars = import ./_helpers/bar.nix { inherit pkgs constants; };
             };
           };
 

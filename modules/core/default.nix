@@ -1,5 +1,8 @@
 # Core modules entry point
+# Cross-platform modules are auto-discovered via import-tree.
+# Linux-only modules live under _linux/ (skipped on Darwin by /_ convention).
 {
+  inputs,
   lib,
   system,
   config,
@@ -16,34 +19,15 @@ in
     description = "Enable OpenClaw AI assistant";
   };
 
-  # config = lib.mkIf config.services.openclaw.enable {
-  #   sops.secrets = {
-  #     openclaw_telegram_token = { };
-  #     openclaw_zai_api_key = { };
-  #     openclaw_gateway_token = { };
-  #   };
-  # };
-
   imports = [
-    # Cross-platform modules
-    ./downloads-cleanup
-    ./nix
-    ./angrr
+    # Cross-platform modules (auto-discovered)
+    # import-tree skips _linux/ by default because of /_ in path
+    (inputs.import-tree.filter (p: p != "/default.nix") ./.)
   ]
   # Linux-only modules (NixOS-specific)
+  # Relative paths inside _linux/ don't contain /_linux/ prefix,
+  # so the default filter works correctly.
   ++ lib.optionals isLinux [
-    ./users
-    ./security
-    ./system
-    ./fonts
-    ./networking
-    ./boot
-    ./audio
-    ./locale
-    ./xserver
-    ./nvidia
-    ./peripherals
-    ./printing
-    ./docker
+    (inputs.import-tree.filter (p: p != "/default.nix") ./_linux)
   ];
 }

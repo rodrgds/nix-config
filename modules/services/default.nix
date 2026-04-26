@@ -1,32 +1,10 @@
 # Server services module
 # Central module for all containerized services on the VPS
-{
-  lib,
-  config,
-  username,
-  ...
-}:
+# Auto-discovered via import-tree — each subdirectory is a self-contained module.
+{ inputs, lib, ... }:
 {
   imports = [
-    ./caddy
-    ./podman
-    ./adguardhome
-    ./n8n
-    ./unieasy
-    ./umami
-    ./ghost
-    ./vaultwarden
-    ./shlink
-    ./teamspeak
-    ./postiz
-    ./websites
-    ./pocketbase
-    ./deploy
-    ./directus
-    ./trndb
-    ./immich-public-proxy
-    ./termix
-    ./openpost
+    (inputs.import-tree.filter (p: p != "/default.nix") ./.)
   ];
 
   options.vps.enableAll = lib.mkEnableOption "Enable all VPS services (Caddy reverse proxy + containerized apps)";

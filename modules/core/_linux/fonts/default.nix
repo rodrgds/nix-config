@@ -5,7 +5,7 @@
   ...
 }:
 let
-  fonts = import ./packages.nix { inherit pkgs; };
+  fonts = import ./_helpers/packages.nix { inherit pkgs; };
   cfg = config.core.fonts;
 in
 {
