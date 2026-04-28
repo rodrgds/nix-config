@@ -93,15 +93,15 @@ in
     # Primary user for nix-darwin
     system.primaryUser = username;
 
-    # User configuration - set Zsh as the default shell
+    # User configuration - set Bash as the default shell
     users.users.${username} = {
       name = username;
       home = "/Users/${username}";
-      shell = pkgs.zsh;
+      shell = pkgs.bash;
     };
 
-    # Ensure Zsh is in /etc/shells and set as login shell
-    environment.shells = [ pkgs.zsh ];
+    # Ensure Bash is in /etc/shells and set as login shell
+    environment.shells = [ pkgs.bash ];
 
     # Home-manager state version
     home-manager.users.${username} = {

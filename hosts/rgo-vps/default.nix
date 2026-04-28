@@ -86,8 +86,8 @@
   vps.immich-public-proxy.enable = false;
   vps.openpost.enable = true;
 
-  # Your user module sets zsh as the login shell.
-  apps.zsh.enable = true;
+  # Your user module sets bash as the login shell.
+  apps.bash.enable = true;
 
   # Bootloader for Hetzner Cloud (BIOS/legacy boot)
   # Note: Using mkForce to override any defaults

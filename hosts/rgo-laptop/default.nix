@@ -51,12 +51,12 @@
 
   # Terminal & Shell
   apps.ghostty.enable = true; # Config via home-manager
-  apps.zsh.enable = true; # Gruvbox theme, syntax highlighting, autosuggestions
+  apps.bash.enable = true; # Gruvbox theme, completion, fzf integration
   apps.git.enable = true; # Git config, osxkeychain credential helper
   apps.gh.enable = true; # GitHub CLI
   apps.ssh.enable = true; # SSH client configuration
   apps.neovim.enable = true; # Neovim with EDITOR env var
-  apps.starship.enable = true; # Starship prompt with Zsh integration
+  apps.starship.enable = true; # Starship prompt with Bash integration
 
   # Development
   apps.direnv.enable = true;

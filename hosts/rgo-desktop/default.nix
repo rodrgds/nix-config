@@ -43,7 +43,7 @@
 
   # Enable apps
   apps.ghostty.enable = true;
-  apps.zsh.enable = true;
+  apps.bash.enable = true;
   apps.starship.enable = true;
   apps.git.enable = true;
   apps.gh.enable = true;

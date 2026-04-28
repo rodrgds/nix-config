@@ -96,6 +96,9 @@ let
     # Zsh aliases
     programs.zsh.shellAliases = aliases;
 
+    # Bash aliases
+    programs.bash.shellAliases = aliases;
+
     # Add scripts to PATH
     home.sessionPath = [ "${homeDir}/.config/home/scripts" ];
   };
