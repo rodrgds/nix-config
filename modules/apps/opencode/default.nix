@@ -8,7 +8,7 @@
 }:
 let
   cfg = config.apps.opencode;
-  inherit (constants) isDarwin;
+  inherit (constants) isDarwin isLinux;
 in
 {
   options.apps.opencode = {
@@ -21,11 +21,8 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
-        # Install opencode CLI and desktop app
-        environment.systemPackages = [
-          pkgs.opencode
-          pkgs.opencode-desktop
-        ];
+        # Install opencode CLI on all supported platforms
+        environment.systemPackages = [ pkgs.opencode ];
 
         home-manager.users.${username} =
           { config, ... }:
@@ -187,40 +184,45 @@ in
             };
           };
       }
+      (lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.opencode-desktop ];
+      })
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [ "opencode-desktop" ];
       })
-      (lib.mkIf cfg.web.enable {
-        systemd.services.opencode-web = {
-          description = "Opencode Web Server";
-          after = [
-            "network.target"
-            "tailscaled.service"
-          ];
-          wants = [ "tailscaled.service" ];
-          wantedBy = [ "multi-user.target" ];
+      (lib.optionalAttrs isLinux (
+        lib.mkIf cfg.web.enable {
+          systemd.services.opencode-web = {
+            description = "Opencode Web Server";
+            after = [
+              "network.target"
+              "tailscaled.service"
+            ];
+            wants = [ "tailscaled.service" ];
+            wantedBy = [ "multi-user.target" ];
 
-          serviceConfig = {
-            Type = "simple";
-            User = username;
-            Group = "users";
-            WorkingDirectory = "/home/${username}";
-            ExecStart = "${pkgs.opencode}/bin/opencode web --hostname 0.0.0.0 --port 4096";
-            Restart = "always";
-            RestartSec = 5;
-            NoNewPrivileges = true;
-            PrivateTmp = true;
-            ProtectSystem = "strict";
-            ProtectHome = false;
-            ReadWritePaths = [ "/home/${username}" ];
-          };
+            serviceConfig = {
+              Type = "simple";
+              User = username;
+              Group = "users";
+              WorkingDirectory = "/home/${username}";
+              ExecStart = "${pkgs.opencode}/bin/opencode web --hostname 0.0.0.0 --port 4096";
+              Restart = "always";
+              RestartSec = 5;
+              NoNewPrivileges = true;
+              PrivateTmp = true;
+              ProtectSystem = "strict";
+              ProtectHome = false;
+              ReadWritePaths = [ "/home/${username}" ];
+            };
 
-          environment = {
-            HOME = "/home/${username}";
-            USER = username;
+            environment = {
+              HOME = "/home/${username}";
+              USER = username;
+            };
           };
-        };
-      })
+        }
+      ))
     ]
   );
 }

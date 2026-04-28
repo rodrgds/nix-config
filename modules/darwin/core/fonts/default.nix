@@ -5,7 +5,7 @@
   ...
 }:
 let
-  fonts = import ../../../core/fonts/packages.nix { inherit pkgs; };
+  fonts = import ../../../core/_linux/fonts/_helpers/packages.nix { inherit pkgs; };
   cfg = config.darwin.core.fonts;
 in
 {
