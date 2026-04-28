@@ -49,7 +49,7 @@ in
         OPENPOST_PORT = toString openpostContainerPort;
         OPENPOST_DB_PATH = "/data/db/openpost.db";
         OPENPOST_MEDIA_PATH = "/data/media";
-        OPENPOST_MEDIA_URL = "/media";
+        OPENPOST_MEDIA_URL = "https://${cfg.domain}/media";
         OPENPOST_FRONTEND_URL = "https://${cfg.domain}";
         OPENPOST_CORS_EXTRA_ORIGINS = "https://${cfg.domain}";
         OPENPOST_DISABLE_LINKEDIN_THREAD_REPLIES = "true";
