@@ -210,5 +210,9 @@
   # Disable wpa_supplicant WiFi (VPS is ethernet-only, saves ~15 MB RAM)
   networking.wireless.enable = lib.mkForce false;
 
-  system.stateVersion = lib.mkDefault "24.11";
+  # Keep the classic D-Bus daemon on the remote VPS so live switch deployments
+  # do not get blocked by the dbus -> broker migration inhibitor.
+  services.dbus.implementation = "dbus";
+
+  system.stateVersion = "24.11";
 }

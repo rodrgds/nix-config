@@ -14,6 +14,6 @@ in
       flake = "/home/rgo/.config/home";
     };
 
-    system.stateVersion = "25.05";
+    system.stateVersion = lib.mkDefault "25.05";
   };
 }
