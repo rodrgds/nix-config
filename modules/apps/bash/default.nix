@@ -29,6 +29,7 @@ in
         historyControl = [
           "ignoredups"
           "ignorespace"
+          "erasedups"
         ];
 
         shellOptions = [
@@ -37,16 +38,12 @@ in
           "globstar"
         ];
 
-        # profileExtra runs in .bash_profile (login shells — macOS Terminal)
         profileExtra = ''
-          # Source .bashrc for login shells (required on macOS where
-          # Terminal opens login shells that skip .bashrc by default)
           if [ -f "$HOME/.bashrc" ]; then
             source "$HOME/.bashrc"
           fi
         ''
         + lib.optionalString isDarwin ''
-          # Add Homebrew to PATH on macOS
           if [ -d /opt/homebrew/bin ]; then
             export PATH="/opt/homebrew/bin:$PATH"
           fi
@@ -55,18 +52,19 @@ in
             export PATH="/opt/homebrew/sbin:$PATH"
           fi
 
-          # Initialize Homebrew shell environment if available
           if [ -f /opt/homebrew/bin/brew ]; then
             eval "$(/opt/homebrew/bin/brew shellenv)"
           fi
         '';
 
-        # initExtra runs in .bashrc (both login and non-login shells)
         initExtra = ''
-          # Only run in actual bash, skip if sourced by zsh/sh
           if [ -z "$BASH_VERSION" ]; then
             return 2>/dev/null || exit 0
           fi
+
+          # ble.sh — fish-style inline history suggestions
+          # Must be sourced first with --noattach; ble-attach goes at the very bottom
+          [[ $- == *i* ]] && source ${pkgs.blesh}/share/blesh/ble.sh --noattach
 
           # Gruvbox LS_COLORS + always colorize ls
           export CLICOLOR=1
@@ -88,6 +86,12 @@ in
           export LESS_TERMCAP_ue=$'\e[0m'
           export LESS_TERMCAP_us=$'\e[1;32m'
 
+          # Timestamp raw `history` output
+          export HISTTIMEFORMAT="%F %T  "
+
+          # Sync history across sessions after every command
+          PROMPT_COMMAND="history -a; history -n; ''${PROMPT_COMMAND:-}"
+
           # Shell options
           set -o vi
           set -o ignoreeof
@@ -97,7 +101,7 @@ in
           shopt -s checkwinsize
           shopt -s cdspell
 
-          # Readline: history search with up/down, case-insensitive completion
+          # Readline bindings (active when ble.sh is not loaded / non-interactive fallback)
           bind '"\e[A": history-search-backward'
           bind '"\e[B": history-search-forward'
           bind "set completion-ignore-case on"
@@ -105,16 +109,38 @@ in
           bind "set menu-complete-display-prefix on"
           bind "set colored-stats on"
           bind "set visible-stats on"
-
-          # Tab cycles through completions instead of listing them first
           bind 'TAB:menu-complete'
           bind '"\\e[Z":menu-complete-backward'
 
-          # Enable fzf keybindings if available
+          # fzf keybindings
           if [[ -z "''${FZF_BASH_INTEGRATION_LOADED:-}" ]] && command -v fzf &> /dev/null; then
             source ${pkgs.fzf}/share/fzf/key-bindings.bash
             source ${pkgs.fzf}/share/fzf/completion.bash
           fi
+
+          # ble.sh appearance + behaviour — applied after load, before attach
+          if [[ ''${BLE_VERSION-} ]]; then
+            # Gruvbox comment gray for the ghost-text suggestion
+            ble-face auto_complete=fg=#928374,italic
+
+            # Show suggestion from history as you type
+            bleopt complete_auto_history=1
+
+            # Accept full suggestion with → ; word-by-word with Alt+→
+            ble-bind -f 'right'     'auto_complete/insert'
+            ble-bind -f 'M-right'   'auto_complete/insert-word'
+
+            # Preserve Ctrl+R for atuin and up/down for history search
+            ble-bind -f 'C-r'       'external-editor'  # atuin will override this
+            ble-bind -f 'up'        'history-search-backward'
+            ble-bind -f 'down'      'history-search-forward'
+          fi
+
+          # Smart history: SQLite-backed, fuzzy, context-aware
+          # (atuin re-binds Ctrl+R and up-arrow on top of ble.sh safely)
+
+          # Attach ble.sh — MUST be last
+          [[ ''${BLE_VERSION-} ]] && ble-attach
         '';
 
         sessionVariables = {
@@ -125,15 +151,33 @@ in
         };
       };
 
+      programs.atuin = {
+        enable = true;
+        enableBashIntegration = true;
+        settings = {
+          style = "compact";
+          search_mode = "fuzzy";
+          filter_mode = "global";
+          filter_mode_shell_up_key_binding = "directory";
+          show_preview = true;
+          exit_mode = "return-query";
+          history_filter = [
+            "^ls$"
+            "^cd$"
+            "^pwd$"
+            "^exit$"
+            "^clear$"
+          ];
+        };
+      };
+
       home.sessionVariables = {
         LANG = "en_US.UTF-8";
         LC_ALL = "en_US.UTF-8";
       };
 
       programs.fzf.enableBashIntegration = true;
-
       programs.zoxide.enableBashIntegration = true;
-
       programs.direnv.enableBashIntegration = true;
     };
   };
