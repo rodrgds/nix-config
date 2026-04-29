@@ -8,7 +8,7 @@
 }:
 let
   cfg = config.apps.bash;
-  inherit (constants) isDarwin colors;
+  inherit (constants) isDarwin;
 in
 {
   options.apps.bash = {
@@ -62,10 +62,6 @@ in
             return 2>/dev/null || exit 0
           fi
 
-          # ble.sh — fish-style inline history suggestions
-          # Must be sourced first with --noattach; ble-attach goes at the very bottom
-          [[ $- == *i* ]] && source ${pkgs.blesh}/share/blesh/ble.sh --noattach
-
           # Gruvbox LS_COLORS + always colorize ls
           export CLICOLOR=1
           export LS_COLORS="di=1;36:ln=1;35:so=1;32:pi=1;33:ex=1;31:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=30;42:ow=34;43"
@@ -101,7 +97,7 @@ in
           shopt -s checkwinsize
           shopt -s cdspell
 
-          # Readline bindings (active when ble.sh is not loaded / non-interactive fallback)
+          # Readline bindings
           bind '"\e[A": history-search-backward'
           bind '"\e[B": history-search-forward'
           bind "set completion-ignore-case on"
@@ -117,30 +113,6 @@ in
             source ${pkgs.fzf}/share/fzf/key-bindings.bash
             source ${pkgs.fzf}/share/fzf/completion.bash
           fi
-
-          # ble.sh appearance + behaviour — applied after load, before attach
-          if [[ ''${BLE_VERSION-} ]]; then
-            # Gruvbox comment gray for the ghost-text suggestion
-            ble-face auto_complete=fg=#928374,italic
-
-            # Show suggestion from history as you type
-            bleopt complete_auto_history=1
-
-            # Accept full suggestion with → ; word-by-word with Alt+→
-            ble-bind -f 'right'     'auto_complete/insert'
-            ble-bind -f 'M-right'   'auto_complete/insert-word'
-
-            # Preserve Ctrl+R for atuin and up/down for history search
-            ble-bind -f 'C-r'       'external-editor'  # atuin will override this
-            ble-bind -f 'up'        'history-search-backward'
-            ble-bind -f 'down'      'history-search-forward'
-          fi
-
-          # Smart history: SQLite-backed, fuzzy, context-aware
-          # (atuin re-binds Ctrl+R and up-arrow on top of ble.sh safely)
-
-          # Attach ble.sh — MUST be last
-          [[ ''${BLE_VERSION-} ]] && ble-attach
         '';
 
         sessionVariables = {
