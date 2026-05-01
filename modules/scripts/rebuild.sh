@@ -125,6 +125,15 @@ update_selected_inputs() {
     echo ""
 }
 
+current_darwin_generation() {
+    darwin-rebuild --list-generations 2>/dev/null | awk '
+        $1 ~ /^[0-9]+$/ && /current/ {
+            print $1
+            exit
+        }
+    '
+}
+
 # Parse optional target override
 TARGET=""
 while [[ $# -gt 0 ]]; do
@@ -180,7 +189,12 @@ case "$TARGET" in
             osascript -e 'display notification "Error while rebuilding nix-darwin" with title "Rebuild Failed"' 2>/dev/null || true
             exit 1
         }
-        msg="Update rgo-laptop configuration"
+        gen="$(current_darwin_generation)"
+        if [ -n "$gen" ]; then
+            msg="Generation $gen"
+        else
+            msg="Darwin rebuild $(date '+%Y-%m-%d %H:%M:%S')"
+        fi
         ;;
 esac
 

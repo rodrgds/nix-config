@@ -38,4 +38,17 @@ final: prev: {
   direnv = prev.direnv.overrideAttrs (_: {
     doCheck = false;
   });
+
+  # mpv currently fails Darwin install-time version probing even though the
+  # build itself succeeds, so skip that broken post-install check on macOS.
+  mpv-unwrapped = prev.mpv-unwrapped.overrideAttrs (
+    _:
+    if prev.stdenv.hostPlatform.isDarwin then
+      {
+        doInstallCheck = false;
+        installCheckPhase = ":";
+      }
+    else
+      { }
+  );
 }
