@@ -7,6 +7,7 @@
 let
   fonts = import ../../../core/_linux/fonts/_helpers/packages.nix { inherit pkgs; };
   cfg = config.darwin.core.fonts;
+  darwinSharedPackages = builtins.filter (pkg: pkg != pkgs.jetbrains-mono) fonts.sharedPackages;
 in
 {
   options.darwin.core.fonts = {
@@ -19,6 +20,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    fonts.packages = fonts.sharedPackages ++ cfg.extraPackages;
+    fonts.packages = darwinSharedPackages ++ cfg.extraPackages;
   };
 }

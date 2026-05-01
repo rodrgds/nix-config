@@ -13,8 +13,10 @@ parse_flake_inputs() {
             opens = gsub(/\{/, "{")
             closes = gsub(/\}/, "}")
 
-            if (depth == 1 && match($0, /^[[:space:]]*([[:alnum:]_.-]+)[[:space:]]*=/, m)) {
-                name = m[1]
+            if (depth == 1 && $0 ~ /^[[:space:]]*[[:alnum:]_.-]+[[:space:]]*=/) {
+                name = $0
+                sub(/^[[:space:]]*/, "", name)
+                sub(/[[:space:]]*=.*/, "", name)
                 sub(/\.url$/, "", name)
                 print name
             }
@@ -147,8 +149,14 @@ fi
 
 cd ~/.config/home
 
-mapfile -t FLAKE_INPUTS < <(parse_flake_inputs)
-select_flake_inputs "${FLAKE_INPUTS[@]}"
+if [ "$TARGET" = "desktop" ]; then
+    mapfile -t FLAKE_INPUTS < <(parse_flake_inputs)
+    select_flake_inputs "${FLAKE_INPUTS[@]}"
+else
+    echo "=== Flake Inputs ==="
+    echo "Skipping flake input update prompt on macOS"
+    echo ""
+fi
 
 echo "=== Linting ==="
 statix check . || true

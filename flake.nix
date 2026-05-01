@@ -4,6 +4,8 @@
   inputs = {
     # Default package set: keep the overall system on stable.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    # macOS must track a darwin-specific nixpkgs branch that matches nix-darwin.
+    nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
     # Fast-moving packages can explicitly opt into unstable.
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     # DaVinci Resolve is intentionally pinned separately so normal flake updates
@@ -16,8 +18,8 @@
     };
 
     nix-darwin = {
-      url = "github:lnl7/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:lnl7/nix-darwin/nix-darwin-25.11";
+      inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
     nix-homebrew = {
@@ -100,6 +102,7 @@
     {
       self,
       nixpkgs,
+      nixpkgs-darwin,
       nixpkgs-unstable,
       nixpkgs-davinci,
       nix-darwin,
@@ -116,7 +119,7 @@
     }@inputs:
     let
       # Common settings across all systems
-      inherit (nixpkgs) lib;
+      linuxLib = nixpkgs.lib;
       username = "rgo";
       fullname = "Rodrigo Dias";
       mkConstants = system: import ./modules/constants.nix { inherit username system; };
@@ -129,11 +132,11 @@
           specialArgs = {
             inherit
               inputs
-              lib
               username
               fullname
               system
               ;
+            lib = linuxLib;
             constants = mkConstants system;
             devenvPkg = inputs.devenv.packages.${system}.default;
           };
@@ -192,11 +195,11 @@
           specialArgs = {
             inherit
               inputs
-              lib
               username
               fullname
               system
               ;
+            lib = nixpkgs-darwin.lib;
             constants = mkConstants system;
             devenvPkg = inputs.devenv.packages.${system}.default;
           };

@@ -105,6 +105,7 @@ in
 
     # Home-manager state version
     home-manager.users.${username} = {
+      home.enableNixpkgsReleaseCheck = false;
       home.stateVersion = "25.05";
     };
 
