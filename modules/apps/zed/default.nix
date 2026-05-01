@@ -20,7 +20,7 @@ in
     lib.mkMerge [
       # Linux: Install via nixpkgs
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.zed-editor ];
+        environment.systemPackages = [ pkgs.unstable.zed-editor ];
       })
       # Darwin: Install via Homebrew cask
       (lib.optionalAttrs isDarwin {

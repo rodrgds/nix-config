@@ -20,7 +20,7 @@ in
     lib.mkMerge [
       # Linux: Install via nixpkgs
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.vscode ];
+        environment.systemPackages = [ pkgs.unstable.vscode ];
       })
       # Darwin: Install via Homebrew cask
       (lib.optionalAttrs isDarwin {

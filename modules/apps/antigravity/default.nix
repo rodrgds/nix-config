@@ -17,7 +17,7 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.antigravity-fhs ];
+        environment.systemPackages = [ pkgs.unstable.antigravity-fhs ];
       })
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [ "antigravity" ];
