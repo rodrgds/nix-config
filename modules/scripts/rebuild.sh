@@ -1,6 +1,128 @@
 #!/usr/bin/env bash
 set -e
 
+parse_flake_inputs() {
+    awk '
+        /^\s*inputs\s*=\s*\{/ {
+            in_inputs = 1
+            depth = 1
+            next
+        }
+
+        in_inputs {
+            opens = gsub(/\{/, "{")
+            closes = gsub(/\}/, "}")
+
+            if (depth == 1 && match($0, /^[[:space:]]*([[:alnum:]_.-]+)[[:space:]]*=/, m)) {
+                name = m[1]
+                sub(/\.url$/, "", name)
+                print name
+            }
+
+            depth += opens - closes
+            if (depth == 0) {
+                exit
+            }
+        }
+    ' flake.nix
+}
+
+select_flake_inputs() {
+    local -a inputs=("$@")
+    local -a defaults=()
+    local -a selected=()
+    local reply token idx
+
+    for input in "${inputs[@]}"; do
+        if [[ "$input" != "nixpkgs-davinci" ]]; then
+            defaults+=("$input")
+        fi
+    done
+
+    echo "=== Flake Inputs ==="
+    for i in "${!inputs[@]}"; do
+        printf "%2d. %s\n" "$((i + 1))" "${inputs[i]}"
+    done
+    echo ""
+    echo "Update inputs before rebuilding?"
+    echo "  Enter: skip"
+    echo "  d: update default set (all except nixpkgs-davinci)"
+    echo "  a: update all inputs"
+    echo "  numbers: choose specific inputs, e.g. '1 3 5' or '1,3,5'"
+    read -r -p "Selection: " reply
+
+    case "${reply// /}" in
+        "")
+            return 0
+            ;;
+        d|D|default|DEFAULT)
+            selected=("${defaults[@]}")
+            ;;
+        a|A|all|ALL)
+            selected=("${inputs[@]}")
+            ;;
+        *)
+            reply="${reply//,/ }"
+            for token in $reply; do
+                if [[ ! "$token" =~ ^[0-9]+$ ]]; then
+                    echo "Invalid selection: $token" >&2
+                    exit 1
+                fi
+
+                idx=$((token - 1))
+                if (( idx < 0 || idx >= ${#inputs[@]} )); then
+                    echo "Selection out of range: $token" >&2
+                    exit 1
+                fi
+
+                selected+=("${inputs[idx]}")
+            done
+            ;;
+    esac
+
+    if ((${#selected[@]} == 0)); then
+        return 0
+    fi
+
+    dedupe_array selected
+    update_selected_inputs "${selected[@]}"
+}
+
+dedupe_array() {
+    local array_name="$1"
+    local -n array_ref="$array_name"
+    local -A seen=()
+    local -a deduped=()
+    local item
+
+    for item in "${array_ref[@]}"; do
+        if [[ -z "${seen[$item]:-}" ]]; then
+            deduped+=("$item")
+            seen[$item]=1
+        fi
+    done
+
+    array_ref=("${deduped[@]}")
+}
+
+update_selected_inputs() {
+    local -a selected=("$@")
+    local -a cmd=("nix" "flake" "update" "--flake" "path:.")
+    local input
+
+    echo ""
+    echo "=== Updating Flake Inputs ==="
+    printf "Selected:"
+    for input in "${selected[@]}"; do
+        printf " %s" "$input"
+        cmd+=("$input")
+    done
+    printf "\n"
+
+    "${cmd[@]}"
+    echo ""
+}
+
 # Parse optional target override
 TARGET=""
 while [[ $# -gt 0 ]]; do
@@ -25,6 +147,9 @@ fi
 
 cd ~/.config/home
 
+mapfile -t FLAKE_INPUTS < <(parse_flake_inputs)
+select_flake_inputs "${FLAKE_INPUTS[@]}"
+
 echo "=== Linting ==="
 statix check . || true
 
@@ -34,7 +159,7 @@ find . -name "*.nix" -exec nixfmt {} + 2>/dev/null || true
 case "$TARGET" in
     desktop)
         echo "=== Rebuilding NixOS ==="
-        nh os switch . -H rgo-desktop -- --impure || {
+        nh os switch path:. -H rgo-desktop -- --impure || {
             notify-send "Error while rebuilding NixOS" 2>/dev/null || true
             exit 1
         }
@@ -43,7 +168,7 @@ case "$TARGET" in
         ;;
     laptop)
         echo "=== Rebuilding Darwin ==="
-        nh darwin switch . -H rgo-laptop -- --impure || {
+        nh darwin switch path:. -H rgo-laptop -- --impure || {
             osascript -e 'display notification "Error while rebuilding nix-darwin" with title "Rebuild Failed"' 2>/dev/null || true
             exit 1
         }
