@@ -1,5 +1,6 @@
+{ sourcePkgs }:
 final: prev:
-prev.davinci-resolve-studio.override (old: {
+sourcePkgs.davinci-resolve-studio.override (old: {
   buildFHSEnv =
     fhs:
     (

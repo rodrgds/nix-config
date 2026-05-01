@@ -2,8 +2,13 @@
   description = "NixOS and nix-darwin configuration with flakes and home-manager";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.11";
+    # Default package set: keep the overall system on stable.
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    # Fast-moving packages can explicitly opt into unstable.
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+    # DaVinci Resolve is intentionally pinned separately so normal flake updates
+    # do not churn this heavyweight package unless you update this input.
+    nixpkgs-davinci.url = "github:nixos/nixpkgs/755f5aa91337890c432639c60b6064bb7fe67769";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -95,6 +100,8 @@
     {
       self,
       nixpkgs,
+      nixpkgs-unstable,
+      nixpkgs-davinci,
       nix-darwin,
       home-manager,
       nix-homebrew,
@@ -133,7 +140,10 @@
           modules = [
             # Apply overlays
             {
-              nixpkgs.overlays = [ (import ./packages { inherit inputs; }) ];
+              nixpkgs.overlays = [
+                inputs.angrr.overlays.default
+                (import ./packages { inherit inputs; })
+              ];
             }
             # Main modules
             ./modules
@@ -193,7 +203,10 @@
           modules = [
             # Apply overlays
             {
-              nixpkgs.overlays = [ (import ./packages { inherit inputs; }) ];
+              nixpkgs.overlays = [
+                inputs.angrr.overlays.default
+                (import ./packages { inherit inputs; })
+              ];
             }
             # Core modules (cross-platform)
             ./modules/core
