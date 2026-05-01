@@ -15,28 +15,31 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home-manager.users.${username} = _: {
-      dconf.settings = {
-        "org/gnome/desktop/interface" = {
-          color-scheme = "prefer-dark";
+    home-manager.users.${username} =
+      { config, ... }:
+      {
+        dconf.settings = {
+          "org/gnome/desktop/interface" = {
+            color-scheme = "prefer-dark";
+          };
         };
-      };
 
-      gtk = {
-        enable = true;
-        font = {
-          name = constants.fonts.ui;
-          size = constants.fonts.sizes.normal;
-        };
-        theme = {
-          package = pkgs.gruvbox-dark-gtk;
-          name = "gruvbox-dark";
-        };
-        iconTheme = {
-          package = pkgs.papirus-icon-theme;
-          name = "Papirus";
+        gtk = {
+          enable = true;
+          font = {
+            name = constants.fonts.ui;
+            size = constants.fonts.sizes.normal;
+          };
+          theme = {
+            package = pkgs.gruvbox-dark-gtk;
+            name = "gruvbox-dark";
+          };
+          gtk4.theme = config.gtk.theme;
+          iconTheme = {
+            package = pkgs.papirus-icon-theme;
+            name = "Papirus";
+          };
         };
       };
-    };
   };
 }

@@ -14,49 +14,49 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [
+    environment.systemPackages = [
       # Essential command-line tools
-      htop
-      unzip
-      zip
-      wget
-      curl
-      gcc
-      gnumake
-      gnugrep
-      tealdeer
-      openssl
-      cmake
+      pkgs.htop
+      pkgs.unzip
+      pkgs.zip
+      pkgs.wget
+      pkgs.curl
+      pkgs.gcc
+      pkgs.gnumake
+      pkgs.gnugrep
+      pkgs.tealdeer
+      pkgs.openssl
+      pkgs.cmake
 
       # System information and utilities
-      scrot
-      xdotool
-      inxi
-      pciutils
-      dmidecode
-      smartmontools
-      mesa-demos
-      xdpyinfo
-      usbutils
-      xclip
-      dex
-      zenity
-      nfs-utils
+      pkgs.scrot
+      pkgs.xdotool
+      pkgs.inxi
+      pkgs.pciutils
+      pkgs.dmidecode
+      pkgs.smartmontools
+      pkgs.mesa-demos
+      pkgs.xorg.xdpyinfo
+      pkgs.usbutils
+      pkgs.xclip
+      pkgs.dex
+      pkgs.zenity
+      pkgs.nfs-utils
 
       # Nix tools
-      nixd
-      nixfmt
+      pkgs.nixd
+      pkgs.nixfmt
 
       # Audio
-      pulseaudioFull
-      pavucontrol
-      playerctl
+      pkgs.pulseaudioFull
+      pkgs.pavucontrol
+      pkgs.playerctl
 
       # Notifications & Desktop utilities
-      libnotify
-      feh
-      polkit_gnome
-      dconf
+      pkgs.libnotify
+      pkgs.feh
+      pkgs.polkit_gnome
+      pkgs.dconf
     ];
   };
 }

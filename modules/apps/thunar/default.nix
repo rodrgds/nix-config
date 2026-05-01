@@ -14,11 +14,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [
-      xarchiver
-      thunar
-      tumbler
-      thunar-archive-plugin
+    environment.systemPackages = [
+      pkgs.xarchiver
+      pkgs.xfce.thunar
+      pkgs.xfce.tumbler
+      pkgs.xfce.thunar-archive-plugin
     ];
 
     home-manager.users.${username} = _: {
