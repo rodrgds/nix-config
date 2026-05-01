@@ -6,26 +6,24 @@
   ...
 }:
 let
-  cfg = config.apps.gemini-cli;
+  cfg = config.apps.claude;
   installDir = ".local/share/npm-global";
-  packageName = "@google/gemini-cli";
+  packageName = "@anthropic-ai/claude-code";
 in
 {
-  options.apps.gemini-cli = {
-    enable = lib.mkEnableOption "Enable Gemini CLI";
+  options.apps.claude = {
+    enable = lib.mkEnableOption "Enable Claude Code CLI";
   };
 
   config = lib.mkIf cfg.enable {
     apps.nodejs.enable = true;
-
-    environment.variables.GEMINI_YOLO_MODE = "true";
 
     home-manager.users.${username} =
       { lib, ... }:
       {
         home.sessionPath = [ "$HOME/${installDir}/bin" ];
 
-        home.activation.installGeminiCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        home.activation.installClaudeCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           export PATH="${pkgs.nodejs}/bin:$PATH"
           INSTALL_ROOT="$HOME/${installDir}"
 

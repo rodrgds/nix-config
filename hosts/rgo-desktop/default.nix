@@ -133,9 +133,11 @@
   apps.synology-drive.enable = true;
   apps.ngrok.enable = true;
 
-  # Opencode
+  # Coding agents
   apps.opencode.enable = true;
   apps.gemini-cli.enable = true;
+  apps.codex.enable = true;
+  apps.claude.enable = true;
 
   # Handy
   apps.handy.enable = true;

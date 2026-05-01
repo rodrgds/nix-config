@@ -22,7 +22,7 @@ in
     lib.mkMerge [
       {
         # Install opencode CLI on all supported platforms
-        environment.systemPackages = [ pkgs.opencode ];
+        environment.systemPackages = [ pkgs.unstable.opencode ];
 
         home-manager.users.${username} =
           { config, ... }:
@@ -185,7 +185,7 @@ in
           };
       }
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.opencode-desktop ];
+        environment.systemPackages = [ pkgs.unstable.opencode-desktop ];
       })
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [ "opencode-desktop" ];
@@ -206,7 +206,7 @@ in
               User = username;
               Group = "users";
               WorkingDirectory = "/home/${username}";
-              ExecStart = "${pkgs.opencode}/bin/opencode web --hostname 0.0.0.0 --port 4096";
+              ExecStart = "${pkgs.unstable.opencode}/bin/opencode web --hostname 0.0.0.0 --port 4096";
               Restart = "always";
               RestartSec = 5;
               NoNewPrivileges = true;

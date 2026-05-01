@@ -77,11 +77,14 @@
   apps.virtualization.enable = true; # QEMU + UTM (Darwin) / VirtualBox (Linux)
   apps.opencode.enable = true; # CLI tool with gruvbox theme
   apps.gemini-cli.enable = true;
+  apps.codex.enable = true;
+  apps.claude.enable = true;
   apps.dbeaver.enable = true; # DBeaver database tool (available in nixpkgs)
   apps.cap.enable = true; # Cap screen recorder
   apps.android-studio.enable = true;
   apps.android-sdk.enable = true;
   apps.affinity.enable = true;
+  apps.zed.enable = true; # Zed editor (Homebrew on Darwin)
 
   # Communication
   apps.telegram.enable = true; # Telegram Desktop (available in nixpkgs)
