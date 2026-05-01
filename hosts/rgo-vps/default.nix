@@ -23,9 +23,6 @@
     "1.0.0.1"
   ];
 
-  # Prevent tailscale from overriding host DNS configuration.
-  services.tailscale.extraUpFlags = lib.mkForce [ "--accept-dns=false" ];
-
   # Add nix-openclaw overlay for openclaw package
   # nixpkgs.overlays = [ inputs.nix-openclaw.overlays.default ];
 
@@ -39,6 +36,7 @@
   core.security.enable = true;
   core.system.enable = true;
   core.networking.enable = true;
+  core.networking.tailscale.acceptDns = false;
 
   apps.nix-tools.enable = true;
 

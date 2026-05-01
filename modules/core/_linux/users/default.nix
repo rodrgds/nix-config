@@ -33,6 +33,7 @@ in
 
     # Home-manager base configuration
     home-manager.users.${username} = {
+      home.enableNixpkgsReleaseCheck = false;
       home.stateVersion = "25.05";
     };
   };
