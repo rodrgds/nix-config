@@ -199,7 +199,7 @@
               fullname
               system
               ;
-            lib = nixpkgs-darwin.lib;
+            inherit (nixpkgs-darwin) lib;
             constants = mkConstants system;
             devenvPkg = inputs.devenv.packages.${system}.default;
           };

@@ -8,7 +8,7 @@ final: prev: {
 
   # Home Manager's xresources module expects pkgs.xrdb, but on the stable set
   # the binary is namespaced under xorg.
-  xrdb = prev.xorg.xrdb;
+  inherit (prev.xorg) xrdb;
 
   stable = import inputs.nixpkgs {
     inherit (prev.stdenv.hostPlatform) system;
