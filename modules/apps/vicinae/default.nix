@@ -85,6 +85,14 @@ in
             };
           };
 
+          # The upstream service uses KillMode=process, which leaves the spawned
+          # Chromium/Electron helper tree behind during Home Manager restarts.
+          # During a NixOS switch that stale tree collides with the restarted
+          # server, triggers a segfault loop, and the activation never finishes.
+          systemd.user.services.vicinae.Service = lib.mkIf isLinux {
+            KillMode = lib.mkForce "control-group";
+          };
+
           home.file.".local/share/vicinae/themes/gruvbox-custom.toml".text = ''
             [meta]
             version = 1

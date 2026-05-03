@@ -135,6 +135,7 @@
 
   # Coding agents
   apps.opencode.enable = true;
+  apps.pi.enable = true;
   apps.gemini-cli.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;

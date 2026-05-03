@@ -76,6 +76,7 @@
   apps.clion.enable = true; # CLion IDE (nixpkgs on Linux, Homebrew on Darwin)
   apps.virtualization.enable = true; # QEMU + UTM (Darwin) / VirtualBox (Linux)
   apps.opencode.enable = true; # CLI tool with gruvbox theme
+  apps.pi.enable = true;
   apps.gemini-cli.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;

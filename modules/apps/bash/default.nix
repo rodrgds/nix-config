@@ -62,7 +62,7 @@ in
             return 2>/dev/null || exit 0
           fi
 
-          export STARSHIP_CONFIG="$HOME/.config/starship.toml"
+
 
           # Gruvbox LS_COLORS + always colorize ls
           export CLICOLOR=1

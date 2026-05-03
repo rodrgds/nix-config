@@ -14,10 +14,6 @@ in
 
   config = lib.mkIf cfg.enable {
     home-manager.users.${username} = {
-      home.sessionVariables = {
-        STARSHIP_CONFIG = "$HOME/.config/starship.toml";
-      };
-
       programs.starship = {
         enable = true;
         enableZshIntegration = true;

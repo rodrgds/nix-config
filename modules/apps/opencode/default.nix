@@ -9,6 +9,9 @@
 let
   cfg = config.apps.opencode;
   inherit (constants) isDarwin isLinux;
+  installDir = ".local/share/npm-global";
+  installRoot = "${constants.homeDir}/${installDir}";
+  packageName = "opencode-ai";
 in
 {
   options.apps.opencode = {
@@ -21,12 +24,13 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
-        # Install opencode CLI on all supported platforms
-        environment.systemPackages = [ pkgs.unstable.opencode ];
+        apps.nodejs.enable = true;
 
         home-manager.users.${username} =
-          { config, ... }:
+          { config, lib, ... }:
           {
+            home.sessionPath = [ "$HOME/${installDir}/bin" ];
+
             programs.opencode = {
               enable = true;
               skills = lib.mapAttrs (name: _: builtins.readFile (./skills + "/${name}")) (
@@ -64,6 +68,14 @@ in
                 '';
               };
             };
+
+            home.activation.installOpencodeCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              export PATH="${pkgs.nodejs}/bin:$PATH"
+              INSTALL_ROOT="$HOME/${installDir}"
+
+              mkdir -p "$INSTALL_ROOT"
+              ${pkgs.nodejs}/bin/npm install --global --prefix "$INSTALL_ROOT" ${packageName}
+            '';
 
             sops.templates."opencode-config".content = builtins.toJSON {
               "$schema" = "https://opencode.ai/config.json";
@@ -206,7 +218,7 @@ in
               User = username;
               Group = "users";
               WorkingDirectory = "/home/${username}";
-              ExecStart = "${pkgs.unstable.opencode}/bin/opencode web --hostname 0.0.0.0 --port 4096";
+              ExecStart = "${installRoot}/bin/opencode web --hostname 0.0.0.0 --port 4096";
               Restart = "always";
               RestartSec = 5;
               NoNewPrivileges = true;

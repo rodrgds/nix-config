@@ -6,31 +6,34 @@
   ...
 }:
 let
-  cfg = config.apps.codex;
+  cfg = config.apps.pi;
   installDir = ".local/share/npm-global";
-  packageName = "@openai/codex";
+  packageName = "@mariozechner/pi-coding-agent";
 in
 {
-  options.apps.codex = {
-    enable = lib.mkEnableOption "Enable Codex CLI";
+  options.apps.pi = {
+    enable = lib.mkEnableOption "Enable Pi coding agent";
   };
 
   config = lib.mkIf cfg.enable {
     apps.nodejs.enable = true;
-    environment.systemPackages = lib.optionals pkgs.stdenv.isLinux [ pkgs.bubblewrap ];
 
     home-manager.users.${username} =
       { lib, ... }:
       {
         home.sessionPath = [ "$HOME/${installDir}/bin" ];
 
-        home.activation.installCodexCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        home.activation.installPiCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           export PATH="${pkgs.nodejs}/bin:$PATH"
           INSTALL_ROOT="$HOME/${installDir}"
 
           mkdir -p "$INSTALL_ROOT"
           ${pkgs.nodejs}/bin/npm install --global --prefix "$INSTALL_ROOT" ${packageName}
         '';
+
+        home.file.".pi/agent/settings.json".text = builtins.toJSON {
+          npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
+        };
       };
   };
 }
