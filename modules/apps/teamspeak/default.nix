@@ -2,8 +2,6 @@
   lib,
   config,
   pkgs,
-  username,
-  system,
   constants,
   ...
 }:
@@ -19,7 +17,7 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.teamspeak6-client ];
+        environment.systemPackages = [ pkgs.unstable.teamspeak6-client ];
       })
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [ "teamspeak-client@beta" ];

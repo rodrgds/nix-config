@@ -134,6 +134,16 @@ current_darwin_generation() {
     '
 }
 
+show_git_diff() {
+    echo "=== Current Git Diff ==="
+    if [ -n "$(git status --porcelain)" ]; then
+        git diff HEAD
+    else
+        echo "No changes"
+    fi
+    echo ""
+}
+
 # Parse optional target override
 TARGET=""
 while [[ $# -gt 0 ]]; do
@@ -157,6 +167,8 @@ if [ -z "$TARGET" ]; then
 fi
 
 cd ~/.config/home
+
+show_git_diff
 
 if [ "$TARGET" = "desktop" ]; then
     mapfile -t FLAKE_INPUTS < <(parse_flake_inputs)
@@ -199,9 +211,6 @@ case "$TARGET" in
 esac
 
 if [ -n "$(git status --porcelain)" ]; then
-    echo ""
-    echo "=== Changes to commit ==="
-    git diff HEAD
     echo ""
     read -r -p "Commit these changes with message '$msg'? [y/N] " answer
     if [[ "$answer" =~ ^[Yy]$ ]]; then

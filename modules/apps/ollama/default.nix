@@ -8,7 +8,7 @@
 let
   cfg = config.apps.ollama;
   inherit (constants) isDarwin isLinux homeDir;
-  ollamaPkg = if isDarwin then pkgs.ollama else pkgs.ollama-cuda;
+  ollamaPkg = if isDarwin then pkgs.unstable.ollama else pkgs.unstable.ollama-cuda;
 in
 {
   options.apps.ollama = {
