@@ -28,22 +28,26 @@ in
           edit_mode = "vi";
         };
 
-        extraEnv = lib.optionalString pkgs.stdenv.isDarwin ''
-          $env.PATH = (
-            $env.PATH
-            | default []
-            | if ($in | describe) == "string" { split row ":" } else { $in }
-            | prepend [
-                "/run/current-system/sw/bin"
-                "/nix/var/nix/profiles/default/bin"
-                ($env.HOME + "/.nix-profile/bin")
-                "/etc/profiles/per-user/${username}/bin"
-                "/opt/homebrew/bin"
-                "/opt/homebrew/sbin"
-              ]
-            | uniq
-          )
-        '';
+        extraEnv =
+          lib.optionalString pkgs.stdenv.isDarwin ''
+            $env.PATH = (
+              $env.PATH
+              | default []
+              | if ($in | describe) == "string" { split row ":" } else { $in }
+              | prepend [
+                  "/run/current-system/sw/bin"
+                  "/nix/var/nix/profiles/default/bin"
+                  ($env.HOME + "/.nix-profile/bin")
+                  "/etc/profiles/per-user/${username}/bin"
+                  "/opt/homebrew/bin"
+                  "/opt/homebrew/sbin"
+                ]
+              | uniq
+            )
+          ''
+          + ''
+            $env.STARSHIP_CONFIG = ($env.HOME | path join ".config" "starship.toml")
+          '';
       };
     };
   };

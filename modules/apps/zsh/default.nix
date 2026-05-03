@@ -150,21 +150,25 @@ in
         ];
 
         # Extra environment setup (runs before .zshrc content)
-        envExtra = lib.optionalString isDarwin ''
-          # Add Homebrew to PATH on macOS
-          if [ -d /opt/homebrew/bin ]; then
-            export PATH="/opt/homebrew/bin:$PATH"
-          fi
+        envExtra =
+          lib.optionalString isDarwin ''
+            # Add Homebrew to PATH on macOS
+            if [ -d /opt/homebrew/bin ]; then
+              export PATH="/opt/homebrew/bin:$PATH"
+            fi
 
-          if [ -d /opt/homebrew/sbin ]; then
-            export PATH="/opt/homebrew/sbin:$PATH"
-          fi
+            if [ -d /opt/homebrew/sbin ]; then
+              export PATH="/opt/homebrew/sbin:$PATH"
+            fi
 
-          # Initialize Homebrew shell environment if available
-          if [ -f /opt/homebrew/bin/brew ]; then
-            eval "$(/opt/homebrew/bin/brew shellenv)"
-          fi
-        '';
+            # Initialize Homebrew shell environment if available
+            if [ -f /opt/homebrew/bin/brew ]; then
+              eval "$(/opt/homebrew/bin/brew shellenv)"
+            fi
+          ''
+          + ''
+            export STARSHIP_CONFIG="$HOME/.config/starship.toml"
+          '';
       };
 
       # Enable fzf zsh integration (if fzf is enabled elsewhere)

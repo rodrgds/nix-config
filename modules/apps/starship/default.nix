@@ -14,6 +14,10 @@ in
 
   config = lib.mkIf cfg.enable {
     home-manager.users.${username} = {
+      home.sessionVariables = {
+        STARSHIP_CONFIG = "$HOME/.config/starship.toml";
+      };
+
       programs.starship = {
         enable = true;
         enableZshIntegration = true;
@@ -21,23 +25,22 @@ in
         enableNushellIntegration = true;
         enableFishIntegration = true;
         settings = {
-          # Performance: timeout for slow commands
-          command_timeout = 500;
+          # Give git-backed modules a bit more headroom in large repos
+          command_timeout = 1000;
           # Performance: don't scan network drives
           scan_timeout = 30;
 
-          # Gruvbox Rainbow Preset
-          # Inspired by Pastel Powerline and Tokyo Night
+          # Gruvbox prompt with muted, warmer segment transitions
           format = lib.concatStrings [
-            "[](color_orange)"
+            "[](color_bg3)"
             "$os"
             "$username"
-            "[](bg:color_yellow fg:color_orange)"
+            "[](bg:color_bg2 fg:color_bg3)"
             "$directory"
-            "[](fg:color_yellow bg:color_aqua)"
+            "[](fg:color_bg2 bg:color_yellow)"
             "$git_branch"
             "$git_status"
-            "[](fg:color_aqua bg:color_blue)"
+            "[](fg:color_yellow bg:color_aqua)"
             "$c"
             "$cpp"
             "$rust"
@@ -49,11 +52,11 @@ in
             "$kotlin"
             "$haskell"
             "$python"
-            "[](fg:color_blue bg:color_bg3)"
+            "[](fg:color_aqua bg:color_blue)"
             "$docker_context"
             "$conda"
             "$pixi"
-            "[](fg:color_bg3 bg:color_bg1)"
+            "[](fg:color_blue bg:color_bg1)"
             "$time"
             "[ ](fg:color_bg1)"
             "$line_break$character"
@@ -63,7 +66,10 @@ in
 
           palettes.gruvbox_dark = {
             color_fg0 = "#fbf1c7";
+            color_fg1 = "#ebdbb2";
+            color_bg0 = "#282828";
             color_bg1 = "#3c3836";
+            color_bg2 = "#504945";
             color_bg3 = "#665c54";
             color_blue = "#458588";
             color_aqua = "#689d6a";
@@ -76,7 +82,7 @@ in
 
           os = {
             disabled = false;
-            style = "bg:color_orange fg:color_fg0";
+            style = "bg:color_bg3 fg:color_fg1";
             symbols = {
               Windows = "󰍲";
               Ubuntu = "󰕈";
@@ -106,13 +112,13 @@ in
 
           username = {
             show_always = true;
-            style_user = "bg:color_orange fg:color_fg0";
-            style_root = "bg:color_orange fg:color_fg0";
+            style_user = "bg:color_bg3 fg:color_fg1";
+            style_root = "bg:color_bg3 fg:color_fg1";
             format = "[ $user ]($style)";
           };
 
           directory = {
-            style = "fg:color_fg0 bg:color_yellow";
+            style = "fg:color_fg1 bg:color_bg2";
             format = "[ $path ]($style)";
             truncation_length = 3;
             truncation_symbol = "…/";
@@ -127,81 +133,80 @@ in
 
           git_branch = {
             symbol = "";
-            style = "bg:color_aqua";
-            format = "[[ $symbol $branch ](fg:color_fg0 bg:color_aqua)]($style)";
+            style = "bg:color_yellow";
+            format = "[[ $symbol $branch ](fg:color_bg0 bg:color_yellow)]($style)";
           };
 
           git_status = {
-            style = "bg:color_aqua";
-            format = "[[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)]($style)";
-            # Performance: use async status checking for faster git status
+            style = "bg:color_yellow";
+            format = "[[($all_status$ahead_behind )](fg:color_bg0 bg:color_yellow)]($style)";
             disabled = false;
           };
 
           nodejs = {
             symbol = "";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           bun = {
             symbol = "🍞";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           c = {
             symbol = " ";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           cpp = {
             symbol = " ";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           rust = {
             symbol = "";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           golang = {
             symbol = "";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           php = {
             symbol = "";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           java = {
             symbol = "";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           kotlin = {
             symbol = "";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           haskell = {
             symbol = "";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           python = {
             symbol = "";
-            style = "bg:color_blue";
-            format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
+            style = "bg:color_aqua";
+            format = "[[ $symbol( $version) ](fg:color_fg1 bg:color_aqua)]($style)";
           };
 
           docker_context = {

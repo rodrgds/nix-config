@@ -38,6 +38,7 @@ in
         # Disable fish greeting
         shellInit = ''
           set -g fish_greeting ""
+          set -gx STARSHIP_CONFIG "$HOME/.config/starship.toml"
         ''
         + lib.optionalString isDarwin ''
           # Add Homebrew to PATH on macOS
