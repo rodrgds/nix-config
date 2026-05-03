@@ -1,30 +1,39 @@
 {
   lib,
   config,
+  pkgs,
   username,
-  system,
   constants,
   ...
 }:
 let
   cfg = config.core.downloads-cleanup;
-  inherit (constants) isDarwin homeDir;
+  inherit (constants) isDarwin isLinux homeDir;
+  retention = "${toString cfg.retentionDays}d";
 in
 {
   options.core.downloads-cleanup = {
-    enable = lib.mkEnableOption "Enable automatic cleanup of Downloads folder (files older than 30 days)";
+    enable = lib.mkEnableOption "Enable automatic cleanup for Downloads and Trash";
+
+    retentionDays = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 30;
+      description = "Delete Downloads and Trash entries older than this many days.";
+    };
   };
 
   config = lib.mkIf cfg.enable (
-    if isDarwin then
-      {
-        # macOS: Use launchd agent
-        launchd.agents.cleanup-downloads = {
+    lib.mkMerge [
+      (lib.optionalAttrs isDarwin {
+        launchd.agents.cleanup-user-folders = {
           serviceConfig = {
             ProgramArguments = [
               "/bin/sh"
-              "-c"
-              "find ${homeDir}/Downloads -type f -mtime +30 -delete"
+              "-lc"
+              ''
+                find ${lib.escapeShellArg homeDir}/Downloads -mindepth 1 -mtime +${toString cfg.retentionDays} -exec rm -rf {} +
+                find ${lib.escapeShellArg homeDir}/.Trash -mindepth 1 -mtime +${toString cfg.retentionDays} -exec rm -rf {} +
+              ''
             ];
             StartCalendarInterval = [
               {
@@ -32,17 +41,49 @@ in
                 Minute = 0;
               }
             ];
-            StandardOutPath = "/tmp/cleanup-downloads.log";
-            StandardErrorPath = "/tmp/cleanup-downloads.err";
+            StandardOutPath = "/tmp/cleanup-user-folders.log";
+            StandardErrorPath = "/tmp/cleanup-user-folders.err";
           };
         };
-      }
-    else
+      })
+
       {
-        # NixOS: Use systemd tmpfiles
-        systemd.tmpfiles.rules = [
-          "d ${homeDir}/Downloads 0755 ${username} ${username} 30d -"
-        ];
+        home-manager.users.${username} =
+          _:
+          lib.mkIf isLinux {
+            xdg.configFile."user-tmpfiles.d/rgo-cleanup.conf".text = ''
+              d ${homeDir}/Downloads 0755 - - ${retention} -
+              d ${homeDir}/.local/share/Trash/files 0700 - - ${retention} -
+              d ${homeDir}/.local/share/Trash/info 0700 - - ${retention} -
+            '';
+
+            systemd.user.services.rgo-tmpfiles-clean = {
+              Unit = {
+                Description = "Clean Downloads and Trash with user tmpfiles rules";
+              };
+              Service = {
+                Type = "oneshot";
+                ExecStart = "${pkgs.systemd}/bin/systemd-tmpfiles --user --create --clean";
+              };
+            };
+
+            systemd.user.timers.rgo-tmpfiles-clean = {
+              Unit = {
+                Description = "Run user tmpfiles cleanup for Downloads and Trash";
+              };
+              Timer = {
+                OnBootSec = "10m";
+                OnUnitActiveSec = "1d";
+                RandomizedDelaySec = "1h";
+                Persistent = true;
+                Unit = "rgo-tmpfiles-clean.service";
+              };
+              Install = {
+                WantedBy = [ "timers.target" ];
+              };
+            };
+          };
       }
+    ]
   );
 }
