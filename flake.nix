@@ -76,7 +76,7 @@
 
     handy = {
       url = "github:cjpais/Handy";
-      inputs.nixpkgs.follows = "nixpkgs";
+      #inputs.nixpkgs.follows = "nixpkgs";
     };
 
     import-tree = {
