@@ -178,6 +178,12 @@ async function deleteFile(path: string): Promise<void> {
   }).exited;
 }
 
+async function streamToText(
+  stream: ReadableStream<Uint8Array>,
+): Promise<string> {
+  return await new Response(stream).text();
+}
+
 async function runCapture(
   cmd: string,
   args: string[] = [],
@@ -192,8 +198,8 @@ async function runCapture(
   });
 
   const [stdout, stderr, code] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
+    streamToText(proc.stdout),
+    streamToText(proc.stderr),
     proc.exited,
   ]);
 
@@ -586,68 +592,112 @@ async function generateCommitMessageWithOpenRouter(): Promise<string | null> {
     return null;
   }
 
-  try {
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://github.com/rodrgds/nix-config",
-          "X-Title": "nix-config rebuild wizard",
+  const maxRetries = 5;
+  let lastError: string | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/rodrgds/nix-config",
+            "X-Title": "nix-config rebuild wizard",
+          },
+          body: JSON.stringify({
+            model: OPENROUTER_MODEL,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You write concise git commit messages for a personal NixOS/nix-darwin config. Return exactly one commit subject line, no markdown, no quotes, under 72 characters if possible.",
+              },
+              {
+                role: "user",
+                content: `Generate a commit message for this change. Do not mention encrypted secret values.\n\n${diff}`,
+              },
+            ],
+            temperature: 0.2,
+            max_tokens: 64,
+          }),
         },
-        body: JSON.stringify({
-          model: OPENROUTER_MODEL,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You write concise git commit messages for a personal NixOS/nix-darwin config. Return exactly one commit subject line, no markdown, no quotes, under 72 characters if possible.",
-            },
-            {
-              role: "user",
-              content: `Generate a commit message for this change. Do not mention encrypted secret values.\n\n${diff}`,
-            },
-          ],
-          temperature: 0.2,
-          max_tokens: 64,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        `❌ OpenRouter API error (${response.status}): ${errorText}`,
       );
-      return null;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = `HTTP ${response.status}: ${errorText}`;
+        console.error(
+          `❌ Attempt ${attempt}/${maxRetries}: OpenRouter API error - ${lastError}`,
+        );
+
+        if (attempt < maxRetries) {
+          const waitMs = Math.pow(2, attempt - 1) * 1000;
+          console.error(`   Retrying in ${waitMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+        continue;
+      }
+
+      const data = (await response.json()) as {
+        choices?: { message?: { content?: string } }[];
+        error?: { message?: string };
+      };
+
+      if (data.error) {
+        lastError = data.error.message ?? "Unknown OpenRouter error";
+        console.error(
+          `❌ Attempt ${attempt}/${maxRetries}: OpenRouter error - ${lastError}`,
+        );
+
+        if (attempt < maxRetries) {
+          const waitMs = Math.pow(2, attempt - 1) * 1000;
+          console.error(`   Retrying in ${waitMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+        continue;
+      }
+
+      const message = data.choices?.[0]?.message?.content
+        ?.trim()
+        .replace(/^['"]|['"]$/g, "");
+      if (!message) {
+        lastError = "Empty message from AI";
+        console.error(`❌ Attempt ${attempt}/${maxRetries}: ${lastError}`);
+
+        if (attempt < maxRetries) {
+          const waitMs = Math.pow(2, attempt - 1) * 1000;
+          console.error(`   Retrying in ${waitMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+        continue;
+      }
+
+      console.error(
+        `✓ OpenRouter generated commit message on attempt ${attempt}`,
+      );
+      return message;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      lastError = msg;
+      console.error(
+        `❌ Attempt ${attempt}/${maxRetries}: OpenRouter request failed - ${msg}`,
+      );
+
+      if (attempt < maxRetries) {
+        const waitMs = Math.pow(2, attempt - 1) * 1000;
+        console.error(`   Retrying in ${waitMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
     }
-
-    const data = (await response.json()) as {
-      choices?: { message?: { content?: string } }[];
-      error?: { message?: string };
-    };
-
-    if (data.error) {
-      console.error(`❌ OpenRouter error: ${data.error.message}`);
-      return null;
-    }
-
-    const message = data.choices?.[0]?.message?.content
-      ?.trim()
-      .replace(/^['"]|['"]$/g, "");
-    if (!message) {
-      console.error("❌ OpenRouter returned empty message");
-      return null;
-    }
-
-    return message;
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error(`❌ OpenRouter request failed: ${msg}`);
-    return null;
   }
+
+  console.error(
+    `❌ OpenRouter failed after ${maxRetries} attempts. Last error: ${lastError}`,
+  );
+  return null;
 }
 
 class App {
@@ -1031,13 +1081,17 @@ class App {
       input.focus();
 
       this.keyHandler = (key) => {
+        const preventDefault = (
+          key as ParsedKey & { preventDefault?: () => void }
+        ).preventDefault;
+
         if (key.name === "return" || key.name === "linefeed") {
-          key.preventDefault();
+          preventDefault?.call(key);
           resolve(input.editBuffer.getText().trim());
         }
 
         if (key.name === "escape") {
-          key.preventDefault();
+          preventDefault?.call(key);
           resolve(null);
         }
       };
@@ -1410,6 +1464,11 @@ class App {
     let success = false;
 
     try {
+      // OpenTUI keeps stdin in flowing mode for key handling. If the parent
+      // process continues reading while a child command inherits the same TTY,
+      // password prompts from sudo/nh/sops can appear to ignore typing because
+      // this process wins the race and consumes the bytes first.
+      process.stdin.pause();
       await runInteractive(cmd, args, options);
       success = true;
     } catch (error) {
@@ -1421,14 +1480,22 @@ class App {
       process.stdout.write("\n");
     }
 
+    try {
+      process.stdin.setRawMode?.(false);
+    } catch {
+      // Ignore if stdin is not a TTY.
+    }
+
     process.stdout.write("\nPress Enter to return to the wizard...");
     await new Promise<void>((resolve) => {
       const onData = () => {
         process.stdin.off("data", onData);
+        process.stdin.pause();
         resolve();
       };
 
       process.stdin.once("data", onData);
+      process.stdin.resume();
     });
 
     process.stdout.write("\u001b[?1049h\u001b[2J\u001b[H\u001b[?25l");
@@ -1444,6 +1511,8 @@ class App {
     } catch {
       // If OpenTUI has no resumable start(), the next render still often works.
     }
+
+    process.stdin.resume();
 
     this.reset(
       success ? "Command finished" : "Command failed",
@@ -2283,7 +2352,7 @@ const renderer = await createCliRenderer({
   exitOnCtrlC: false,
   targetFps: 30,
   useAlternateScreen: true,
-});
+} as Parameters<typeof createCliRenderer>[0] & { useAlternateScreen: boolean });
 
 const app = new App(renderer);
 renderer.start();
