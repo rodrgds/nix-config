@@ -2,6 +2,10 @@
 
 ![Screenshot](screenshot.png)
 
+## Rebuild Wizard Demo
+
+![Rebuild wizard demo](rebuild.gif)
+
 This is my personal configuration for both NixOS (desktop) and macOS (MacBook) using flakes and home-manager. Both systems share the same configuration with platform-specific adaptations.
 
 ## Features
