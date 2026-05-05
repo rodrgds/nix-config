@@ -30,7 +30,7 @@ export const TARGETS: Target[] = [
       targetHost: "rgo@rgo-vps",
       // local = build on the current NixOS machine, then deploy.
       // target = build on the VPS, equivalent to --build-host rgo@rgo-vps.
-      buildHost: "local",
+      buildHost: "target",
     },
   },
 ];
