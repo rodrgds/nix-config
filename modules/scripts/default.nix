@@ -25,14 +25,16 @@ let
   getAliasName =
     name:
     let
-      # Remove .sh, .py extensions for cleaner aliases
+      # Remove script extensions for cleaner aliases
       withoutSh = lib.removeSuffix ".sh" name;
       withoutPy = lib.removeSuffix ".py" withoutSh;
+      withoutTs = lib.removeSuffix ".ts" withoutPy;
     in
-    withoutPy;
+    withoutTs;
 
   # Check if file is a shell script that needs bash prefix for Fish compatibility
   isShellScript = name: lib.hasSuffix ".sh" name;
+  isBunScript = name: lib.hasSuffix ".ts" name;
 
   scriptAliases = lib.mapAttrs' (
     name: content:
@@ -41,8 +43,14 @@ let
       # Point to source location in repo so aliases work immediately
       # (home-manager also installs to ~/.config/home/scripts/ for PATH access)
       scriptPath = "${homeDir}/.config/home/modules/scripts/${name}";
-      # Prefix with 'bash ' for .sh scripts to ensure Fish compatibility
-      aliasValue = if isShellScript name then "bash ${scriptPath}" else scriptPath;
+      # Prefix scripts that need an interpreter so aliases work across shells.
+      aliasValue =
+        if isShellScript name then
+          "bash ${scriptPath}"
+        else if isBunScript name then
+          "bun ${scriptPath}"
+        else
+          scriptPath;
     in
     lib.nameValuePair aliasName aliasValue
   ) scripts;
@@ -53,7 +61,8 @@ let
     "v" = "nvim";
     "glog" = "git log --oneline --graph --decorate --all";
     "ll" = "ls -la";
-    "rebuild" = "bash ${homeDir}/.config/home/modules/scripts/rebuild.sh";
+    "rebuild" = "bun ${homeDir}/.config/home/tools/rebuild-wizard/rebuild.ts";
+    "rebuild-old" = "bash ${homeDir}/.config/home/modules/scripts/rebuild.sh";
     "rebuild-vps" = "${homeDir}/.config/home/modules/scripts/rebuild-vps.sh";
 
     # Legacy aliases (default to main secrets.yaml)

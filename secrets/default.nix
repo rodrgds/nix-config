@@ -118,6 +118,7 @@ let
     "lastfm_api_key"
     "lastfm_secret"
     "lastfm_username"
+    "openrouter_api_key"
     "openai_api_key"
     "location_latitude"
     "location_longitude"
