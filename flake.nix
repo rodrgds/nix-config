@@ -26,6 +26,10 @@
       url = "github:zhaofengli/nix-homebrew";
     };
 
+    nix-flatpak = {
+      url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
+    };
+
     android-nixpkgs = {
       url = "github:tadfisher/android-nixpkgs/stable";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -160,6 +164,8 @@
             nix-index-database.nixosModules.nix-index
             # angrr for automatic GC root retention
             angrr.nixosModules.angrr
+            # Declarative Flatpak manager
+            inputs.nix-flatpak.nixosModules.nix-flatpak
             # Home-manager as NixOS module
             home-manager.nixosModules.home-manager
             {

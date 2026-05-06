@@ -188,7 +188,7 @@ in
           blocked_services = {
             ids = [
               "twitter"
-              "youtube"
+              # "youtube"
               "instagram"
               "linkedin"
             ];
