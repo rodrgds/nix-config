@@ -12,6 +12,22 @@ import {
 import { runInteractive, visibleCommand } from "./command";
 import type { ChecklistItem, CommandOptions, MenuItem } from "./types";
 
+const TERMINAL_RESET =
+  "\u001b[0m" + // reset attributes
+  "\u001b[?25h" + // show cursor
+  "\u001b[?1l" + // normal cursor keys
+  "\u001b[?7h" + // enable line wrap
+  "\u001b[?1000l" + // disable mouse click tracking
+  "\u001b[?1002l" + // disable mouse drag tracking
+  "\u001b[?1003l" + // disable all-motion mouse tracking
+  "\u001b[?1004l" + // disable focus events
+  "\u001b[?1005l" + // disable UTF-8 mouse mode
+  "\u001b[?1006l" + // disable SGR mouse mode
+  "\u001b[?1015l" + // disable urxvt mouse mode
+  "\u001b[?2004l" + // disable bracketed paste
+  "\u001b[?1049l" + // leave alternate screen
+  "\u001b>"; // normal keypad mode
+
 export class App {
   private renderer: CliRenderer;
   private screen: BoxRenderable | null = null;
@@ -769,7 +785,7 @@ export class App {
       // Ignore if stdin is not a TTY.
     }
 
-    process.stdout.write("\u001b[0m\u001b[?25h\u001b[?1049l");
+    process.stdout.write(TERMINAL_RESET);
     process.stdout.write("\n");
     process.stdout.write(`$ ${visibleCommand(cmd, args)}\n\n`);
 

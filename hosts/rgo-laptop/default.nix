@@ -98,7 +98,7 @@
   apps.typst.enable = true; # Typst typesetting system (Homebrew on Darwin)
   # apps.raycast.enable = true; # Launcher (Homebrew on Darwin)
   apps.flameshot.enable = true; # Screenshots (Homebrew on Darwin)
-  apps.cake-wallet.enable = true; # Cake Wallet (Flatpak on Linux, App Store on Darwin)
+  apps.cake-wallet.enable = false; # Cake Wallet (Flatpak on Linux, App Store on Darwin)
 
   # Media
   apps.mpv.enable = true; # MPV with custom Lua script for camera toggle

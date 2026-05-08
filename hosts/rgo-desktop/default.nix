@@ -127,7 +127,7 @@
   apps.qbittorrent.enable = true;
   apps.typst.enable = true;
   apps.qdirstat.enable = true;
-  apps.cake-wallet.enable = true;
+  apps.cake-wallet.enable = false;
 
   # System
   apps.core-packages.enable = true;
