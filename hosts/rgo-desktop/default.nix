@@ -70,11 +70,13 @@
   apps.python.enable = true;
   apps.php.enable = true;
   apps.android-studio.enable = true;
+  # apps.android-studio.packageMode = "frozen";
   apps.android-sdk.enable = true;
   apps.stripe-cli.enable = true;
   apps.dbeaver.enable = true;
   apps.laravel.enable = true;
   apps.affinity.enable = true;
+  # apps.affinity.packageMode = "frozen";
 
   # Desktop
   apps.i3.enable = true;
@@ -93,6 +95,7 @@
   apps.darktable.enable = true;
   apps.gimp.enable = true;
   apps.davinci-resolve.enable = true;
+  # apps.davinci-resolve.packageMode = "frozen";
   apps.auto-editor.enable = true;
   apps.flameshot.enable = true;
   apps.normcap.enable = true;
@@ -121,6 +124,7 @@
   apps.thunderbird.enable = true;
   apps.anydesk.enable = true;
   apps.maestro.enable = true;
+  apps.surfshark.enable = true;
 
   # Productivity
   apps.obsidian.enable = true;

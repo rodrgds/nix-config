@@ -12,6 +12,12 @@ _: [
     };
   }
   {
+    command = "floating enable, move position center";
+    criteria = {
+      class = "(?i)vicinae";
+    };
+  }
+  {
     command = "border pixel 2";
     criteria = {
       class = "^.*";

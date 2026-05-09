@@ -36,6 +36,8 @@ in
               environment = {
                 DISPLAY = ":0";
                 PATH = "/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin";
+                USE_LAYER_SHELL = "1";
+                XDG_DATA_DIRS = "/run/current-system/sw/share:/var/lib/flatpak/exports/share:/home/${username}/.local/share/flatpak/exports/share:/home/${username}/.local/share";
                 XDG_RUNTIME_DIR = "/run/user/1000";
                 DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
               };
@@ -46,14 +48,10 @@ in
               pop_to_root_on_close = true;
               search_files_in_root = true;
 
-              # Prevent drift by anchoring position and disabling persistence
+              # i3 handles placement; avoid reusing a stale saved launcher position.
               remember_last_position = false;
               launcher_window = {
                 inherit (constants.display) opacity;
-                position = {
-                  anchor = "top-center";
-                  offset_y = 0;
-                };
               };
 
               # TODO: make this work haha

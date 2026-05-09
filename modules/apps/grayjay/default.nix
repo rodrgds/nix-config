@@ -1,9 +1,8 @@
 {
   lib,
   config,
-  pkgs,
-  username,
   constants,
+  username,
   ...
 }:
 let
@@ -19,7 +18,25 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.grayjay ];
+        apps.flatpak = {
+          enable = true;
+          packages = [ "app.grayjay.Grayjay" ];
+        };
+
+        home-manager.users.${username} = _: {
+          home.file.".local/share/applications/app.grayjay.Grayjay.desktop".text = ''
+            [Desktop Entry]
+            Type=Application
+            Name=Grayjay
+            Comment=Follow creators, not platforms
+            Exec=flatpak run app.grayjay.Grayjay %U
+            Icon=app.grayjay.Grayjay
+            Terminal=false
+            Categories=AudioVideo;Video;Network;
+            StartupWMClass=Grayjay
+            X-Flatpak=app.grayjay.Grayjay
+          '';
+        };
       })
     ]
   );

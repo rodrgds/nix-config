@@ -123,15 +123,16 @@ in
   config = lib.mkIf (cfg.enable && isLinux) {
     services.flatpak = {
       enable = true;
-      remotes = cfg.remotes;
+      inherit (cfg)
+        remotes
+        overrides
+        uninstallUnmanaged
+        uninstallUnused
+        ;
       packages = lib.optionals cfg.installFlatseal [ "com.github.tchx84.Flatseal" ] ++ cfg.packages;
-      overrides = cfg.overrides;
-      uninstallUnmanaged = cfg.uninstallUnmanaged;
-      uninstallUnused = cfg.uninstallUnused;
 
       update = {
-        onActivation = cfg.update.onActivation;
-        auto = cfg.update.auto;
+        inherit (cfg.update) onActivation auto;
       };
     };
 

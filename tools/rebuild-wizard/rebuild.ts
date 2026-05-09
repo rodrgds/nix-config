@@ -117,24 +117,24 @@ async function chooseTarget(
 
 async function chooseRebuildOptions(app: App): Promise<RebuildOptions | null> {
   const inputs = await parseFlakeInputs();
-  const defaultInputs = inputs.filter((input) => input !== "nixpkgs-davinci");
+  const defaultInputs: string[] = [];
 
   const selectedInputs = await app.checklist(
     "Flake inputs",
-    "Choose inputs to update before rebuilding. Leave all unchecked to skip flake updates.",
+    "Choose inputs to update before rebuilding. Default is no input updates.",
     inputs.map((input) => ({
       label: input,
       value: input,
       description:
         input === "nixpkgs-davinci"
-          ? "Pinned heavyweight input; excluded from default set."
-          : "Included in default update set.",
+          ? "Pinned heavyweight input; update manually only."
+          : "Manual update only; default rebuild does not update inputs.",
     })),
     [],
     {
       allowBack: true,
       controls:
-        "Space toggles · Enter continues · d default set · a all · n none · q/Esc back",
+        "Space toggles · Enter continues · d default none · a all · n none · q/Esc back",
       onDefault: () => defaultInputs,
       onAll: () => inputs,
       onNone: () => [],
@@ -229,7 +229,7 @@ async function runPreparationAndRebuild(
   if (!prepared) return false;
 
   const [cmd, args] = rebuildCommand(target);
-  const subtitle = `Target: ${target.name}. Rebuild runs in real terminal for nh/sudo/password support.`;
+  const subtitle = `Target: ${target.name}. Local rebuilds ask for sudo immediately and keep it fresh while building.`;
 
   const success = await app.externalCommandScreen(
     "Rebuild",

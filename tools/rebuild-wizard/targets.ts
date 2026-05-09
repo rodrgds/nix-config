@@ -142,17 +142,17 @@ export async function notify(
 
 export function rebuildCommand(target: Target): [string, string[]] {
   if (target.kind === "darwin") {
-    return [
+    return withEarlySudo([
       "nh",
       ["darwin", "switch", "path:.", "-H", target.flakeAttr, "--", "--impure"],
-    ];
+    ]);
   }
 
   if (target.kind === "nixos") {
-    return [
+    return withEarlySudo([
       "nh",
       ["os", "switch", "path:.", "-H", target.flakeAttr, "--", "--impure"],
-    ];
+    ]);
   }
 
   if (!target.remote) {
@@ -176,4 +176,30 @@ export function rebuildCommand(target: Target): [string, string[]] {
   }
 
   return ["nixos-rebuild", args];
+}
+
+function withEarlySudo(command: [string, string[]]): [string, string[]] {
+  const [cmd, args] = command;
+
+  return [
+    "bash",
+    [
+      "-lc",
+      [
+        "sudo -v || exit $?",
+        "(",
+        "  while true; do",
+        "    sudo -n -v >/dev/null 2>&1 || exit 0",
+        "    sleep 60",
+        "  done",
+        ") &",
+        "sudo_keepalive=$!",
+        'trap \'kill "$sudo_keepalive" >/dev/null 2>&1 || true\' EXIT',
+        '"$@"',
+      ].join("\n"),
+      "rebuild-with-sudo",
+      cmd,
+      ...args,
+    ],
+  ];
 }

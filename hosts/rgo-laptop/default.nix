@@ -92,6 +92,7 @@
   apps.teamspeak.enable = true; # TeamSpeak (nixpkgs on Linux, Homebrew cask on Darwin)
   apps.beeper.enable = true; # Beeper messaging
   apps.maestro.enable = true; # Maestro mobile automation tool
+  apps.surfshark.enable = true; # Surfshark VPN
 
   # Productivity
   apps.obsidian.enable = true; # Obsidian (unfree, available in nixpkgs)
