@@ -21,6 +21,11 @@ in
         apps.flatpak = {
           enable = true;
           packages = [ "app.grayjay.Grayjay" ];
+          overrides."app.grayjay.Grayjay".Environment = {
+            # relay.grayjay.app currently resolves IPv6 first on this host, but
+            # the IPv6 relay connection times out while IPv4 succeeds.
+            DOTNET_SYSTEM_NET_DISABLEIPV6 = "1";
+          };
         };
 
         home-manager.users.${username} = _: {

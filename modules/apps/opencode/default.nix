@@ -12,6 +12,12 @@ let
   installDir = ".local/share/npm-global";
   installRoot = "${constants.homeDir}/${installDir}";
   packageName = "opencode-ai";
+  opencodeSkills = lib.mapAttrs' (
+    name: _:
+    lib.nameValuePair
+      "opencode/skills/${lib.removeSuffix ".md" name}/SKILL.md"
+      { source = ./skills + "/${name}"; }
+  ) (lib.attrsets.filterAttrs (_: type: type == "regular") (builtins.readDir ./skills));
 in
 {
   options.apps.opencode = {
@@ -33,9 +39,6 @@ in
 
             programs.opencode = {
               enable = true;
-              skills = lib.mapAttrs (name: _: builtins.readFile (./skills + "/${name}")) (
-                lib.attrsets.filterAttrs (_: type: type == "regular") (builtins.readDir ./skills)
-              );
               commands = {
                 release = ''
                   # Release Command
@@ -108,86 +111,88 @@ in
               };
             };
 
-            xdg.configFile."opencode/opencode.json".source =
-              config.lib.file.mkOutOfStoreSymlink
-                config.sops.templates."opencode-config".path;
+            xdg.configFile = opencodeSkills // {
+              "opencode/opencode.json".source =
+                config.lib.file.mkOutOfStoreSymlink
+                  config.sops.templates."opencode-config".path;
 
-            xdg.configFile."opencode/opencode-notifier.json".text = builtins.toJSON {
-              sound = true;
-              notification = true;
-              timeout = 5;
-              showProjectName = true;
-              showSessionTitle = false;
-              showIcon = true;
-              suppressWhenFocused = true;
-              enableOnDesktop = false;
+              "opencode/opencode-notifier.json".text = builtins.toJSON {
+                sound = true;
+                notification = true;
+                timeout = 5;
+                showProjectName = true;
+                showSessionTitle = false;
+                showIcon = true;
+                suppressWhenFocused = true;
+                enableOnDesktop = false;
 
-              linux = {
-                grouping = false;
-              };
-              events = {
-                permission = {
-                  sound = true;
-                  notification = true;
-                  command = true;
+                linux = {
+                  grouping = false;
                 };
-                complete = {
-                  sound = true;
-                  notification = true;
-                  command = true;
+                events = {
+                  permission = {
+                    sound = true;
+                    notification = true;
+                    command = true;
+                  };
+                  complete = {
+                    sound = true;
+                    notification = true;
+                    command = true;
+                  };
+                  subagent_complete = {
+                    sound = false;
+                    notification = false;
+                    command = true;
+                  };
+                  error = {
+                    sound = true;
+                    notification = true;
+                    command = true;
+                  };
+                  question = {
+                    sound = true;
+                    notification = true;
+                    command = true;
+                  };
+                  user_cancelled = {
+                    sound = false;
+                    notification = false;
+                    command = true;
+                  };
+                  plan_exit = {
+                    sound = true;
+                    notification = true;
+                    command = true;
+                  };
                 };
-                subagent_complete = {
-                  sound = false;
-                  notification = false;
-                  command = true;
+                messages = {
+                  permission = "Session needs permission: {sessionTitle}";
+                  complete = "Session has finished: {sessionTitle}";
+                  subagent_complete = "Subagent task completed: {sessionTitle}";
+                  error = "Session encountered an error: {sessionTitle}";
+                  question = "Session has a question: {sessionTitle}";
+                  user_cancelled = "Session was cancelled by user: {sessionTitle}";
+                  plan_exit = "Plan ready for review: {sessionTitle}";
                 };
-                error = {
-                  sound = true;
-                  notification = true;
-                  command = true;
+                sounds = {
+                  permission = null;
+                  complete = null;
+                  subagent_complete = null;
+                  error = null;
+                  question = null;
+                  user_cancelled = null;
+                  plan_exit = null;
                 };
-                question = {
-                  sound = true;
-                  notification = true;
-                  command = true;
+                volumes = {
+                  permission = 1;
+                  complete = 1;
+                  subagent_complete = 1;
+                  error = 1;
+                  question = 1;
+                  user_cancelled = 1;
+                  plan_exit = 1;
                 };
-                user_cancelled = {
-                  sound = false;
-                  notification = false;
-                  command = true;
-                };
-                plan_exit = {
-                  sound = true;
-                  notification = true;
-                  command = true;
-                };
-              };
-              messages = {
-                permission = "Session needs permission: {sessionTitle}";
-                complete = "Session has finished: {sessionTitle}";
-                subagent_complete = "Subagent task completed: {sessionTitle}";
-                error = "Session encountered an error: {sessionTitle}";
-                question = "Session has a question: {sessionTitle}";
-                user_cancelled = "Session was cancelled by user: {sessionTitle}";
-                plan_exit = "Plan ready for review: {sessionTitle}";
-              };
-              sounds = {
-                permission = null;
-                complete = null;
-                subagent_complete = null;
-                error = null;
-                question = null;
-                user_cancelled = null;
-                plan_exit = null;
-              };
-              volumes = {
-                permission = 1;
-                complete = 1;
-                subagent_complete = 1;
-                error = 1;
-                question = 1;
-                user_cancelled = 1;
-                plan_exit = 1;
               };
             };
 

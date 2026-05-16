@@ -13,7 +13,7 @@
     nixpkgs-davinci.url = "github:nixos/nixpkgs/755f5aa91337890c432639c60b6064bb7fe67769";
 
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
