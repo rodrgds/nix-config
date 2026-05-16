@@ -62,8 +62,6 @@ let
     "glog" = "git log --oneline --graph --decorate --all";
     "ll" = "ls -la";
     "rebuild" = "bun ${homeDir}/.config/home/tools/rebuild-wizard/rebuild.ts";
-    "rebuild-old" = "bash ${homeDir}/.config/home/modules/scripts/rebuild.sh";
-    "rebuild-vps" = "${homeDir}/.config/home/modules/scripts/rebuild-vps.sh";
 
     # Legacy aliases (default to main secrets.yaml)
     # "encrypt_secrets" = "bash ${homeDir}/.config/home/modules/scripts/secrets.sh encrypt secrets";

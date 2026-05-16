@@ -18,8 +18,10 @@ in
     lib.mkMerge [
       # Linux: Flatpak avoids rebuilding the Electron app as part of NixOS.
       (lib.optionalAttrs isLinux {
-        apps.flatpak.enable = true;
-        services.flatpak.packages = [ "com.stremio.Stremio" ];
+        apps.flatpak = {
+          enable = true;
+          packages = [ "com.stremio.Stremio" ];
+        };
 
         home-manager.users.${username} = _: {
           home.file.".local/share/applications/com.stremio.Stremio.desktop".text = ''

@@ -10,7 +10,7 @@
 }:
 let
   cfg = config.secrets;
-  inherit (constants) homeDir isLinux;
+  inherit (constants) homeDir isLinux isDarwin;
 
   # Determine secrets file and list based on host type
   vpsSecretsFile = ./vps-secrets.yaml;
@@ -174,9 +174,9 @@ in
         }
       ))
 
-      # Home-manager sops configuration (for personal machines only)
+      # Home-manager sops configuration for personal machines.
       # VPS doesn't need HM sops - system-level sops handles all VPS secrets,
-      # and the user-level service can't read /root/.config/sops/age/keys.txt
+      # and the user-level service can't read /root/.config/sops/age/keys.txt.
       (lib.mkIf (!cfg.isVps) {
         home-manager.users.${username} =
           { config, ... }:

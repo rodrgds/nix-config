@@ -1,521 +1,173 @@
-# NixOS & macOS Configuration
+# NixOS and macOS Config
 
 ![Screenshot](screenshot.png)
 
-## Rebuild Wizard Demo
+Personal flake-based config for:
 
-![Rebuild wizard demo](rebuild.gif)
+- `rgo-desktop` on NixOS (`x86_64-linux`)
+- `rgo-laptop` on macOS (`aarch64-darwin`)
+- `rgo-vps` on NixOS
 
-This is my personal configuration for both NixOS (desktop) and macOS (MacBook) using flakes and home-manager. Both systems share the same configuration with platform-specific adaptations.
+It uses shared modules, Home Manager, `nh`, and `sops-nix`.
 
-## Features
+## Layout
 
-- **Multi-Platform** - Same configuration works on NixOS (x86_64-linux) and macOS (aarch64-darwin)
-- **Flakes** - Modern Nix configuration with flake support
-- **Home Manager** - User environment managed as part of the system
-- **Modular Structure** - Clean separation:
-  - `hosts/` - Host-specific configurations (rgo-desktop, rgo-laptop)
-  - `modules/` - All system and app modules
-  - `packages/` - Custom packages and overlays
-  - `secrets/` - Encrypted secrets with sops-nix
-- **i3/Aerospace** - Tiling window manager (i3 on NixOS, Aerospace on macOS)
-- **Gruvbox Theme** - Consistent theming across terminal, apps, and desktop
-- **Gaming Setup** - Steam, CS2, and various gaming tools (NixOS only)
-- **Development Environment** - Full setup for web, mobile, and systems development
-- **nix-tools** - Consolidated Nix tooling (nh, comma, angrr, nurl, nix-init, statix, nil, home-manager, nixfmt)
+```text
+.
+├── flake.nix
+├── hosts/
+├── modules/
+├── packages/
+├── secrets/
+└── tools/
+```
 
-## Supported Systems
+## Hosts
 
-| System | Platform | Hostname | Window Manager |
-|--------|----------|----------|----------------|
-| Desktop | NixOS x86_64 | rgo-desktop | i3 |
-| Laptop | macOS aarch64 | rgo-laptop | Aerospace |
+| Host | Platform | Notes |
+| --- | --- | --- |
+| `rgo-desktop` | NixOS | Main desktop, i3, gaming, Linux-only apps |
+| `rgo-laptop` | macOS | nix-darwin, Aerospace, Homebrew integration |
+| `rgo-vps` | NixOS | Remote services and containers |
 
-## Prerequisites
+## Secrets
 
-### For macOS (New Machine Setup)
+This repo uses `sops-nix`, but not the same way on every host.
 
-1. **Set up macOS user account** with username `rgo`
-2. **Enable FileVault** (recommended for security)
-3. **Install Xcode Command Line Tools**:
-   ```bash
-   xcode-select --install
-   ```
-4. **Install Homebrew** (needed for secrets and apps):
-   ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   ```
-   Follow the on-screen instructions and add Homebrew to your PATH.
+- `rgo-desktop` and `rgo-laptop` use the Home Manager `sops` module for personal secrets
+- `rgo-vps` uses the system `sops` module for service secrets
+- the age key path currently used by personal machines is `~/.config/sops/age/keys.txt`
+- the VPS system key path is `/root/.config/sops/age/keys.txt`
 
-#### macOS: Open apps once
+Important Darwin detail:
 
-Some macOS apps require being opened manually the first time so you can grant system permissions (Accessibility, Full Disk Access, Screen Recording, Files and Folders, etc.). Open each app once and accept any security prompts so the configuration and integrations apply correctly. Common examples:
+- on macOS, this repo currently uses Home Manager `sops.secrets.<name>.path`
+- do not assume `sops.templates` or `config.sops.placeholder.*` are available on Darwin in this setup
 
-- Raycast
-- Karabiner
-- Aerospace (window manager)
-- Syncthing
-- JankyBorders
-- Other GUI apps that integrate with system permissions
+### Personal machine secrets
 
-If an app doesn't behave as expected, check System Settings → Privacy & Security and enable the necessary permissions.
-
-## Deployment Guide
-
-### Step 1: SOPS Secrets Setup (Required First!)
-
-Your configuration uses encrypted secrets. You need the age private key to decrypt them.
-
-#### Option A: Copy Existing Key (If you have it)
-
-The private key is usually at:
-- NixOS: `~/.config/sops/age/keys.txt` or `~/.age/key.txt`
-- macOS: `/Users/rgo/.config/sops/age/keys.txt`
-
-Copy this file to your new machine before proceeding.
-
-#### Option B: Generate New Key and Re-encrypt
-
-If you don't have access to the existing private key:
-
-1. **Generate new age key** on your new machine:
-   ```bash
-   # macOS - install age first
-   brew install age
-   
-   # Create key directory
-   mkdir -p ~/.config/sops/age
-   
-   # Generate key
-   age-keygen -o ~/.config/sops/age/keys.txt
-   
-   # Get the public key
-   cat ~/.config/sops/age/keys.txt | grep "public key"
-   # Example output: # public key: age1xxxxx...
-   ```
-
-2. **Update `.sops.yaml`** on your existing machine:
-   - Edit `secrets/.sops.yaml`
-   - Replace the old laptop public key with your new one
-   - The file should look like:
-     ```yaml
-     keys:
-       - &desktop age1kh66yknmm78fls7qx8hujmjyprpflq2g44rtrcxd8ln0e4k3m9vqsq8l2h
-       - &laptop age1xxxxx... # Your NEW public key
-     
-     creation_rules:
-       - path_regex: (secrets\.yaml|secrets_plain\.yaml)$
-         key_groups:
-           - age:
-               - *desktop
-               - *laptop
-     ```
-
-3. **Re-encrypt secrets** on existing machine:
-   ```bash
-   cd ~/.config/home
-   sops updatekeys secrets/secrets.yaml
-   git add secrets/.sops.yaml secrets/secrets.yaml
-   git commit -m "Update laptop age key"
-   git push
-   ```
-
-4. **Pull updated config** on new machine:
-   ```bash
-   cd ~/.config/home
-   git pull
-   ```
-
-**Security Note**: Never commit the private key (the file containing `AGE-SECRET-KEY`). Only the public key (starting with `age1`) goes in `.sops.yaml`.
-
-### Step 2: Install Nix
-
-#### macOS
+Expected key path:
 
 ```bash
-# Install Nix (multi-user installation)
+~/.config/sops/age/keys.txt
+```
+
+If you already have the key, copy it there before rebuilding.
+
+If you need a new one:
+
+```bash
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+grep "public key" ~/.config/sops/age/keys.txt
+```
+
+Then update `secrets/.sops.yaml`, re-encrypt `secrets/secrets.yaml`, and commit the changes.
+
+## macOS Setup
+
+### 1. Prerequisites
+
+```bash
+xcode-select --install
+```
+
+Install Homebrew:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Install Nix:
+
+```bash
 sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
+```
 
-# Restart terminal or source your shell config
-source ~/.zshrc  # or ~/.bashrc
+Enable flakes:
 
-# Verify installation
-nix --version
-
-# Enable flakes (required)
+```bash
 mkdir -p ~/.config/nix
 echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
-
-# Note: You may need to restart the Nix daemon for this to take effect:
-# sudo launchctl unload /Library/LaunchDaemons/org.nixos.nix-daemon.plist
-# sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
-#
-# Or just use --extra-experimental-features flag in the next step
 ```
 
-#### NixOS
-
-Nix is already installed. Just ensure flakes are enabled in your `configuration.nix`:
-```nix
-nix.settings.experimental-features = [ "nix-command" "flakes" ];
-```
-
-### Step 3: Clone Configuration
+### 2. Clone
 
 ```bash
 git clone https://github.com/yourusername/nix-config.git ~/.config/home
 cd ~/.config/home
 ```
 
-### Step 4: Deploy
+### 3. First Darwin switch
 
-#### macOS (rgo-laptop)
-
-**First time only** (installs nix-darwin):
 ```bash
-cd ~/.config/home
-# Use this if you get "experimental-features" errors:
-nix --extra-experimental-features 'nix-command flakes' run nix-darwin/master#darwin-rebuild -- switch --flake '.#rgo-laptop'
-
-# Or if flakes are already enabled:
-nix run nix-darwin/master#darwin-rebuild -- switch --flake '.#rgo-laptop'
+nix --extra-experimental-features 'nix-command flakes' run github:lnl7/nix-darwin/nix-darwin-25.11#darwin-rebuild -- switch --flake '.#rgo-laptop'
 ```
 
-**Subsequent updates** (using nh):
+### 4. Normal rebuilds
+
+Preferred:
+
+```bash
+rebuild --laptop
+```
+
+Fallback:
+
 ```bash
 nh darwin switch ~/.config/home -H rgo-laptop
 ```
 
-**Fallback** (if nh is not yet installed):
+Or:
+
 ```bash
 darwin-rebuild switch --flake "$HOME/.config/home#rgo-laptop"
 ```
 
-#### NixOS (rgo-desktop)
+### 5. Open macOS apps once
 
-**First time only** (new installation):
+Some apps need manual permission approval after install:
+
+- Aerospace
+- Karabiner
+- Raycast
+- Syncthing
+- JankyBorders
+
+Check `System Settings -> Privacy & Security` if something looks broken.
+
+## NixOS Setup
+
+Clone the repo and switch:
+
 ```bash
 cd ~/.config/home
 sudo nixos-install --flake '.#rgo-desktop'
 ```
 
-**Subsequent updates** (using nh):
+Later rebuilds:
+
+```bash
+rebuild
+```
+
+Fallback:
+
 ```bash
 nh os switch ~/.config/home -H rgo-desktop
 ```
 
-**Fallback** (if nh is not yet installed):
+Or:
+
 ```bash
 sudo nixos-rebuild switch --flake "$HOME/.config/home#rgo-desktop"
 ```
 
-### Step 5: Verify Secrets
+## VPS Setup
 
-After deployment, verify secrets are decrypted:
-
-```bash
-# Check age key is in place
-cat ~/.config/sops/age/keys.txt
-
-# Secrets should be automatically decrypted by home-manager
-# They're available as files in ~/.config/sops/decrypted/
-```
-
-## VPS Migration Guide
-
-### Setting Up a New VPS (Hetzner Cloud)
-
-When migrating to a new VPS or setting up a fresh one, follow these steps:
-
-#### 1. Deploy NixOS with nixos-anywhere
+First install:
 
 ```bash
-# First-time install (will WIPE the server)
-nix run github:nix-community/nixos-anywhere -- \
-  --flake '.#rgo-vps' \
-  --target-host root@<new-server-ip> \
-  --build-on local \
-  --no-substitute-on-destination
-```
-
-#### 2. Generate Age Key for Secrets
-
-The new VPS needs its own age key to decrypt secrets:
-
-**On the NEW VPS:**
-```bash
-ssh rgo@<new-server-ip>
-
-# Generate age key
-mkdir -p ~/.config/sops/age
-age-keygen -o ~/.config/sops/age/keys.txt
-
-# Copy the PUBLIC key (starts with age1...)
-cat ~/.config/sops/age/keys.txt | grep "public key"
-# Example: # public key: age1s7whd543hee9awste3derwmc57t7yjdwn0jzrs43d5nt9v9wrc4qdtt2l7
-```
-
-**On your LOCAL machine:**
-```bash
-cd ~/.config/home
-
-# Edit .sops.yaml and add the new VPS key
-sops secrets/.sops.yaml
-```
-
-Add public key to `secrets/.sops.yaml`.
-
-**Re-encrypt secrets and copy key:**
-```bash
-# Re-encrypt with new key
-sops updatekeys secrets/secrets.yaml
-sops updatekeys secrets/vps-secrets.yaml
-
-# Commit changes
-git add secrets/.sops.yaml secrets/secrets.yaml secrets/vps-secrets.yaml
-git commit -m "Add new VPS age key"
-git push
-
-# Copy key to root (for system secrets)
-ssh rgo@<new-server-ip> "sudo mkdir -p /root/.config/sops/age && sudo cp ~/.config/sops/age/keys.txt /root/.config/sops/age/ && sudo chmod 600 /root/.config/sops/age/keys.txt"
-```
-
-#### 3. Update VPS IP in Secrets
-
-```bash
-# Edit secrets.yaml if needed
-sops secrets/secrets.yaml
-
-git add secrets/secrets.yaml
-git commit -m "Update secrets"
-git push
-```
-
-#### 4. Rebuild VPS
-
-```bash
-rebuild-vps
-```
-
-### Migrating Data from Old VPS to New VPS
-
-**Prerequisites:**
-- SSH access to both VPS (old and new)
-- Age key setup complete on new VPS
-
-#### Stop Services on New VPS
-
-```bash
-ssh rgo@<new-server-ip> "sudo systemctl stop podman-n8n podman-vaultwarden podman-umami podman-shlink podman-directus podman-teamspeak podman-ghost podman-postiz podman-unieasy 2>/dev/null; echo Services stopped"
-```
-
-#### Set Up SSH Keys for Data Transfer
-
-You need passwordless SSH from old VPS to new VPS for rsync to work with sudo.
-
-**On OLD VPS:**
-```bash
-ssh rgo@<old-server-ip>
-
-# Generate SSH key (if not exists)
-ssh-keygen -t ed25519 -C "vps-migration" -f ~/.ssh/id_ed25519 -N ""
-
-# Copy public key to clipboard
-cat ~/.ssh/id_ed25519.pub
-```
-
-**On NEW VPS:**
-```bash
-ssh rgo@<new-server-ip>
-
-# Add the public key to authorized_keys
-echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
-
-# Also add to root for sudo rsync
-sudo mkdir -p /root/.ssh
-sudo bash -c 'echo "PASTE_PUBLIC_KEY_HERE" >> /root/.ssh/authorized_keys'
-sudo chmod 600 /root/.ssh/authorized_keys
-sudo chmod 700 /root/.ssh
-```
-
-**Test the connection from OLD VPS:**
-```bash
-ssh rgo@<new-server-ip> echo "SSH works!"
-```
-
-#### Copy Service Data
-
-**SSH into OLD VPS and run:**
-
-```bash
-ssh rgo@<old-server-ip>
-
-# Set variables (for fish shell)
-set OLD_IP "<old-server-ip>"
-set NEW_IP "<new-server-ip>"
-
-# Copy service data (example: n8n)
-# The --rsync-path="sudo rsync" flag is REQUIRED for permissions
-sudo rsync -avz --delete --rsync-path="sudo rsync" /var/lib/n8n/ rgo@{$NEW_IP}:/var/lib/n8n/
-
-# Repeat for other services (vaultwarden, umami, etc.)
-# Pattern: sudo rsync -avz --delete --rsync-path="sudo rsync" /var/lib/<service>/ rgo@{$NEW_IP}:/var/lib/<service>/
-```
-
-#### Fix Permissions on New VPS
-
-```bash
-ssh rgo@<new-server-ip> "
-sudo chown -R root:root /var/lib/vaultwarden /var/lib/shlink /var/lib/caddy 2>/dev/null
-sudo chown -R 999:999 /var/lib/n8n/postgres 2>/dev/null
-sudo chown -R 70:70 /var/lib/umami/postgres 2>/dev/null
-sudo chown -R 1000:1000 /var/lib/directus /var/lib/n8n/data 2>/dev/null
-sudo chown -R 9987:9987 /var/lib/teamspeak 2>/dev/null
-sudo chown -R root:root /var/lib/tailscale 2>/dev/null
-echo 'Permissions fixed'
-"
-```
-
-#### Restart Services
-
-```bash
-ssh rgo@<new-server-ip> "sudo systemctl restart podman-vaultwarden podman-n8n podman-umami podman-shlink podman-directus podman-teamspeak 2>/dev/null; echo Services restarted"
-```
-
-#### Verify Migration
-
-```bash
-ssh rgo@<new-server-ip>
-
-# Check for failed services
-sudo systemctl list-units --state=failed --no-pager | grep podman
-
-# Check disk space
-df -h
-
-# Check service logs (example for vaultwarden)
-sudo podman logs vaultwarden
-```
-
-**Note:** Copy data from `/var/lib/<service>/` directories, not `/var/lib/containers/` (container images are rebuilt automatically).
-
-## Platform-Specific Details
-
-### What's Different Between Platforms?
-
-| Feature | NixOS (rgo-desktop) | macOS (rgo-laptop) |
-|---------|---------------------|-------------------|
-| **Window Manager** | i3 (X11) | Aerospace (macOS native) |
-| **Package Source** | nixpkgs | nixpkgs + Homebrew |
-| **System Services** | systemd | launchd / Homebrew services |
-| **Window Borders** | i3 built-in | JankyBorders |
-| **Screenshot Tool** | Flameshot | Flameshot (via Homebrew) |
-| **Gaming** | Steam, CS2, Wine | Not available |
-| **File Sync** | Syncthing (systemd) | Syncthing (Homebrew) |
-| **VPN** | Tailscale (service) | Tailscale (Homebrew) |
-
-### Shared Configuration
-
-These are identical on both platforms:
-- Shell: Fish with Gruvbox theme, Starship prompt
-- Terminal: Ghostty (config via home-manager)
-- Editor: Neovim
-- Git configuration
-- VSCode: settings
-- Development tools: Node.js, Python, etc.
-
-### macOS-Specific Apps (Homebrew)
-
-These install via Homebrew on macOS:
-- **Aerospace** - Window manager (replaces i3)
-- **JankyBorders** - Window borders
-- **Raycast** - Launcher
-- **Microsoft Edge** - Browser
-- **Ghostty** - Terminal
-- **Stremio** - Media center
-- **TeamSpeak** - Voice chat
-- **Beeper** - Messaging
-- **Syncthing** - File sync
-- **Tailscale** - VPN
-
-### NixOS-Specific Apps
-
-These only work on NixOS:
-- i3, bumblebee-status, dunst, redshift
-- Flameshot, normcap, charm-freeze
-- Steam, gamemode, CS2, Prism Launcher
-- OBS, DaVinci Resolve, Darktable
-- Solaar (Logitech mouse tool)
-
-## Customization
-
-If you fork this config, change:
-
-1. **Username** in `flake.nix` (currently "rgo")
-2. **Age keys** in `secrets/.sops.yaml` (generate your own with `age-keygen`)
-3. **Secrets** in `secrets/secrets.yaml` (API keys, passwords, etc.)
-4. **System settings** in `hosts/rgo-desktop/` or `hosts/rgo-laptop/`
-5. **Personal preferences** in various modules
-
-## Structure
-
-```
-.
-├── flake.nix              # Main flake configuration
-├── hosts/
-│   ├── rgo-desktop/      # NixOS desktop configuration
-│   │   ├── default.nix
-│   │   ├── hardware.nix
-│   │   └── hardware-configuration.nix
-│   └── rgo-laptop/       # macOS laptop configuration
-│       ├── default.nix
-│       ├── system.nix
-│       └── homebrew.nix
-├── modules/
-│   ├── constants.nix     # Shared constants (fonts, colors)
-│   ├── apps/             # Application modules (cross-platform)
-│   ├── core/             # NixOS core modules
-│   ├── darwin/           # macOS-specific modules
-│   └── scripts/          # Custom scripts
-├── packages/             # Custom packages
-└── secrets/              # Encrypted secrets
-    ├── secrets.yaml
-    └── .sops.yaml
-```
-
-## Useful Commands
-
-### Rebuild
-```bash
-# Desktop (NixOS)
-rebuild
-
-# Laptop (macOS)
-rebuild --laptop
-
-# VPS (after NixOS is installed + secrets available)
-rebuild-vps
-```
-
-**Fallback without nh:**
-```bash
-# NixOS
-sudo nixos-rebuild switch --flake "$HOME/.config/home#rgo-desktop"
-
-# macOS
-darwin-rebuild switch --flake "$HOME/.config/home#rgo-laptop"
-
-# VPS
-nixos-rebuild switch \
-  --flake "$HOME/.config/home#rgo-vps" \
-  --target-host rgo@rgo-vps \
-  --build-host rgo@rgo-vps \
-  --sudo
-```
-
-### Hetzner VPS install (nixos-anywhere)
-```bash
-# First-time install (will wipe the server)
 nix run github:nix-community/nixos-anywhere -- \
   --flake '.#rgo-vps' \
   --target-host root@<server-ip> \
@@ -523,112 +175,57 @@ nix run github:nix-community/nixos-anywhere -- \
   --no-substitute-on-destination
 ```
 
-### Secrets Management
+Then:
+
+1. Generate an age key on the VPS at `~/.config/sops/age/keys.txt`
+2. Add the VPS public key to `secrets/.sops.yaml`
+3. Re-encrypt `secrets/secrets.yaml` and `secrets/vps-secrets.yaml`
+4. Copy the key to `/root/.config/sops/age/keys.txt`
+5. Run `rebuild` and choose the VPS target in the TUI
+
+## Commands
+
 ```bash
-# Edit secrets
-sops secrets/secrets.yaml
+# Desktop
+rebuild
 
-# Add new secret
-sops secrets/secrets.yaml
-# Then add to secrets/default.nix
+# Laptop
+rebuild --laptop
 
-# Update keys (after adding new machine)
-sops updatekeys secrets/secrets.yaml
-```
-
-### Maintenance
-```bash
 # Update flake inputs
 nix flake update
 
 # Check flake
 nix flake check
 
-# Rebuild (auto-runs statix + nixfmt, auto-commits on success)
-rebuild
-
-# Clean up old generations and GC roots with nh
+# Cleanup
 nh clean all -k 3
-
-# Traditional garbage collect (fallback)
-nix-collect-garbage -d
 ```
 
-### Nix Store Cleanup
-If your `/nix/store` is growing too large despite automatic GC, run these commands:
+### Rebuild script
 
-```bash
-# 1. Delete old Home Manager generations
-home-manager expire-generations "-7 days"
+`rebuild` is not just a shell alias for `nixos-rebuild` or `darwin-rebuild`.
 
-# 2. Delete old system generations (keeps current + last few)
-sudo nix-env -p /nix/var/nix/profiles/system --delete-generations +5
+It runs the Bun-based rebuild wizard in `tools/rebuild-wizard/rebuild.ts` and is wired by the `scripts` module. In practice it can:
 
-# 3. Clean auto GC roots from direnv/develop shells
-sudo rm -rf /nix/var/nix/gcroots/auto/*
+- select the rebuild target
+- optionally update selected flake inputs
+- show git status and diff before rebuilding
+- run `statix` and `nixfmt`
+- run the correct rebuild command for the chosen target
 
-# 4. Remove stale result symlinks in your home
-find ~ -maxdepth 4 -name "result" -type l -mtime +7 -delete 2>/dev/null
+## Notes
 
-# 5. Full GC + optimise
-sudo nix-collect-garbage -d
-sudo nix-store --optimise
-```
+- macOS uses `nixpkgs-darwin` plus Homebrew integration
+- Linux-only modules still exist in the shared tree, so platform gating matters
+- `apps.ollama` on macOS currently installs via Homebrew, not `pkgs.ollama`
+- Flatpak is Linux-only in this repo
 
-For automatic cleanup, angrr is enabled on all systems and runs weekly to remove stale GC roots.
+## Customizing
 
-### Nix Tools
-All Nix-specific tooling is bundled under the `apps.nix-tools` module:
-- **nh** - Better rebuild/cleanup CLI (`nh os switch`, `nh clean`)
-- **comma** - Run packages without installing (`, cowsay hello`)
-- **nix-index** - Find which package owns a file (`nix-locate bin/hello`)
-- **angrr** - Automatic GC root retention cleanup
-- **nurl** - Generate fetcher expressions from URLs
-- **nix-init** - Scaffold full Nix packages from URLs
-- **statix** - Lint Nix code for antipatterns
-- **nil** - Nix language server
-- **nixfmt** - Nix formatter
-- **home-manager** - Home-manager CLI
+If you fork this repo, change at minimum:
 
-```bash
-# Run a package without installing it
-, cowsay "hello"
-
-# Find which package owns a file
-nix-locate 'bin/hello'
-
-# Generate a fetcher expression from a URL
-nurl https://github.com/nix-community/patsh v0.2.0
-
-# Scaffold a full Nix package from a URL
-nix-init
-
-# Lint Nix files
-statix check .
-statix fix .
-```
-
-## Troubleshooting
-
-### macOS: "homebrew" option does not exist
-This means you're trying to build a macOS config on NixOS or vice versa. Make sure you're using the correct hostname (`rgo-laptop` for macOS, `rgo-desktop` for NixOS).
-
-### SOPS: "failed to decrypt" errors
-- Verify `~/.config/sops/age/keys.txt` exists and contains your private key
-- Check that the public key in `.sops.yaml` matches your private key
-- Ensure file permissions: `chmod 600 ~/.config/sops/age/keys.txt`
-
-### macOS: "_nixbld1 does not exist" after macOS update
-See [NixOS/nix#10892](https://github.com/NixOS/nix/issues/10892) for fix instructions.
-
-### First build takes forever
-This is normal - it's downloading and building everything. Subsequent builds will be much faster.
-
-## TODO
-
-- [ ] Use [bun2nix](https://nix-community.github.io/bun2nix/) for managing Bun packages in Nix
-- [ ] Consider [flake-parts](https://flake.parts/) if flake outputs grow significantly (packages, devShells, checks, modules). Currently the flake is ~230 lines and readable without it.
-
-## Credits
-
-Inspired by various NixOS and nix-darwin configurations in the community.
+1. `username` in `flake.nix`
+2. keys in `secrets/.sops.yaml`
+3. values in `secrets/secrets.yaml`
+4. host-specific settings under `hosts/`

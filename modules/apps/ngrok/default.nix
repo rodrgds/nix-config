@@ -23,23 +23,26 @@ in
       {
         home.packages = [ pkgs.ngrok ];
 
-        home.activation.setupNgrok = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          mkdir -p "${ngrokDir}"
-          if [ -f "${config.sops.secrets.ngrok_auth_token.path}" ]; then
-            cat > "${ngrokDir}/ngrok.yml" << EOF
-          version: "2"
-          authtoken: $(cat ${config.sops.secrets.ngrok_auth_token.path})
-          EOF
-            chmod 600 "${ngrokDir}/ngrok.yml"
-          fi
-        '';
-
-        home.activation.setupNgrokSymlink = lib.mkIf isDarwin (
-          lib.hm.dag.entryAfter [ "setupNgrok" ] ''
+        home.activation = {
+          setupNgrok = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            mkdir -p "${ngrokDir}"
+            if [ -f "${config.sops.secrets.ngrok_auth_token.path}" ]; then
+              cat > "${ngrokDir}/ngrok.yml" << EOF
+            version: "2"
+            authtoken: $(cat ${config.sops.secrets.ngrok_auth_token.path})
+            EOF
+              chmod 600 "${ngrokDir}/ngrok.yml"
+            fi
+          '';
+        }
+        // lib.optionalAttrs isDarwin {
+          setupNgrokSymlink = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             mkdir -p "${homeDir}/.config/ngrok"
-            ln -sf "${ngrokDir}/ngrok.yml" "${homeDir}/.config/ngrok/ngrok.yml"
-          ''
-        );
+            if [ -f "${ngrokDir}/ngrok.yml" ]; then
+              ln -sf "${ngrokDir}/ngrok.yml" "${homeDir}/.config/ngrok/ngrok.yml"
+            fi
+          '';
+        };
       };
   };
 }
