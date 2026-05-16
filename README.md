@@ -8,9 +8,31 @@ Personal flake-based config for:
 - `rgo-laptop` on macOS (`aarch64-darwin`)
 - `rgo-vps` on NixOS
 
-It uses shared modules, Home Manager, `nh`, and `sops-nix`.
+It uses shared modules, Home Manager, `nh`, `sops-nix`, and a Bun-based rebuild TUI.
 
-## Layout
+## Overview
+
+### Highlights
+
+- One repo for desktop, laptop, and VPS
+- Shared modules with platform-specific gating where needed
+- Home Manager integrated into both NixOS and nix-darwin
+- Homebrew integration on macOS
+- `sops-nix` for both personal and server secrets
+- TUI rebuild flow with target selection, diff view, formatting, and optional flake input updates
+- Development setup for web, mobile, systems, and AI tooling
+- Linux desktop stack with i3 and gaming tools
+- VPS stack with reverse proxy, Podman services, and Tailscale
+
+### Hosts
+
+| Host | Platform | Notes |
+| --- | --- | --- |
+| `rgo-desktop` | NixOS | Main desktop, i3, gaming, Linux-only apps |
+| `rgo-laptop` | macOS | nix-darwin, Aerospace, Homebrew integration |
+| `rgo-vps` | NixOS | Remote services and containers |
+
+### Layout
 
 ```text
 .
@@ -22,13 +44,67 @@ It uses shared modules, Home Manager, `nh`, and `sops-nix`.
 └── tools/
 ```
 
-## Hosts
+## What’s In Here
 
-| Host | Platform | Notes |
+### Shared base
+
+- Ghostty
+- Bash, Git, GitHub CLI, SSH
+- Neovim and Zed
+- Node.js, Bun, Python, Go, Graphviz, Doxygen
+- VS Code, Android Studio, Android SDK, DBeaver
+- Obsidian, MPV, qBittorrent
+- Codex, Claude, Gemini CLI, Opencode, and Pi
+
+### NixOS desktop
+
+- i3, bumblebee-status, dunst, redshift
+- Steam, CS2, Prism Launcher, Lunar Client, Wine, Winetricks, MangoHud, GameMode
+- OBS, Darktable, GIMP, DaVinci Resolve, Flameshot, NormCap, Charm Freeze
+- Solaar, Synology Drive, ngrok, Vicinae, Grayjay, Rescrobbled
+
+### macOS laptop
+
+- Aerospace and JankyBorders
+- Homebrew-managed GUI apps where needed
+- Edge, Ghostty, Telegram, TeamSpeak, Beeper, Surfshark
+- UTM/QEMU, CLion, Affinity, Cap, Stremio
+- Syncthing, Tailscale, ngrok, Ollama
+
+### VPS
+
+Current enabled services include:
+
+- Caddy
+- AdGuard Home
+- Vaultwarden
+- Umami
+- TeamSpeak
+- Directus
+- TRNDb
+- n8n
+- Shlink
+- OpenPost
+- Podman-based service infrastructure
+
+Some heavier or experimental services remain disabled until needed.
+
+## Platform Differences
+
+| Area | `rgo-desktop` | `rgo-laptop` |
 | --- | --- | --- |
-| `rgo-desktop` | NixOS | Main desktop, i3, gaming, Linux-only apps |
-| `rgo-laptop` | macOS | nix-darwin, Aerospace, Homebrew integration |
-| `rgo-vps` | NixOS | Remote services and containers |
+| Window manager | i3 | Aerospace |
+| Service manager | systemd | launchd |
+| Package source | nixpkgs | nixpkgs + Homebrew |
+| Flatpak | yes | no |
+| Ollama | currently off | Homebrew install |
+| Gaming stack | yes | no |
+
+Notes:
+
+- Linux-only modules still exist in the shared tree, so option gating matters
+- Flatpak is Linux-only in this repo
+- `apps.ollama` on macOS currently installs via Homebrew, not `pkgs.ollama`
 
 ## Secrets
 
@@ -36,7 +112,7 @@ This repo uses `sops-nix`, but not the same way on every host.
 
 - `rgo-desktop` and `rgo-laptop` use the Home Manager `sops` module for personal secrets
 - `rgo-vps` uses the system `sops` module for service secrets
-- the age key path currently used by personal machines is `~/.config/sops/age/keys.txt`
+- the current personal age key path is `~/.config/sops/age/keys.txt`
 - the VPS system key path is `/root/.config/sops/age/keys.txt`
 
 Important Darwin detail:
@@ -64,9 +140,11 @@ grep "public key" ~/.config/sops/age/keys.txt
 
 Then update `secrets/.sops.yaml`, re-encrypt `secrets/secrets.yaml`, and commit the changes.
 
-## macOS Setup
+## Installation
 
-### 1. Prerequisites
+### macOS
+
+#### Prerequisites
 
 ```bash
 xcode-select --install
@@ -91,42 +169,20 @@ mkdir -p ~/.config/nix
 echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 ```
 
-### 2. Clone
+Clone:
 
 ```bash
 git clone https://github.com/yourusername/nix-config.git ~/.config/home
 cd ~/.config/home
 ```
 
-### 3. First Darwin switch
+First switch:
 
 ```bash
 nix --extra-experimental-features 'nix-command flakes' run github:lnl7/nix-darwin/nix-darwin-25.11#darwin-rebuild -- switch --flake '.#rgo-laptop'
 ```
 
-### 4. Normal rebuilds
-
-Preferred:
-
-```bash
-rebuild --laptop
-```
-
-Fallback:
-
-```bash
-nh darwin switch ~/.config/home -H rgo-laptop
-```
-
-Or:
-
-```bash
-darwin-rebuild switch --flake "$HOME/.config/home#rgo-laptop"
-```
-
-### 5. Open macOS apps once
-
-Some apps need manual permission approval after install:
+Open these apps once after install so macOS permission prompts appear:
 
 - Aerospace
 - Karabiner
@@ -134,36 +190,24 @@ Some apps need manual permission approval after install:
 - Syncthing
 - JankyBorders
 
-Check `System Settings -> Privacy & Security` if something looks broken.
+If something looks broken, check `System Settings -> Privacy & Security`.
 
-## NixOS Setup
+### NixOS desktop
 
-Clone the repo and switch:
+First install:
 
 ```bash
 cd ~/.config/home
 sudo nixos-install --flake '.#rgo-desktop'
 ```
 
-Later rebuilds:
-
-```bash
-rebuild
-```
-
-Fallback:
-
-```bash
-nh os switch ~/.config/home -H rgo-desktop
-```
-
-Or:
+Fallback direct rebuild:
 
 ```bash
 sudo nixos-rebuild switch --flake "$HOME/.config/home#rgo-desktop"
 ```
 
-## VPS Setup
+### VPS
 
 First install:
 
@@ -183,7 +227,9 @@ Then:
 4. Copy the key to `/root/.config/sops/age/keys.txt`
 5. Run `rebuild` and choose the VPS target in the TUI
 
-## Commands
+## Operations
+
+### Rebuilds
 
 ```bash
 # Desktop
@@ -192,17 +238,14 @@ rebuild
 # Laptop
 rebuild --laptop
 
-# Update flake inputs
-nix flake update
-
-# Check flake
-nix flake check
-
-# Cleanup
-nh clean all -k 3
+# Direct fallback commands
+nh os switch ~/.config/home -H rgo-desktop
+nh darwin switch ~/.config/home -H rgo-laptop
+sudo nixos-rebuild switch --flake "$HOME/.config/home#rgo-desktop"
+darwin-rebuild switch --flake "$HOME/.config/home#rgo-laptop"
 ```
 
-### Rebuild script
+### Rebuild TUI
 
 `rebuild` is not just a shell alias for `nixos-rebuild` or `darwin-rebuild`.
 
@@ -214,12 +257,169 @@ It runs the Bun-based rebuild wizard in `tools/rebuild-wizard/rebuild.ts` and is
 - run `statix` and `nixfmt`
 - run the correct rebuild command for the chosen target
 
-## Notes
+### Secrets management
 
-- macOS uses `nixpkgs-darwin` plus Homebrew integration
-- Linux-only modules still exist in the shared tree, so platform gating matters
-- `apps.ollama` on macOS currently installs via Homebrew, not `pkgs.ollama`
-- Flatpak is Linux-only in this repo
+```bash
+# Edit personal secrets
+sops secrets/secrets.yaml
+
+# Edit VPS secrets
+sops secrets/vps-secrets.yaml
+
+# Update keys after adding a machine
+sops updatekeys secrets/secrets.yaml
+sops updatekeys secrets/vps-secrets.yaml
+```
+
+### Maintenance
+
+```bash
+# Update flake inputs
+nix flake update
+
+# Run checks
+nix flake check
+
+# Cleanup with nh
+nh clean all -k 3
+
+# Traditional garbage collection
+nix-collect-garbage -d
+```
+
+### Nix store cleanup
+
+If `/nix/store` grows too much:
+
+```bash
+# Delete old Home Manager generations
+home-manager expire-generations "-7 days"
+
+# Delete old system generations
+sudo nix-env -p /nix/var/nix/profiles/system --delete-generations +5
+
+# Clean auto GC roots from direnv/develop shells
+sudo rm -rf /nix/var/nix/gcroots/auto/*
+
+# Remove stale result symlinks
+find ~ -maxdepth 4 -name "result" -type l -mtime +7 -delete 2>/dev/null
+
+# Full GC + optimise
+sudo nix-collect-garbage -d
+sudo nix-store --optimise
+```
+
+`angrr` is enabled to help remove stale GC roots automatically.
+
+### Nix tools
+
+Bundled in `apps.nix-tools`:
+
+- `nh` for rebuilds and cleanup
+- `comma` for ad-hoc package execution
+- `nix-index` for file lookup
+- `angrr` for GC root cleanup
+- `nurl` for fetcher expressions
+- `nix-init` for package scaffolding
+- `statix` for linting
+- `nil` for the language server
+- `nixfmt` for formatting
+- `home-manager` CLI
+
+```bash
+# Run a package without installing it
+, cowsay "hello"
+
+# Find which package owns a file
+nix-locate 'bin/hello'
+
+# Generate a fetcher expression from a URL
+nurl https://github.com/nix-community/patsh v0.2.0
+
+# Scaffold a package
+nix-init
+
+# Lint Nix files
+statix check .
+statix fix .
+```
+
+## VPS Migration
+
+Typical flow for a replacement VPS:
+
+1. deploy the new host with `nixos-anywhere`
+2. add its age key to `secrets/.sops.yaml`
+3. re-encrypt secrets
+4. copy service data from `/var/lib/<service>/`
+5. fix ownership
+6. rebuild and verify services
+
+Useful commands:
+
+```bash
+# Stop services on the new VPS before copying data
+ssh rgo@<new-server-ip> "sudo systemctl stop podman-n8n podman-vaultwarden podman-umami podman-shlink podman-directus podman-teamspeak podman-ghost podman-postiz podman-unieasy 2>/dev/null; echo Services stopped"
+
+# Copy service data from the old VPS
+sudo rsync -avz --delete --rsync-path="sudo rsync" /var/lib/<service>/ rgo@<new-server-ip>:/var/lib/<service>/
+
+# Fix common permissions on the new VPS
+ssh rgo@<new-server-ip> "
+sudo chown -R root:root /var/lib/vaultwarden /var/lib/shlink /var/lib/caddy 2>/dev/null
+sudo chown -R 999:999 /var/lib/n8n/postgres 2>/dev/null
+sudo chown -R 70:70 /var/lib/umami/postgres 2>/dev/null
+sudo chown -R 1000:1000 /var/lib/directus /var/lib/n8n/data 2>/dev/null
+sudo chown -R 9987:9987 /var/lib/teamspeak 2>/dev/null
+sudo chown -R root:root /var/lib/tailscale 2>/dev/null
+echo 'Permissions fixed'
+"
+
+# Restart common services
+ssh rgo@<new-server-ip> "sudo systemctl restart podman-vaultwarden podman-n8n podman-umami podman-shlink podman-directus podman-teamspeak 2>/dev/null; echo Services restarted"
+
+# Verify
+ssh rgo@<new-server-ip> "sudo systemctl list-units --state=failed --no-pager | grep podman; df -h"
+```
+
+Copy data from `/var/lib/<service>/`, not `/var/lib/containers/`.
+
+## Troubleshooting
+
+### macOS: `homebrew` option does not exist
+
+You are probably trying to build the macOS host on NixOS or vice versa. Use the correct host:
+
+- `rgo-laptop` for macOS
+- `rgo-desktop` for NixOS
+
+### SOPS: failed to decrypt
+
+- verify `~/.config/sops/age/keys.txt` exists
+- verify the public key in `secrets/.sops.yaml` matches your private key
+- ensure permissions are correct:
+
+```bash
+chmod 600 ~/.config/sops/age/keys.txt
+```
+
+### macOS: `_nixbld1 does not exist` after macOS update
+
+See `NixOS/nix#10892`.
+
+### First build takes a long time
+
+Normal. The first build downloads and builds a lot more than later rebuilds.
+
+## Why This Repo Might Be Useful
+
+If you are deciding whether to borrow from this config, the main selling points are:
+
+- mixed NixOS + macOS management in one repo
+- a relatively large app/tool catalog already split by platform
+- practical secrets handling for both personal machines and a VPS
+- a real rebuild workflow instead of only raw `switch` commands
+- examples of handling Linux-only modules in a shared tree without duplicating the whole config
 
 ## Customizing
 
@@ -229,3 +429,8 @@ If you fork this repo, change at minimum:
 2. keys in `secrets/.sops.yaml`
 3. values in `secrets/secrets.yaml`
 4. host-specific settings under `hosts/`
+
+## TODO
+
+- [ ] Use `bun2nix` for managing Bun packages in Nix
+- [ ] Consider `flake-parts` if flake outputs grow a lot more
