@@ -287,6 +287,9 @@ nh clean all -k 3
 nix-collect-garbage -d
 ```
 
+<details>
+<summary><strong>Extra Maintenance Commands</strong></summary>
+
 ### Nix store cleanup
 
 If `/nix/store` grows too much:
@@ -344,7 +347,10 @@ statix check .
 statix fix .
 ```
 
-## VPS Migration
+</details>
+
+<details>
+<summary><strong>VPS Migration</strong></summary>
 
 Typical flow for a replacement VPS:
 
@@ -383,6 +389,8 @@ ssh rgo@<new-server-ip> "sudo systemctl list-units --state=failed --no-pager | g
 ```
 
 Copy data from `/var/lib/<service>/`, not `/var/lib/containers/`.
+
+</details>
 
 ## Troubleshooting
 
