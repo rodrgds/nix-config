@@ -14,9 +14,9 @@ let
   packageName = "opencode-ai";
   opencodeSkills = lib.mapAttrs' (
     name: _:
-    lib.nameValuePair
-      "opencode/skills/${lib.removeSuffix ".md" name}/SKILL.md"
-      { source = ./skills + "/${name}"; }
+    lib.nameValuePair "opencode/skills/${lib.removeSuffix ".md" name}/SKILL.md" {
+      source = ./skills + "/${name}";
+    }
   ) (lib.attrsets.filterAttrs (_: type: type == "regular") (builtins.readDir ./skills));
 in
 {
