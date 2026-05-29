@@ -17,8 +17,10 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
-        apps.flatpak.enable = true;
-        services.flatpak.packages = [ "com.surfshark.Surfshark" ];
+        apps.flatpak = {
+          enable = true;
+          packages = [ "com.surfshark.Surfshark" ];
+        };
 
         home-manager.users.${username} = _: {
           home.file.".local/share/applications/com.surfshark.Surfshark.desktop".text = ''

@@ -8,7 +8,7 @@
 let
   cfg = config.apps.ollama;
   inherit (constants) isDarwin isLinux homeDir;
-  ollamaPkg = if isDarwin then pkgs.ollama else pkgs.ollama-cuda;
+  ollamaPkg = pkgs.ollama-cuda;
 in
 {
   options.apps.ollama = {
@@ -74,19 +74,22 @@ in
         '';
       })
       (lib.optionalAttrs isDarwin {
-        environment.systemPackages = [ ollamaPkg ];
+        homebrew.casks = [ "ollama" ];
 
         launchd.user.agents.ollama = {
           serviceConfig = {
+            Label = "com.user.ollama";
             KeepAlive = true;
             RunAtLoad = true;
             ProgramArguments = [
-              "${ollamaPkg}/bin/ollama"
+              "/opt/homebrew/bin/ollama"
               "serve"
             ];
             EnvironmentVariables = cfg.environmentVariables // {
               OLLAMA_HOST = "${cfg.host}:${toString cfg.port}";
             };
+            StandardOutPath = "/tmp/ollama.log";
+            StandardErrorPath = "/tmp/ollama.error.log";
           };
         };
       })

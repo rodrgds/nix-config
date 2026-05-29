@@ -20,7 +20,7 @@
   # Enable Nix configuration (cross-platform)
   core.nix.enable = true;
 
-  # Enable secrets management with sops-nix
+  # Enable Home Manager secrets on Darwin.
   secrets.enable = true;
 
   # Enable scripts (rebuild command and aliases)

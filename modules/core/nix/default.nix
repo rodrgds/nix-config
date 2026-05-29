@@ -51,15 +51,28 @@ in
       };
 
       home-manager.users.${username} =
-        { config, ... }:
-        {
-          sops.templates."nix-conf" = {
-            content = ''
-              access-tokens = github.com=${config.sops.placeholder.github_pat}
+        { config, lib, ... }:
+        lib.mkMerge [
+          (lib.optionalAttrs isLinux {
+            sops.templates."nix-conf" = {
+              content = ''
+                access-tokens = github.com=${config.sops.placeholder.github_pat}
+              '';
+              path = "${homeDir}/.config/nix/nix.conf";
+            };
+          })
+          (lib.optionalAttrs isDarwin {
+            home.activation.setupNixSecretConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              mkdir -p "${homeDir}/.config/nix"
+              if [ -f "${config.sops.secrets.github_pat.path}" ]; then
+                cat > "${homeDir}/.config/nix/nix.conf" << EOF
+              access-tokens = github.com=$(cat ${config.sops.secrets.github_pat.path})
+              EOF
+                chmod 600 "${homeDir}/.config/nix/nix.conf"
+              fi
             '';
-            path = "${homeDir}/.config/nix/nix.conf";
-          };
-        };
+          })
+        ];
     }
     // lib.optionalAttrs isLinux {
       environment.pathsToLink = [ "/libexec" ];

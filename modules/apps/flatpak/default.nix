@@ -120,31 +120,33 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && isLinux) {
-    services.flatpak = {
-      enable = true;
-      inherit (cfg)
-        remotes
-        overrides
-        uninstallUnmanaged
-        uninstallUnused
-        ;
-      packages = lib.optionals cfg.installFlatseal [ "com.github.tchx84.Flatseal" ] ++ cfg.packages;
+  config = lib.mkIf cfg.enable (
+    lib.optionalAttrs isLinux {
+      services.flatpak = {
+        enable = true;
+        inherit (cfg)
+          remotes
+          overrides
+          uninstallUnmanaged
+          uninstallUnused
+          ;
+        packages = lib.optionals cfg.installFlatseal [ "com.github.tchx84.Flatseal" ] ++ cfg.packages;
 
-      update = {
-        inherit (cfg.update) onActivation auto;
+        update = {
+          inherit (cfg.update) onActivation auto;
+        };
       };
-    };
 
-    apps.xdg-portals.enable = lib.mkDefault true;
+      apps.xdg-portals.enable = lib.mkDefault true;
 
-    environment.systemPackages = [
-      pkgs.flatpak
-      pkgs.xdg-utils
-    ];
+      environment.systemPackages = [
+        pkgs.flatpak
+        pkgs.xdg-utils
+      ];
 
-    environment.extraInit = ''
-      export XDG_DATA_DIRS="/var/lib/flatpak/exports/share:$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS"
-    '';
-  };
+      environment.extraInit = ''
+        export XDG_DATA_DIRS="/var/lib/flatpak/exports/share:$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS"
+      '';
+    }
+  );
 }
