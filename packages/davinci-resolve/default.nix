@@ -233,10 +233,19 @@ prev.buildFHSEnv {
     ];
 
   extraPreBwrapCmds = ''
-    mkdir -p ~/.local/share/DaVinciResolve/license || exit 1
-    mkdir -p ~/.local/share/DaVinciResolve/Extras || exit 1
-    mkdir -p ~/.local/share/DaVinciResolve/configs || exit 1
-    mkdir -p ~/.local/share/DaVinciResolve/logs || exit 1
+        mkdir -p ~/.local/share/DaVinciResolve/license || exit 1
+        mkdir -p ~/.local/share/DaVinciResolve/Extras || exit 1
+        mkdir -p ~/.local/share/DaVinciResolve/configs || exit 1
+        mkdir -p ~/.local/share/DaVinciResolve/logs || exit 1
+
+        # Seed the user license directory with the fake license.
+        # Without this, the bwrap --bind above mounts an empty directory
+        # over the license file in the Nix store and Resolve asks for a key.
+        cat > ~/.local/share/DaVinciResolve/license/blackmagic.lic <<'LICEOF'
+    LICENSE blackmagic davinciresolvestudio 999999 permanent uncounted
+      hostid=ANY issuer=CGP customer=CGP issued=28-dec-2023
+      akey=0000-0000-0000-0000 _ck=00 sig="00"
+    LICEOF
   '';
 
   extraBwrapArgs = [
