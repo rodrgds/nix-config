@@ -122,13 +122,14 @@ let
     '';
   });
 
+  python2 = prev.writeShellScriptBin "python2" ''
+    exec ${prev.python3}/bin/python3 "$@"
+  '';
+
   davinci = sourcePkgs.davinci-resolve-studio.passthru.davinci.overrideAttrs (old: {
     src = sourceZip;
     postFixup = ''
       ${old.postFixup}
-
-      # Remove bundled glib libraries that conflict with system ones
-      rm -f $out/libs/libglib-2.0.so* $out/libs/libgio-2.0.so* $out/libs/libgmodule-2.0.so* || true
 
       # --- Patch resolve binary ---
       ${prev.perl}/bin/perl -pi -e 's/\x03\x00\x89\x45\xFC\x83\x7D\xFC\x00\x74\x11\x48\x8B\x45\xC8\x8B/\x03\x00\x89\x45\xFC\x83\x7D\xFC\x00\xEB\x11\x48\x8B\x45\xC8\x8B/' $out/bin/resolve
@@ -143,31 +144,6 @@ let
       ${prev.perl}/bin/perl -pi -e 's/\x74\x11\x48\x8B\x45\xC8\x8B\x55\xFC\x89\x50\x58\xB8\x00\x00\x00/\xEB\x11\x48\x8B\x45\xC8\x8B\x55\xFC\x89\x50\x58\xB8\x00\x00\x00/g' $out/bin/resolve
 
       ${prev.perl}/bin/perl -pi -e 's/\x41\xb6\x01\x84\xc0\x0f\x84\xb0\x00\x00\x00\x48\x85\xdb\x74\x08\x45\x31\xf6\xe9\xa3\x00\x00\x00/\x41\xb6\x00\x84\xc0\x0f\x84\xb0\x00\x00\x00\x48\x85\xdb\x74\x08\x45\x31\xf6\xe9\xa3\x00\x00\x00/g' $out/bin/resolve
-
-      ${prev.perl}/bin/perl -pi -e 's/\x74\x11\xE8\x31\x25\x00\x00\x48\x89\xC7\xE8\x09\xBA\x02\x00\x84/\x75\x11\xE8\x31\x25\x00\x00\x48\x89\xC7\xE8\x09\xBA\x02\x00\x84/g' $out/bin/resolve
-
-      # --- Patch resolve-real if it exists (needed for some distros/wrappers) ---
-      if [ -f $out/bin/resolve-real ]; then
-        ${prev.perl}/bin/perl -pi -e 's/\x03\x00\x89\x45\xFC\x83\x7D\xFC\x00\x74\x11\x48\x8B\x45\xC8\x8B/\x03\x00\x89\x45\xFC\x83\x7D\xFC\x00\xEB\x11\x48\x8B\x45\xC8\x8B/' $out/bin/resolve-real
-
-        ${prev.perl}/bin/perl -pi -e 's/\x74\x11\x48\x8B\x45\xC8\x8B\x55\xFC\x89\x50\x58\xB8\x00\x00\x00/\xEB\x11\x48\x8B\x45\xC8\x8B\x55\xFC\x89\x50\x58\xB8\x00\x00\x00/' $out/bin/resolve-real
-
-        ${prev.perl}/bin/perl -pi -e 's/\x41\xb6\x01\x84\xc0\x0f\x84\xb0\x00\x00\x00\x48\x85\xdb\x74\x08\x45\x31\xf6\xe9\xa3\x00\x00\x00/\x41\xb6\x00\x84\xc0\x0f\x84\xb0\x00\x00\x00\x48\x85\xdb\x74\x08\x45\x31\xf6\xe9\xa3\x00\x00\x00/' $out/bin/resolve-real
-
-        ${prev.perl}/bin/perl -pi -e 's/\x03\x00\x89\x45\xFC\x83\x7D\xFC\x00\x74\x11\x48\x8B\x45\xC8\x8B/\x03\x00\x89\x45\xFC\x83\x7D\xFC\x00\xEB\x11\x48\x8B\x45\xC8\x8B/g' $out/bin/resolve-real
-
-        ${prev.perl}/bin/perl -pi -e 's/\x74\x11\x48\x8B\x45\xC8\x8B\x55\xFC\x89\x50\x58\xB8\x00\x00\x00/\xEB\x11\x48\x8B\x45\xC8\x8B\x55\xFC\x89\x50\x58\xB8\x00\x00\x00/g' $out/bin/resolve-real
-
-        ${prev.perl}/bin/perl -pi -e 's/\x41\xb6\x01\x84\xc0\x0f\x84\xb0\x00\x00\x00\x48\x85\xdb\x74\x08\x45\x31\xf6\xe9\xa3\x00\x00\x00/\x41\xb6\x00\x84\xc0\x0f\x84\xb0\x00\x00\x00\x48\x85\xdb\x74\x08\x45\x31\xf6\xe9\xa3\x00\x00\x00/g' $out/bin/resolve-real
-
-        ${prev.perl}/bin/perl -pi -e 's/\x74\x11\xE8\x31\x25\x00\x00\x48\x89\xC7\xE8\x09\xBA\x02\x00\x84/\x75\x11\xE8\x31\x25\x00\x00\x48\x89\xC7\xE8\x09\xBA\x02\x00\x84/g' $out/bin/resolve-real
-      fi
-
-      # --- DaVinci Resolve 21 beta bypass patch (accepts any license key) ---
-      ${prev.perl}/bin/perl -pi -e 's/\x89\xd5\x89\xf3\x49\x89\xfe/\x31\xed\x89\xf3\x49\x89\xfe/g' $out/bin/resolve || true
-      if [ -f $out/bin/resolve-real ]; then
-        ${prev.perl}/bin/perl -pi -e 's/\x89\xd5\x89\xf3\x49\x89\xfe/\x31\xed\x89\xf3\x49\x89\xfe/g' $out/bin/resolve-real || true
-      fi
 
       mkdir -p $out/.license
       echo -e "LICENSE blackmagic davinciresolvestudio 999999 permanent uncounted\n  hostid=ANY issuer=CGP customer=CGP issued=28-dec-2023\n  akey=0000-0000-0000-0000 _ck=00 sig=\"00\"" > $out/.license/blackmagic.lic
@@ -203,6 +179,7 @@ prev.buildFHSEnv {
       nspr
       ocl-icd
       opencl-headers
+      python2
       python3
       python3.pkgs.numpy
       udev
@@ -251,15 +228,21 @@ prev.buildFHSEnv {
   extraBwrapArgs = [
     ''--bind "$HOME"/.local/share/DaVinciResolve/license ${davinci}/.license''
     ''--bind "$HOME"/.local/share/DaVinciResolve/Extras ${davinci}/Extras''
+    ''--bind "$HOME"/.local/share/DaVinciResolve/logs ${davinci}/logs''
     "--bind /run/opengl-driver/etc/OpenCL /etc/OpenCL"
   ];
 
   runScript = "${prev.bash}/bin/bash ${prev.writeText "davinci-wrapper" ''
+    set -euo pipefail
+
     export QT_XKB_CONFIG_ROOT="${prev.xkeyboard_config}/share/X11/xkb"
-    export QT_PLUGIN_PATH="${davinci}/libs/plugins:$QT_PLUGIN_PATH"
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib:/usr/lib32:${davinci}/libs
-    unset QT_QPA_PLATFORM
-    ${davinci}/bin/resolve
+    export QT_PLUGIN_PATH="${davinci}/libs/plugins:''${QT_PLUGIN_PATH:-}"
+    export LD_LIBRARY_PATH="''${LD_LIBRARY_PATH:-}:/usr/lib:/usr/lib32:${davinci}/libs"
+
+    export QT_QPA_PLATFORM=xcb
+
+    cd ${davinci}
+    exec ${davinci}/bin/resolve
   ''}";
 
   extraInstallCommands = ''
