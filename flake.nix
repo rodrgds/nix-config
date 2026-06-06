@@ -55,10 +55,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    vicinae = {
-      url = "github:vicinaehq/vicinae";
-    };
-
     vicinae-extensions = {
       url = "github:vicinaehq/extensions";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -115,7 +111,6 @@
       sops-nix,
       disko,
       steam-config-nix,
-      vicinae,
       nix-index-database,
       angrr,
       # nix-openclaw,
@@ -185,7 +180,6 @@
                 sharedModules = [
                   sops-nix.homeManagerModules.sops
                   steam-config-nix.homeModules.default
-                  vicinae.homeManagerModules.default
                   # nix-openclaw.homeManagerModules.openclaw
                 ];
               };

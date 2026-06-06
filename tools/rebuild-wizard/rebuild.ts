@@ -229,7 +229,7 @@ async function runPreparationAndRebuild(
   if (!prepared) return false;
 
   const [cmd, args] = rebuildCommand(target);
-  const subtitle = `Target: ${target.name}. Local rebuilds ask for sudo immediately and keep it fresh while building.`;
+  const subtitle = `Target: ${target.name}. Asking for sudo up front and keeping it fresh while building.`;
 
   const success = await app.externalCommandScreen(
     "Rebuild",

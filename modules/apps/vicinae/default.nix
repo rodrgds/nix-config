@@ -19,7 +19,6 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
-        # Add vicinae cachix when vicinae is enabled
         nix.settings = {
           substituters = [ "https://vicinae.cachix.org" ];
           trusted-public-keys = [ "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc=" ];
@@ -28,114 +27,96 @@ in
 
       {
         home-manager.users.${username} = _: {
-          services.vicinae = lib.mkIf isLinux {
+          programs.vicinae = lib.mkIf isLinux {
             enable = true;
+            package = pkgs.vicinae;
+
             systemd = {
               enable = true;
               autoStart = true;
-              environment = {
-                DISPLAY = ":0";
-                PATH = "/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin";
-                USE_LAYER_SHELL = "1";
-                XDG_DATA_DIRS = "/run/current-system/sw/share:/var/lib/flatpak/exports/share:/home/${username}/.local/share/flatpak/exports/share:/home/${username}/.local/share";
-                XDG_RUNTIME_DIR = "/run/user/1000";
-                DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
-              };
             };
+
+            useLayerShell = true;
+
             settings = {
-              close_on_focus_loss = true;
-              consider_preedit = true;
-              pop_to_root_on_close = true;
-              search_files_in_root = true;
-
-              # i3 handles placement; avoid reusing a stale saved launcher position.
-              remember_last_position = false;
-              launcher_window = {
-                inherit (constants.display) opacity;
-              };
-
-              # TODO: make this work haha
-              favourites = [
-                "vscode-recents:open-recent"
-                "clipboard-history:show"
-                "it-tools:it-tools"
-                "port-killer:kill-port"
-              ];
-
+              closeOnFocusLoss = true;
+              considerPreedit = true;
+              popToRootOnClose = true;
+              rootSearch.searchFiles = true;
+              window.opacity = constants.display.opacity;
               font = {
-                normal = {
-                  size = constants.fonts.sizes.large;
-                  family = constants.fonts.ui;
-                };
+                normal = constants.fonts.ui;
+                size = constants.fonts.sizes.large;
               };
               theme = {
-                dark = {
-                  name = "gruvbox-custom";
-                  icon_theme = "Papirus";
+                name = "gruvbox-custom";
+                iconTheme = "Papirus";
+              };
+            };
+
+            themes = {
+              "gruvbox-custom" = {
+                meta = {
+                  version = 1;
+                  name = "Gruvbox Custom";
+                  description = "Custom Gruvbox dark theme for vicinae";
+                  variant = "dark";
+                  inherits = "vicinae-dark";
+                };
+                colors = {
+                  core = {
+                    background = constants.colors.bg0;
+                    foreground = constants.colors.fg0;
+                    secondary_background = constants.colors.bg1;
+                    border = constants.colors.bg2;
+                    accent = constants.colors.orange;
+                  };
+                  accents = {
+                    blue = constants.colors.blue;
+                    green = constants.colors.green;
+                    magenta = constants.colors.magenta;
+                    orange = constants.colors.orange;
+                    purple = constants.colors.magenta;
+                    red = constants.colors.red;
+                    yellow = constants.colors.yellow;
+                    cyan = constants.colors.cyan;
+                  };
+                  list.item = {
+                    selection = {
+                      background = {
+                        name = constants.colors.bg2;
+                        opacity = 0.7;
+                      };
+                      secondary_background = constants.colors.bg2;
+                      foreground = constants.colors.orangeBright;
+                    };
+                    hover = {
+                      background = constants.colors.bg2;
+                      foreground = constants.colors.fg0;
+                    };
+                  };
                 };
               };
-              extensions = with inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system}; [
-                nix
-                vscode-recents
-                port-killer
-                it-tools
+            };
+
+            extensions = with inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system}; [
+              nix
+              vscode-recents
+              port-killer
+              it-tools
+            ];
+          };
+
+          systemd.user.services.vicinae = lib.mkIf isLinux {
+            Unit.After = [ "graphical-session.target" ];
+            Service = {
+              Environment = [
+                "PATH=/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin"
+                "XDG_DATA_DIRS=/run/current-system/sw/share:/var/lib/flatpak/exports/share:/home/${username}/.local/share/flatpak/exports/share:/home/${username}/.local/share"
               ];
+              KillMode = lib.mkForce "control-group";
             };
           };
-
-          # The upstream service uses KillMode=process, which leaves the spawned
-          # Chromium/Electron helper tree behind during Home Manager restarts.
-          # During a NixOS switch that stale tree collides with the restarted
-          # server, triggers a segfault loop, and the activation never finishes.
-          systemd.user.services.vicinae.Service = lib.mkIf isLinux {
-            KillMode = lib.mkForce "control-group";
-          };
-
-          home.file.".local/share/vicinae/themes/gruvbox-custom.toml".text = ''
-            [meta]
-            version = 1
-            name = "Gruvbox Custom"
-            description = "Custom Gruvbox dark theme for vicinae"
-            variant = "dark"
-            inherits = "vicinae-dark"
-
-            [colors.core]
-            background = "${constants.colors.bg0}"
-            foreground = "${constants.colors.fg0}"
-            secondary_background = "${constants.colors.bg1}"
-            border = "${constants.colors.bg2}"
-            accent = "${constants.colors.orange}"
-
-            [colors.accents]
-            blue = "${constants.colors.blue}"
-            green = "${constants.colors.green}"
-            magenta = "${constants.colors.magenta}"
-            orange = "${constants.colors.orange}"
-            purple = "${constants.colors.magenta}"
-            red = "${constants.colors.red}"
-            yellow = "${constants.colors.yellow}"
-            cyan = "${constants.colors.cyan}"
-
-            [colors.input]
-            background = "${constants.colors.bg1}"
-            foreground = "${constants.colors.fg0}"
-            border = "${constants.colors.bg2}"
-            border_focus = "${constants.colors.orange}"
-            placeholder = "${constants.colors.fg2}"
-
-            [colors.list]
-            background = "${constants.colors.bg0}"
-            foreground = "${constants.colors.fg0}"
-            selected_background = "${constants.colors.bg2}"
-            selected_foreground = "${constants.colors.orangeBright}"
-            hover_background = "${constants.colors.bg2}"
-            hover_foreground = "${constants.colors.fg0}"
-
-            [colors.scrollbar]
-            track = "${constants.colors.bg1}"
-            thumb = "${constants.colors.fg2}"
-            thumb_hover = "${constants.colors.fg1}"
-          '';
         };
       }
     ]

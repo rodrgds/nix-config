@@ -175,7 +175,7 @@ export function rebuildCommand(target: Target): [string, string[]] {
     args.push("--build-host", target.remote.buildHost);
   }
 
-  return ["nixos-rebuild", args];
+  return withEarlySudo(["nixos-rebuild", args]);
 }
 
 function withEarlySudo(command: [string, string[]]): [string, string[]] {
