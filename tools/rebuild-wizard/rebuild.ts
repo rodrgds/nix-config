@@ -484,7 +484,7 @@ async function sopsInvocation(
   const [cmd, prefix] = await sopsCommand();
   return {
     cmd,
-    args: [...prefix, ...args],
+    args: [...prefix, "--config", join(SECRETS_DIR, ".sops.yaml"), ...args],
     options: {
       cwd: REPO_DIR,
       ...options,
