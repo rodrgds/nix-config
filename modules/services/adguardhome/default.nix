@@ -188,9 +188,9 @@ in
           blocked_services = {
             ids = [
               "twitter"
-              # "youtube"
-              #"instagram"
-              #"linkedin"
+              "youtube"
+              "instagram"
+              "linkedin"
             ];
             # AdGuard blocked_services.schedule is an inactivity window.
             # 20h-24h means services are allowed at night and blocked during daytime.
