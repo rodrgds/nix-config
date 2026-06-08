@@ -89,6 +89,8 @@ in
 
       path = [ pkgs.bun ];
 
+      environment.LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
+
       serviceConfig = {
         Type = "simple";
         EnvironmentFile = config.sops.templates."personal-site-env".path;
@@ -96,7 +98,6 @@ in
         WorkingDirectory = "/var/lib/personal-site";
         ExecStart = "${pkgs.bun}/bin/bun run dist/server/entry.mjs";
         Restart = "always";
-        LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
       };
     };
 
