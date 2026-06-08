@@ -43,12 +43,6 @@ let
     "shlink_db_user"
     "shlink_db_name"
     "shlink_geolite_license_key"
-    # YOURLS
-    "yourls_db_user"
-    "yourls_db_password"
-    "yourls_db_root_password"
-    "yourls_admin_password"
-    "yourls_admin_user"
     # Postiz
     "postiz_jwt_secret"
     "postiz_postgres_password"
@@ -90,6 +84,7 @@ let
     "trndb_db_password"
     "trndb_db_name"
     # Website
+    "website_github_access_token"
     "website_hevy_api_key"
     "website_lastfm_api_key"
     "website_lastfm_username"
@@ -112,6 +107,8 @@ let
     "openpost_threads_client_id"
     "openpost_threads_client_secret"
     "openpost_mastodon_servers"
+    # Deploy webhook
+    "deploy_webhook_secret"
   ];
 
   mainSecretNames = [

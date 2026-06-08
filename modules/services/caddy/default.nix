@@ -99,6 +99,13 @@ let
       '';
     };
 
+    # Deploy webhook - GitHub push-to-deploy
+    "webhooks.rgo.pt" = {
+      extraConfig = ''
+        reverse_proxy localhost:${toString (cfg.internalPorts."webhooks.rgo.pt" or 9000)}
+      '';
+    };
+
     # OpenPost - social media scheduler
     "openpost.rgo.pt" = {
       extraConfig = ''

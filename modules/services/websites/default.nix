@@ -1,4 +1,3 @@
-# Websites module (edu-site and personal-site)
 {
   config,
   lib,
@@ -26,11 +25,18 @@ in
 {
   options.vps.websites = {
     enable = lib.mkEnableOption "Websites (edu-site & personal-site)";
+    edu.enable = lib.mkEnableOption "edu.rgo.pt static site" // {
+      default = true;
+    };
+    personal.enable = lib.mkEnableOption "personal site at rgo.pt" // {
+      default = true;
+    };
   };
 
   config = lib.mkIf cfg.enable {
-    sops.templates."personal-site-env" = {
+    sops.templates."personal-site-env" = lib.mkIf cfg.personal.enable {
       content = ''
+        GITHUB_ACCESS_TOKEN=${config.sops.placeholder.website_github_access_token}
         HEVY_API_KEY=${config.sops.placeholder.website_hevy_api_key}
         LASTFM_API_KEY=${config.sops.placeholder.website_lastfm_api_key}
         LASTFM_USERNAME=${config.sops.placeholder.website_lastfm_username}
@@ -46,7 +52,7 @@ in
       mode = "0600";
     };
 
-    systemd.services.personal-site = {
+    systemd.services.personal-site = lib.mkIf cfg.personal.enable {
       description = "Personal Astro Website Build";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
@@ -55,6 +61,7 @@ in
         pkgs.bun
         pkgs.git
         pkgs.nodejs
+        pkgs.typst
         pkgs.vips
         pkgs.glib
         pkgs.cairo
@@ -74,7 +81,7 @@ in
       };
     };
 
-    systemd.services.personal-site-run = {
+    systemd.services.personal-site-run = lib.mkIf cfg.personal.enable {
       description = "Personal Astro Website Server";
       after = [ "personal-site.service" ];
       wantedBy = [ "multi-user.target" ];
@@ -89,26 +96,29 @@ in
         WorkingDirectory = "/var/lib/personal-site";
         ExecStart = "${pkgs.bun}/bin/bun run dist/server/entry.mjs";
         Restart = "always";
+        LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
       };
     };
 
-    vps.caddy.internalPorts = {
+    vps.caddy.internalPorts = lib.mkIf cfg.personal.enable {
       personal = personalPort;
     };
 
-    services.caddy.virtualHosts = {
-      "edu.rgo.pt" = {
-        extraConfig = ''
-          root * ${eduSite}
-          file_server
-        '';
+    services.caddy.virtualHosts =
+      lib.mkIf cfg.edu.enable {
+        "edu.rgo.pt" = {
+          extraConfig = ''
+            root * ${eduSite}
+            file_server
+          '';
+        };
+      }
+      // lib.mkIf cfg.personal.enable {
+        "rgo.pt" = {
+          extraConfig = ''
+            reverse_proxy 127.0.0.1:${toString personalPort}
+          '';
+        };
       };
-
-      "rgo.pt" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:${toString personalPort}
-        '';
-      };
-    };
   };
 }

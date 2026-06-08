@@ -1,4 +1,3 @@
-# Deploy webhook for GitHub push-to-deploy
 {
   config,
   lib,
@@ -11,41 +10,11 @@ in
 {
   options.vps.deploy = {
     enable = lib.mkEnableOption "GitHub deploy webhook";
-    secret = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-      description = "Webhook secret for GitHub";
-    };
   };
 
   config = lib.mkIf cfg.enable {
-    services.webhook = {
-      enable = true;
-      port = 9000;
-      openFirewall = true;
-    };
-
-    environment.etc."scripts/redeploy.sh" = {
-      mode = "0755";
-      text = ''
-        #!/usr/bin/env bash
-        set -e
-
-        cd /etc/nixos
-
-        echo "Updating flakes..."
-        nix flake update
-
-        echo "Rebuilding system..."
-        nixos-rebuild switch --flake .#rgo-vps
-
-        echo "Deployment complete!"
-      '';
-    };
-
-    environment.etc."webhook-hooks.json" = {
-      mode = "0644";
-      text = ''
+    sops.templates."webhook-hooks" = {
+      content = ''
         [
           {
             "id": "redeploy",
@@ -54,7 +23,7 @@ in
             "trigger-rule": {
               "match": {
                 "type": "payload-hash-sha1",
-                "secret": "${cfg.secret}",
+                "secret": "${config.sops.placeholder.deploy_webhook_secret}",
                 "parameter": {
                   "source": "header",
                   "name": "X-Hub-Signature-256"
@@ -64,12 +33,35 @@ in
           }
         ]
       '';
+      mode = "0644";
     };
+
+    environment.etc."scripts/redeploy.sh" = {
+      mode = "0755";
+      text = ''
+        #!/usr/bin/env bash
+        set -e
+
+        cd /home/rgo/.config/home
+
+        echo "Updating flakes..."
+        nix flake update
+
+        echo "Rebuilding system..."
+        nh os switch . -H rgo-vps
+
+        echo "Deployment complete!"
+      '';
+    };
+
+    vps.caddy.internalPorts."webhooks.rgo.pt" = 9000;
 
     systemd.services.webhook-deploy = {
       description = "GitHub Webhook for Deploys";
       serviceConfig = {
-        ExecStart = "${pkgs.webhook}/bin/webhook -hooks=/etc/webhook-hooks.json -verbose";
+        ExecStart = "${pkgs.webhook}/bin/webhook -hooks=${
+          config.sops.templates."webhook-hooks".path
+        } -verbose";
         Restart = "always";
       };
       wantedBy = [ "multi-user.target" ];

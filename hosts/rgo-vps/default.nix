@@ -68,19 +68,24 @@
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
-  vps.trndb.enable = true;
   vps.n8n.enable = true;
   vps.shlink = {
     enable = true;
     extraDomains = [ "ref.rgo.pt" ];
   };
-  vps.termix.enable = true;
-  vps.postiz.enable = false; # enable in the future, but the system starts thrashing because of elasticsearch (it should have more RAM than it currently has, so I need to upgrade the machine)
+  vps.websites = {
+    enable = true;
+    personal.enable = true;
+    edu.enable = false;
+  };
+  vps.deploy.enable = true;
+
+  vps.trndb.enable = false;
+  vps.termix.enable = false;
+  vps.postiz.enable = false;
   vps.ghost.enable = false;
   vps.unieasy.enable = false;
   vps.pocketbase.enable = false;
-  vps.websites.enable = false;
-  vps.deploy.enable = false;
   vps.immich-public-proxy.enable = false;
   vps.openpost.enable = true;
 
