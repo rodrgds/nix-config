@@ -176,6 +176,10 @@ in
           "||shorts.youtube.com^"
           "||youtube.com^$path=/shorts"
           "||www.youtube.com^$path=/shorts"
+
+          "||youtube.com^"
+          "||www.youtube.com^"
+
           "@@||music.youtube.com^"
         ];
 
@@ -188,7 +192,6 @@ in
           blocked_services = {
             ids = [
               "twitter"
-              "youtube"
               "instagram"
               "linkedin"
             ];
