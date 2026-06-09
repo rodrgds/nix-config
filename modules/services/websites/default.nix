@@ -77,7 +77,7 @@ in
         MemoryHigh = "2G";
         MemoryMax = "2.5G";
 
-        ExecStart = "${pkgs.bash}/bin/bash -c 'if [ ! -d /var/lib/personal-site/.git ]; then git clone https://github.com/rodrgds/personal-website /var/lib/personal-site; fi && cd /var/lib/personal-site && git pull origin main && bun install && bun run build'";
+        ExecStart = "${pkgs.bash}/bin/bash -c 'if [ ! -d /var/lib/personal-site/.git ]; then git clone https://github.com/rodrgds/personal-website /var/lib/personal-site; fi && cd /var/lib/personal-site && git fetch origin main && git reset --hard origin/main && bun install && bun run build'";
       };
     };
 

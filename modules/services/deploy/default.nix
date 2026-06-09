@@ -22,7 +22,7 @@ in
             "pass-arguments-to-command": [],
             "trigger-rule": {
               "match": {
-                "type": "payload-hash-sha1",
+                "type": "payload-hash-sha256",
                 "secret": "${config.sops.placeholder.deploy_webhook_secret}",
                 "parameter": {
                   "source": "header",
@@ -39,16 +39,18 @@ in
     environment.etc."scripts/redeploy.sh" = {
       mode = "0755";
       text = ''
-        #!/usr/bin/env bash
+        #!${pkgs.bash}/bin/bash
         set -e
+
+        export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
 
         cd /home/rgo/.config/home
 
-        echo "Updating flakes..."
-        nix flake update
-
         echo "Rebuilding system..."
-        nh os switch . -H rgo-vps
+        sudo -u rgo nh os switch . -H rgo-vps
+
+        echo "Restarting personal site services..."
+        systemctl restart personal-site personal-site-run
 
         echo "Deployment complete!"
       '';
