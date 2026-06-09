@@ -38,12 +38,7 @@ in
           "globstar"
         ];
 
-        profileExtra = ''
-          if [ -f "$HOME/.bashrc" ]; then
-            source "$HOME/.bashrc"
-          fi
-        ''
-        + lib.optionalString isDarwin ''
+        profileExtra = lib.optionalString isDarwin ''
           if [ -d /opt/homebrew/bin ]; then
             export PATH="/opt/homebrew/bin:$PATH"
           fi
