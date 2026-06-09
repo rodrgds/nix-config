@@ -39,6 +39,7 @@
   core.networking.tailscale.acceptDns = false;
 
   apps.nix-tools.enable = true;
+  environment.systemPackages = [ pkgs.git ];
 
   # Headless defaults
   core.audio.enable = lib.mkForce false;
