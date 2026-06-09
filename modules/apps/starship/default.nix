@@ -61,7 +61,7 @@ in
           palette = "warm_fade";
 
           palettes.warm_fade = {
-            color_1 = "#cc5b16";
+            color_1 = "#a04000";
             color_2 = "#d65d0e";
             color_3 = "#d48f1b";
             color_4 = "#d79921";
