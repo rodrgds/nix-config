@@ -181,6 +181,7 @@ in
           "||www.youtube.com^"
 
           "@@||music.youtube.com^"
+          "@@||accounts.youtube.com^"
         ];
 
         filtering = {
