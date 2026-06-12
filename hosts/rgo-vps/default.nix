@@ -89,6 +89,18 @@
   vps.pocketbase.enable = false;
   vps.immich-public-proxy.enable = false;
   vps.openpost.enable = true;
+  vps.litellm = {
+    enable = true;
+    host = "0.0.0.0";
+    port = 4000;
+    zenApiBase = "https://opencode.ai/zen/v1";
+    goApiBase = "https://opencode.ai/zen/go/v1";
+    goAnthropicBase = "https://opencode.ai/zen/go";
+    flashFreeModel = "openai/deepseek-v4-flash-free";
+    flashPaidModel = "openai/deepseek-v4-flash";
+    normalModel = "anthropic/minimax-m3";
+    cooldownTime = 3600;
+  };
 
   # Your user module sets bash as the login shell.
   apps.bash.enable = true;
@@ -114,6 +126,7 @@
     80 # HTTP
     443 # HTTPS
   ];
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 4000 ];
 
   # Ensure the user exists for SSH login.
   users.users.${username} = {

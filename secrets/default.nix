@@ -107,6 +107,12 @@ let
     "openpost_threads_client_id"
     "openpost_threads_client_secret"
     "openpost_mastodon_servers"
+    # LiteLLM
+    "litellm_master_key"
+    "litellm_opencode_key_1"
+    "litellm_opencode_key_2"
+    "litellm_opencode_key_3"
+    "litellm_opencode_key_4"
     # Deploy webhook
     "deploy_webhook_secret"
   ];

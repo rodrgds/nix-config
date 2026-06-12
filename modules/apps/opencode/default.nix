@@ -39,7 +39,26 @@ in
               "$schema" = "https://opencode.ai/config.json";
               autoupdate = true;
               theme = "gruvbox";
+              model = "litellm/flash";
               plugin = [ "@mohak34/opencode-notifier@latest" ];
+              provider = {
+                litellm = {
+                  npm = "@ai-sdk/openai-compatible";
+                  name = "LiteLLM VPS";
+                  options = {
+                    baseURL = "http://127.0.0.1:4000/v1";
+                    apiKey = "{env:LITELLM_MASTER_KEY}";
+                  };
+                  models = {
+                    flash = {
+                      name = "DeepSeek V4 Flash via LiteLLM";
+                    };
+                    normal = {
+                      name = "MiniMax M3 via LiteLLM";
+                    };
+                  };
+                };
+              };
               mcp = {
                 svelte = {
                   type = "local";
