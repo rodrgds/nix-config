@@ -38,7 +38,7 @@ in
 
         core.frozen-packages.packages.affinity-v3 = {
           mode = cfg.packageMode;
-          package = inputs.affinity-nix.packages.${pkgs.stdenv.hostPlatform.system}.v3;
+          package = pkgs.affinity-v3;
           command = "affinity-v3";
           executablePath = "/bin/affinity-v3";
           rootName = "rgo-affinity-v3";

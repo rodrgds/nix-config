@@ -44,12 +44,7 @@ in
 
         export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
 
-        cd /home/rgo/.config/home
-
-        echo "Rebuilding system..."
-        sudo -u rgo nh os switch . -H rgo-vps
-
-        echo "Restarting personal site services..."
+        echo "Redeploying personal site..."
         systemctl restart personal-site personal-site-run
 
         echo "Deployment complete!"

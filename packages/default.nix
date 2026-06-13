@@ -1,6 +1,11 @@
 # Package overlay
 { inputs }:
-final: prev: {
+final: prev:
+let
+  affinityOverlay = inputs.affinity-nix.overlays.default final prev;
+in
+affinityOverlay
+// {
   unstable = import inputs.nixpkgs-unstable {
     inherit (prev.stdenv.hostPlatform) system;
     config.allowUnfree = true;
