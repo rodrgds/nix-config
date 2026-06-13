@@ -9,6 +9,7 @@
 }:
 let
   cfg = config.darwin.core.homebrew;
+  brewPrefix = if pkgs.stdenv.hostPlatform.isAarch64 then "/opt/homebrew" else "/usr/local";
 in
 {
   options.darwin.core.homebrew = {
@@ -41,5 +42,32 @@ in
       ];
 
     };
+
+    # Homebrew 4.6+ refuses formulae/casks from third-party taps until they are
+    # explicitly trusted. Do this before nix-darwin runs `brew bundle`, so a
+    # fresh activation can install packages from our configured taps.
+    system.activationScripts.homebrew.text = lib.mkBefore ''
+      if [ -x "${brewPrefix}/bin/brew" ]; then
+        echo >&2 "trusting Homebrew taps..."
+        PATH="${brewPrefix}/bin:${lib.makeBinPath [ pkgs.mas ]}:$PATH" \
+        sudo \
+          --preserve-env=PATH \
+          --user=${lib.escapeShellArg config.system.primaryUser} \
+          --set-home \
+          env HOMEBREW_NO_AUTO_UPDATE=1 \
+          bash -c '
+            if brew help trust >/dev/null 2>&1; then
+              for tap in \
+                felixkratz/formulae \
+                gromgit/fuse \
+                mobile-dev-inc/tap \
+                nikitabobko/tap
+              do
+                brew trust "$tap" >/dev/null 2>&1 || true
+              done
+            fi
+          '
+      fi
+    '';
   };
 }

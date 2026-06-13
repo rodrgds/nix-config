@@ -74,7 +74,7 @@ in
         '';
       })
       (lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "ollama" ];
+        homebrew.casks = [ "ollama-app" ];
 
         launchd.user.agents.ollama = {
           serviceConfig = {
