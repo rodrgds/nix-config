@@ -109,10 +109,7 @@ in
           in
           (
             {
-              home.sessionPath = [
-                "$HOME/.local/bin"
-                "$HOME/${installDir}/bin"
-              ];
+              home.sessionPath = [ "$HOME/${installDir}/bin" ];
 
               programs.opencode = {
                 enable = true;
@@ -152,29 +149,41 @@ in
               home.activation.installOpencodeCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
                 export PATH="${pkgs.nodejs}/bin:$PATH"
                 INSTALL_ROOT="$HOME/${installDir}"
+                OPENCODE_BIN="$INSTALL_ROOT/bin/opencode"
+                OPENCODE_REAL="$INSTALL_ROOT/bin/opencode-real"
 
                 mkdir -p "$INSTALL_ROOT"
                 ${pkgs.nodejs}/bin/npm install --global --prefix "$INSTALL_ROOT" ${packageName}
+
+                if [ -L "$OPENCODE_BIN" ]; then
+                  target="$(readlink "$OPENCODE_BIN")"
+                  case "$target" in
+                    /*) real="$target" ;;
+                    *) real="$(dirname "$OPENCODE_BIN")/$target" ;;
+                  esac
+                  rm -f "$OPENCODE_REAL"
+                  ln -s "$real" "$OPENCODE_REAL"
+                elif [ -x "$OPENCODE_BIN" ] && ! grep -q "LITELLM_MASTER_KEY" "$OPENCODE_BIN"; then
+                  mv "$OPENCODE_BIN" "$OPENCODE_REAL"
+                fi
+
+                cat > "$OPENCODE_BIN" <<'EOF'
+                #!/usr/bin/env bash
+                set -euo pipefail
+
+                if [ -z "''${LITELLM_MASTER_KEY:-}" ]; then
+                  for key_file in ${litellmMasterKeyFileArgs}; do
+                    if [ -r "$key_file" ]; then
+                      export LITELLM_MASTER_KEY="$(tr -d '\n' < "$key_file")"
+                      break
+                    fi
+                  done
+                fi
+
+                exec "$HOME/${installDir}/bin/opencode-real" "$@"
+                EOF
+                chmod +x "$OPENCODE_BIN"
               '';
-
-              home.file.".local/bin/opencode" = {
-                executable = true;
-                text = ''
-                  #!/usr/bin/env bash
-                  set -euo pipefail
-
-                  if [ -z "''${LITELLM_MASTER_KEY:-}" ]; then
-                    for key_file in ${litellmMasterKeyFileArgs}; do
-                      if [ -r "$key_file" ]; then
-                        export LITELLM_MASTER_KEY="$(tr -d '\n' < "$key_file")"
-                        break
-                      fi
-                    done
-                  fi
-
-                  exec "$HOME/${installDir}/bin/opencode" "$@"
-                '';
-              };
 
               xdg.configFile =
                 opencodeSkills
