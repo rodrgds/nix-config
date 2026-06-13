@@ -22,6 +22,15 @@ in
 {
   options.apps.opencode = {
     enable = lib.mkEnableOption "Enable Opencode CLI and desktop app";
+    litellm = {
+      baseURL = lib.mkOption {
+        type = lib.types.str;
+        default = "http://rgo-vps:4000/v1";
+        description = "LiteLLM OpenAI-compatible API base URL.";
+      };
+
+    };
+
     web = {
       enable = lib.mkEnableOption "Enable Opencode web server (systemd service)";
     };
@@ -35,6 +44,8 @@ in
         home-manager.users.${username} =
           { config, lib, ... }:
           let
+            litellmMasterKeyPath = config.sops.secrets.litellm_master_key.path;
+
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
               autoupdate = true;
@@ -44,17 +55,17 @@ in
               provider = {
                 litellm = {
                   npm = "@ai-sdk/openai-compatible";
-                  name = "LiteLLM VPS";
+                  name = "My LiteLLM (VPS)";
                   options = {
-                    baseURL = "http://127.0.0.1:4000/v1";
+                    baseURL = cfg.litellm.baseURL;
                     apiKey = "{env:LITELLM_MASTER_KEY}";
                   };
                   models = {
                     flash = {
-                      name = "DeepSeek V4 Flash via LiteLLM";
+                      name = "Reeeeeally cheap model";
                     };
                     normal = {
-                      name = "MiniMax M3 via LiteLLM";
+                      name = "Pretty good model";
                     };
                   };
                 };
@@ -131,7 +142,19 @@ in
                 INSTALL_ROOT="$HOME/${installDir}"
 
                 mkdir -p "$INSTALL_ROOT"
-                ${pkgs.nodejs}/bin/npm install --global --prefix "$INSTALL_ROOT" ${packageName}
+                ${pkgs.nodejs}/bin/npm install --global --force --prefix "$INSTALL_ROOT" ${packageName}
+              '';
+
+              programs.bash.initExtra = lib.mkAfter ''
+                if [ -z "''${LITELLM_MASTER_KEY:-}" ] && [ -r "${litellmMasterKeyPath}" ]; then
+                  export LITELLM_MASTER_KEY="$(tr -d '\n' < "${litellmMasterKeyPath}")"
+                fi
+              '';
+
+              programs.zsh.envExtra = lib.mkAfter ''
+                if [ -z "''${LITELLM_MASTER_KEY:-}" ] && [ -r "${litellmMasterKeyPath}" ]; then
+                  export LITELLM_MASTER_KEY="$(tr -d '\n' < "${litellmMasterKeyPath}")"
+                fi
               '';
 
               xdg.configFile =
