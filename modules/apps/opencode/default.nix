@@ -22,6 +22,20 @@ in
 {
   options.apps.opencode = {
     enable = lib.mkEnableOption "Enable Opencode CLI and desktop app";
+    litellm = {
+      baseURL = lib.mkOption {
+        type = lib.types.str;
+        default = "http://rgo-vps:4000/v1";
+        description = "LiteLLM OpenAI-compatible API base URL.";
+      };
+
+      masterKeyFile = lib.mkOption {
+        type = lib.types.str;
+        default = "$HOME/.config/opencode/litellm-master-key";
+        description = "Optional file read by the opencode wrapper to populate LITELLM_MASTER_KEY.";
+      };
+    };
+
     web = {
       enable = lib.mkEnableOption "Enable Opencode web server (systemd service)";
     };
@@ -46,7 +60,7 @@ in
                   npm = "@ai-sdk/openai-compatible";
                   name = "LiteLLM VPS";
                   options = {
-                    baseURL = "http://127.0.0.1:4000/v1";
+                    baseURL = cfg.litellm.baseURL;
                     apiKey = "{env:LITELLM_MASTER_KEY}";
                   };
                   models = {
@@ -89,7 +103,10 @@ in
           in
           (
             {
-              home.sessionPath = [ "$HOME/${installDir}/bin" ];
+              home.sessionPath = [
+                "$HOME/.local/bin"
+                "$HOME/${installDir}/bin"
+              ];
 
               programs.opencode = {
                 enable = true;
@@ -133,6 +150,20 @@ in
                 mkdir -p "$INSTALL_ROOT"
                 ${pkgs.nodejs}/bin/npm install --global --prefix "$INSTALL_ROOT" ${packageName}
               '';
+
+              home.file.".local/bin/opencode" = {
+                executable = true;
+                text = ''
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  if [ -z "''${LITELLM_MASTER_KEY:-}" ] && [ -r "${cfg.litellm.masterKeyFile}" ]; then
+                    export LITELLM_MASTER_KEY="$(tr -d '\n' < "${cfg.litellm.masterKeyFile}")"
+                  fi
+
+                  exec "$HOME/${installDir}/bin/opencode" "$@"
+                '';
+              };
 
               xdg.configFile =
                 opencodeSkills
