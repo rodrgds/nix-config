@@ -49,6 +49,12 @@ in
         home-manager.users.${username} =
           { config, lib, ... }:
           let
+            litellmMasterKeyFiles = [
+              config.sops.secrets.litellm_master_key.path
+              cfg.litellm.masterKeyFile
+            ];
+            litellmMasterKeyFileArgs = lib.concatMapStringsSep " " lib.escapeShellArg litellmMasterKeyFiles;
+
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
               autoupdate = true;
@@ -58,17 +64,17 @@ in
               provider = {
                 litellm = {
                   npm = "@ai-sdk/openai-compatible";
-                  name = "LiteLLM VPS";
+                  name = "My LiteLLM (VPS)";
                   options = {
                     baseURL = cfg.litellm.baseURL;
                     apiKey = "{env:LITELLM_MASTER_KEY}";
                   };
                   models = {
                     flash = {
-                      name = "DeepSeek V4 Flash via LiteLLM";
+                      name = "Reeeeeally cheap model";
                     };
                     normal = {
-                      name = "MiniMax M3 via LiteLLM";
+                      name = "Pretty good model";
                     };
                   };
                 };
@@ -157,8 +163,13 @@ in
                   #!/usr/bin/env bash
                   set -euo pipefail
 
-                  if [ -z "''${LITELLM_MASTER_KEY:-}" ] && [ -r "${cfg.litellm.masterKeyFile}" ]; then
-                    export LITELLM_MASTER_KEY="$(tr -d '\n' < "${cfg.litellm.masterKeyFile}")"
+                  if [ -z "''${LITELLM_MASTER_KEY:-}" ]; then
+                    for key_file in ${litellmMasterKeyFileArgs}; do
+                      if [ -r "$key_file" ]; then
+                        export LITELLM_MASTER_KEY="$(tr -d '\n' < "$key_file")"
+                        break
+                      fi
+                    done
                   fi
 
                   exec "$HOME/${installDir}/bin/opencode" "$@"
