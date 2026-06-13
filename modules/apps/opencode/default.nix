@@ -31,7 +31,7 @@ in
 
       masterKeyFile = lib.mkOption {
         type = lib.types.str;
-        default = "$HOME/.config/opencode/litellm-master-key";
+        default = "${constants.homeDir}/.config/opencode/litellm-master-key";
         description = "Optional file read by the opencode wrapper to populate LITELLM_MASTER_KEY.";
       };
     };
@@ -153,7 +153,7 @@ in
                 OPENCODE_REAL="$INSTALL_ROOT/bin/opencode-real"
 
                 mkdir -p "$INSTALL_ROOT"
-                ${pkgs.nodejs}/bin/npm install --global --prefix "$INSTALL_ROOT" ${packageName}
+                ${pkgs.nodejs}/bin/npm install --global --force --prefix "$INSTALL_ROOT" ${packageName}
 
                 if [ -L "$OPENCODE_BIN" ]; then
                   target="$(readlink "$OPENCODE_BIN")"
@@ -163,6 +163,7 @@ in
                   esac
                   rm -f "$OPENCODE_REAL"
                   ln -s "$real" "$OPENCODE_REAL"
+                  rm -f "$OPENCODE_BIN"
                 elif [ -x "$OPENCODE_BIN" ] && ! grep -q "LITELLM_MASTER_KEY" "$OPENCODE_BIN"; then
                   mv "$OPENCODE_BIN" "$OPENCODE_REAL"
                 fi
