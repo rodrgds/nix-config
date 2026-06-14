@@ -223,12 +223,73 @@ in
             }
 
             {
+              # Continue the flash chain if an intermediate alias fails.
+              "flash-free-key-2" = [
+                "flash-free-key-3"
+                "flash-free-key-4"
+                "flash-paid-key-1"
+                "flash-paid-key-2"
+                "flash-paid-key-3"
+                "flash-paid-key-4"
+              ];
+            }
+
+            {
+              "flash-free-key-3" = [
+                "flash-free-key-4"
+                "flash-paid-key-1"
+                "flash-paid-key-2"
+                "flash-paid-key-3"
+                "flash-paid-key-4"
+              ];
+            }
+
+            {
+              "flash-free-key-4" = [
+                "flash-paid-key-1"
+                "flash-paid-key-2"
+                "flash-paid-key-3"
+                "flash-paid-key-4"
+              ];
+            }
+
+            {
+              "flash-paid-key-1" = [
+                "flash-paid-key-2"
+                "flash-paid-key-3"
+                "flash-paid-key-4"
+              ];
+            }
+
+            {
+              "flash-paid-key-2" = [
+                "flash-paid-key-3"
+                "flash-paid-key-4"
+              ];
+            }
+
+            {
+              "flash-paid-key-3" = [ "flash-paid-key-4" ];
+            }
+
+            {
               # normal: Go key 1 -> 2 -> 3 -> 4
               "normal" = [
                 "normal-key-2"
                 "normal-key-3"
                 "normal-key-4"
               ];
+            }
+
+            {
+              "normal-key-2" = [
+                "normal-key-3"
+                "normal-key-4"
+              ];
+            }
+
+            {
+              "normal-key-3" = [ "normal-key-4" ];
             }
           ];
 
