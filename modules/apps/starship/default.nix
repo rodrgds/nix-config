@@ -63,9 +63,9 @@ in
           palettes.warm_fade = {
             color_1 = "#a04000";
             color_2 = "#d65d0e";
-            color_3 = "#d48f1b";
-            color_4 = "#d79921";
-            color_5 = "#e8c040";
+            color_3 = "#d58f17";
+            color_4 = "#faba2f";
+            color_5 = "#ffd856";
             color_6 = "#edd5a8";
             color_fg0 = "#fbf1c7";
             color_fg1 = "#ebdbb2";

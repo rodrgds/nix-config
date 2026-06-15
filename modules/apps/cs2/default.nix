@@ -77,7 +77,7 @@ in
           launchOptions = {
             wrappers = [
               (lib.getExe pkgs.gamemode)
-              (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
+              # (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
               # (lib.getExe pkgs.mangohud)
               "${moduleDir}/apps/cs2/wrapper.sh"
             ];
@@ -87,10 +87,10 @@ in
               "-nojoy"
               "+fps_max"
               "0"
-              "+mat_queue_mode"
-              "2"
-              "+cl_forcepreload"
-              "1"
+              # "+mat_queue_mode"
+              # "2"
+              # "+cl_forcepreload"
+              # "1"
               "+fps_max_menu"
               "60"
               "-fullscreen"
