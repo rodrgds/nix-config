@@ -177,11 +177,13 @@ in
           "||youtube.com^$path=/shorts"
           "||www.youtube.com^$path=/shorts"
 
-          "||youtube.com^"
-          "||www.youtube.com^"
+          #"||youtube.com^"
+          #"||www.youtube.com^"
 
           "@@||music.youtube.com^"
           "@@||accounts.youtube.com^"
+          "@@||studio.youtube.com^"
+          "@@||upload.youtube.com^"
         ];
 
         filtering = {
