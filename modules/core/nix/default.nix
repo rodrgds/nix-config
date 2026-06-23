@@ -22,6 +22,10 @@ in
       ];
 
       nix.settings = {
+        trusted-users = [
+          "root"
+          username
+        ];
         substituters = [
           "https://cache.nixos.org"
         ];
