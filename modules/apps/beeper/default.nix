@@ -24,6 +24,7 @@ in
       })
       # Darwin: Install via Homebrew (only if on Darwin)
       (lib.optionalAttrs isDarwin {
+        homebrew.taps = [ "beeper/tap" ];
         homebrew.casks = [ "beeper" ];
         homebrew.brews = [ "beeper/tap/cli" ];
       })

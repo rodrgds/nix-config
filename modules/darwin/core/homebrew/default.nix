@@ -58,6 +58,7 @@ in
           bash -c '
             if brew help trust >/dev/null 2>&1; then
               for tap in \
+                beeper/tap \
                 felixkratz/formulae \
                 gromgit/fuse \
                 mobile-dev-inc/tap \
