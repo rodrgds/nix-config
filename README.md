@@ -54,7 +54,7 @@ It uses shared modules, Home Manager, `nh`, `sops-nix`, and a Bun-based rebuild 
 - Node.js, Bun, Python, Go, Graphviz, Doxygen
 - VS Code, Android Studio, Android SDK, DBeaver
 - Obsidian, MPV, qBittorrent
-- Codex, Claude, Gemini CLI, Opencode, and Pi
+- Codex, Claude, Antigravity CLI, Opencode, and Pi
 
 ### NixOS desktop
 

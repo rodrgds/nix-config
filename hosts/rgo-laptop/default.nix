@@ -72,12 +72,11 @@
   apps.m-cli.enable = true; # m-cli Swiss Army Knife for macOS (Homebrew on Darwin)
   apps.qbittorrent.enable = true;
   apps.vscode.enable = true; # VSCode: (unfree, available in nixpkgs)
-  apps.antigravity.enable = true; # Antigravity: Google's AI-powered VSCode fork
+  apps.antigravity.enable = true; # Antigravity CLI (agy) - Google's terminal-first AI agent
   apps.clion.enable = true; # CLion IDE (nixpkgs on Linux, Homebrew on Darwin)
   apps.virtualization.enable = true; # QEMU + UTM (Darwin) / VirtualBox (Linux)
   apps.opencode.enable = true; # CLI tool with gruvbox theme
   apps.pi.enable = true;
-  apps.gemini-cli.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;
   apps.dbeaver.enable = true; # DBeaver database tool (available in nixpkgs)
