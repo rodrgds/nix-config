@@ -30,7 +30,7 @@ in
           {
             home.activation.installAntigravityCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
               if [ ! -x "$HOME/${installDir}/agy" ]; then
-                export PATH="${pkgs.curl}/bin:${pkgs.bash}/bin:${pkgs.coreutils}/bin:${pkgs.gnutar}/bin:${pkgs.gnused}/bin:$PATH"
+                export PATH="${pkgs.curl}/bin:${pkgs.bash}/bin:${pkgs.coreutils}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.gnused}/bin:$PATH"
                 ${pkgs.curl}/bin/curl -fsSL ${installUrl} | ${pkgs.bash}/bin/bash
               fi
             '';
