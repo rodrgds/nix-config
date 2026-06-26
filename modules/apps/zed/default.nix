@@ -29,7 +29,7 @@ in
       {
         home-manager.users.${username} = {
           xdg.configFile."zed/settings.json".text = builtins.toJSON {
-            theme = "Flexoki";
+            theme = "One Dark";
             features.inline_completion = false;
             telemetry.metrics = false;
             telemetry.diagnostics = false;

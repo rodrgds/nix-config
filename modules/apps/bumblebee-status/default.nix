@@ -19,6 +19,7 @@ in
 
     home-manager.users.${username} = _: {
       home.file.".config/bumblebee-status/modules/stopwatch.py".source = ./bumblebee_stopwatch.py;
+      home.file.".config/bumblebee-status/themes/flexoki.json".source = ./flexoki.json;
     };
   };
 }

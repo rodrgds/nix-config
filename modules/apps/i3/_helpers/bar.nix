@@ -2,7 +2,7 @@
 [
   {
     position = "bottom";
-    statusCommand = "bumblebee-status -t theme -m disk memory cpu layout shortcut uptime date time -p theme.name=flexoki theme.highlight=${constants.colors.orange} theme.light=${constants.colors.orangeBright} theme.dark=${constants.colors.bg0} theme.focus=#403E3C shortcut.cmds='${constants.scriptDir}/toggle_keyboard_layout.sh;${constants.scriptDir}/toggle_sound_device.sh;${constants.scriptDir}/1monitor.sh;${constants.scriptDir}/fullres.sh' shortcut.labels=' ; ; ; ' time.format=' %H:%M' date.format=' %a, %b %d' disk.format=' {left}' memory.format='{percent:.2f}%' cpu.format=' {:.0f}%' layout.format='a{variant}' uptime.format=' {hours}:{mins:02d}'";
+    statusCommand = "bumblebee-status -t flexoki -m disk memory cpu layout shortcut uptime date time -p shortcut.cmds='${constants.scriptDir}/toggle_keyboard_layout.sh;${constants.scriptDir}/toggle_sound_device.sh;${constants.scriptDir}/1monitor.sh;${constants.scriptDir}/fullres.sh' shortcut.labels=' ; ; ; ' time.format=' %H:%M' date.format=' %a, %b %d' disk.format=' {left}' memory.format='{percent:.2f}%' cpu.format=' {:.0f}%' layout.format='a{variant}' uptime.format=' {hours}:{mins:02d}'";
     fonts = {
       names = [
         "JetBrainsMono Nerd Font"

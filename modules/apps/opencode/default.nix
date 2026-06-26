@@ -49,7 +49,7 @@ in
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
               autoupdate = true;
-              theme = "flexoki-dark";
+              theme = "flexoki";
               model = "litellm/flash";
               plugin = [ "@mohak34/opencode-notifier@latest" ];
               provider = {

@@ -10,7 +10,6 @@ OPTS=(
     --output "$TEMP_IMAGE"
     --font.family "JetBrains Mono"
     --font.size "14"
-    --theme "flexoki"
     --background "#100F0F"
     --padding "25,30"
     --margin "10"
