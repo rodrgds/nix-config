@@ -13,7 +13,7 @@ let
 in
 {
   options.apps.vicinae = {
-    enable = lib.mkEnableOption "Enable Vicinae application launcher";
+    enable = lib.mkEnableOption "Enable Vicinae";
   };
 
   config = lib.mkIf cfg.enable (
@@ -49,17 +49,17 @@ in
                 size = constants.fonts.sizes.large;
               };
               theme = {
-                name = "gruvbox-custom";
+                name = "flexoki-custom";
                 iconTheme = "Papirus";
               };
             };
 
             themes = {
-              "gruvbox-custom" = {
+              "flexoki-custom" = {
                 meta = {
                   version = 1;
-                  name = "Gruvbox Custom";
-                  description = "Custom Gruvbox dark theme for vicinae";
+                  name = "Flexoki Custom";
+                  description = "Custom Flexoki dark theme for vicinae";
                   variant = "dark";
                   inherits = "vicinae-dark";
                 };
@@ -104,6 +104,8 @@ in
               vscode-recents
               port-killer
               it-tools
+              protondb-search
+              iconify
             ];
           };
 

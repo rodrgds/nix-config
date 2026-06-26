@@ -14,7 +14,7 @@ let
 in
 {
   options.apps.ngrok = {
-    enable = lib.mkEnableOption "Enable ngrok tunnel tool";
+    enable = lib.mkEnableOption "Enable ngrok";
   };
 
   config = lib.mkIf cfg.enable {

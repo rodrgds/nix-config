@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.solaar = {
-    enable = lib.mkEnableOption "Enable Solaar Logitech device manager";
+    enable = lib.mkEnableOption "Enable Solaar";
   };
 
   config = lib.mkIf cfg.enable (

@@ -4,7 +4,7 @@ let
 in
 {
   options.core.nvidia = {
-    enable = lib.mkEnableOption "Enable NVIDIA configuration";
+    enable = lib.mkEnableOption "Enable NVIDIA";
   };
 
   config = lib.mkIf cfg.enable {

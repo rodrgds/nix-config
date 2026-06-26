@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.xdg-portals = {
-    enable = lib.mkEnableOption "Enable XDG Desktop Portals";
+    enable = lib.mkEnableOption "Enable xdg-portals";
   };
 
   config = lib.mkIf cfg.enable (

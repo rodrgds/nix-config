@@ -36,6 +36,9 @@ affinityOverlay
       final
       prev;
 
+  # Flexoki GTK theme
+  flexoki-gtk = prev.callPackage ./flexoki-gtk { };
+
   # Handy - Speech-to-text application
   inherit (inputs.handy.packages.${prev.stdenv.hostPlatform.system}) handy;
 

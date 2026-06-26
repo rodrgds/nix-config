@@ -13,7 +13,7 @@ let
 in
 {
   options.apps.zed = {
-    enable = lib.mkEnableOption "Enable Zed Editor";
+    enable = lib.mkEnableOption "Enable Zed";
   };
 
   config = lib.mkIf cfg.enable (
@@ -26,6 +26,16 @@ in
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [ "zed" ];
       })
+      {
+        home-manager.users.${username} = {
+          xdg.configFile."zed/settings.json".text = builtins.toJSON {
+            theme = "Flexoki";
+            features.inline_completion = false;
+            telemetry.metrics = false;
+            telemetry.diagnostics = false;
+          };
+        };
+      }
     ]
   );
 }

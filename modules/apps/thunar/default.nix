@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.thunar = {
-    enable = lib.mkEnableOption "Enable Thunar file manager";
+    enable = lib.mkEnableOption "Enable Thunar";
   };
 
   config = lib.mkIf cfg.enable {

@@ -8,7 +8,7 @@ let
 in
 {
   options.core.angrr = {
-    enable = lib.mkEnableOption "Enable angrr automatic GC root retention cleanup";
+    enable = lib.mkEnableOption "Enable angrr";
   };
 
   config = lib.mkIf cfg.enable {

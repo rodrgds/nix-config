@@ -11,7 +11,7 @@ let
 in
 {
   options.apps.alacritty = {
-    enable = lib.mkEnableOption "Enable Alacritty terminal";
+    enable = lib.mkEnableOption "Enable Alacritty";
   };
 
   config = lib.mkIf cfg.enable {

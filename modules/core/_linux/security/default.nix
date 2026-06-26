@@ -4,7 +4,7 @@ let
 in
 {
   options.core.security = {
-    enable = lib.mkEnableOption "Enable security configuration";
+    enable = lib.mkEnableOption "Enable security";
   };
 
   config = lib.mkIf cfg.enable {

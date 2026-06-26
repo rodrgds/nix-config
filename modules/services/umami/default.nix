@@ -14,7 +14,7 @@ let
 in
 {
   options.vps.umami = {
-    enable = lib.mkEnableOption "Umami analytics";
+    enable = lib.mkEnableOption "Enable Umami";
 
     domain = lib.mkOption {
       type = lib.types.str;

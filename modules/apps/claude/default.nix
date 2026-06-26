@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.claude = {
-    enable = lib.mkEnableOption "Enable Claude Code CLI";
+    enable = lib.mkEnableOption "Enable Claude";
   };
 
   config = lib.mkIf cfg.enable {

@@ -4,7 +4,7 @@ let
 in
 {
   options.core.audio = {
-    enable = lib.mkEnableOption "Enable audio configuration";
+    enable = lib.mkEnableOption "Enable audio";
   };
 
   config = lib.mkIf cfg.enable {

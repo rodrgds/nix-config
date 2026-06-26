@@ -25,7 +25,7 @@ let
 in
 {
   options.vps.adguardhome = {
-    enable = lib.mkEnableOption "AdGuard Home network-wide ad blocker";
+    enable = lib.mkEnableOption "Enable AdGuard Home";
 
     dnsBindHosts = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -194,9 +194,9 @@ in
 
           blocked_services = {
             ids = [
-              "twitter"
-              "instagram"
-              "linkedin"
+              # "twitter"
+              # "instagram"
+              # "linkedin"
             ];
             # AdGuard blocked_services.schedule is an inactivity window.
             # 20h-24h means services are allowed at night and blocked during daytime.

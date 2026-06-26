@@ -7,7 +7,7 @@
     (inputs.import-tree.filter (p: p != "/default.nix") ./.)
   ];
 
-  options.vps.enableAll = lib.mkEnableOption "Enable all VPS services (Caddy reverse proxy + containerized apps)";
+  options.vps.enableAll = lib.mkEnableOption "Enable all VPS services";
 
   # Note: Individual services are enabled separately via vps.* namespace
 }

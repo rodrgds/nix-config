@@ -8,7 +8,7 @@ let
 in
 {
   options.apps.comma = {
-    enable = lib.mkEnableOption "Enable comma (run packages without installing) and nix-index";
+    enable = lib.mkEnableOption "Enable comma";
   };
 
   config = lib.mkIf cfg.enable {

@@ -11,7 +11,7 @@ let
 in
 {
   options.apps.surfshark = {
-    enable = lib.mkEnableOption "Enable Surfshark VPN";
+    enable = lib.mkEnableOption "Enable Surfshark";
   };
 
   config = lib.mkIf cfg.enable (

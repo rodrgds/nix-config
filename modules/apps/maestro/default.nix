@@ -13,7 +13,7 @@ let
 in
 {
   options.apps.maestro = {
-    enable = lib.mkEnableOption "Enable Maestro mobile automation tool";
+    enable = lib.mkEnableOption "Enable Maestro";
   };
 
   config = lib.mkIf cfg.enable (

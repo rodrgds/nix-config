@@ -13,7 +13,7 @@ let
 in
 {
   options.darwin.core.homebrew = {
-    enable = lib.mkEnableOption "Enable Homebrew integration";
+    enable = lib.mkEnableOption "Enable Homebrew";
   };
 
   config = lib.mkIf cfg.enable {

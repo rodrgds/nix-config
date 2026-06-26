@@ -40,7 +40,7 @@ let
 in
 {
   options.apps.flatpak = {
-    enable = lib.mkEnableOption "Enable declarative Flatpak support";
+    enable = lib.mkEnableOption "Enable Flatpak";
 
     packages = lib.mkOption {
       type = lib.types.listOf packageType;

@@ -21,7 +21,7 @@ let
 in
 {
   options.apps.opencode = {
-    enable = lib.mkEnableOption "Enable Opencode CLI and desktop app";
+    enable = lib.mkEnableOption "Enable Opencode";
     litellm = {
       baseURL = lib.mkOption {
         type = lib.types.str;
@@ -32,7 +32,7 @@ in
     };
 
     web = {
-      enable = lib.mkEnableOption "Enable Opencode web server (systemd service)";
+      enable = lib.mkEnableOption "Enable Opencode web";
     };
   };
 
@@ -49,7 +49,7 @@ in
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
               autoupdate = true;
-              theme = "gruvbox";
+              theme = "flexoki-dark";
               model = "litellm/flash";
               plugin = [ "@mohak34/opencode-notifier@latest" ];
               provider = {
@@ -66,6 +66,9 @@ in
                     };
                     normal = {
                       name = "Pretty good model";
+                    };
+                    best = {
+                      name = "Best OSS model";
                     };
                   };
                 };

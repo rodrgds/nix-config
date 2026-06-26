@@ -100,7 +100,7 @@ let
 in
 {
   options.scripts = {
-    enable = lib.mkEnableOption "Enable centralized scripts with auto-imports";
+    enable = lib.mkEnableOption "Enable scripts";
   };
 
   config = lib.mkIf cfg.enable (

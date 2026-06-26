@@ -13,7 +13,7 @@ let
 in
 {
   options.apps.virtualization = {
-    enable = lib.mkEnableOption "Enable virtualization (QEMU + platform-specific hypervisor)";
+    enable = lib.mkEnableOption "Enable virtualization";
   };
 
   config = lib.mkIf cfg.enable (

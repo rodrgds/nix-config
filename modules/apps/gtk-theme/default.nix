@@ -11,7 +11,7 @@ let
 in
 {
   options.apps.gtk-theme = {
-    enable = lib.mkEnableOption "Enable GTK theme configuration";
+    enable = lib.mkEnableOption "Enable GTK theme";
   };
 
   config = lib.mkIf cfg.enable {
@@ -24,17 +24,17 @@ in
           };
         };
 
-        gtk = {
-          enable = true;
-          font = {
-            name = constants.fonts.ui;
-            size = constants.fonts.sizes.normal;
-          };
-          theme = {
-            package = pkgs.gruvbox-dark-gtk;
-            name = "gruvbox-dark";
-          };
-          gtk4.theme = config.gtk.theme;
+          gtk = {
+            enable = true;
+            font = {
+              name = constants.fonts.ui;
+              size = constants.fonts.sizes.normal;
+            };
+            theme = {
+              package = pkgs.flexoki-gtk;
+              name = "flexoki";
+            };
+            gtk4.theme = config.gtk.theme;
           iconTheme = {
             package = pkgs.papirus-icon-theme;
             name = "Papirus";

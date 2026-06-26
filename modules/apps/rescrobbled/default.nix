@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.rescrobbled = {
-    enable = lib.mkEnableOption "Enable Rescrobbled Last.fm scrobbler";
+    enable = lib.mkEnableOption "Enable Rescrobbled";
   };
 
   config = lib.mkIf cfg.enable {

@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.nh = {
-    enable = lib.mkEnableOption "Enable nh (nix helper) for better rebuild and cleanup experience";
+    enable = lib.mkEnableOption "Enable nh";
   };
 
   config = lib.mkIf cfg.enable (

@@ -78,7 +78,7 @@ let
 in
 {
   options.vps.n8n = {
-    enable = lib.mkEnableOption "n8n workflow automation";
+    enable = lib.mkEnableOption "Enable n8n";
 
     domain = lib.mkOption {
       type = lib.types.str;

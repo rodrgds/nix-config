@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.php = {
-    enable = lib.mkEnableOption "Enable PHP development environment";
+    enable = lib.mkEnableOption "Enable PHP";
   };
 
   config = lib.mkIf cfg.enable {

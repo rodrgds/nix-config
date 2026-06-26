@@ -4,7 +4,7 @@ let
 in
 {
   options.core.system = {
-    enable = lib.mkEnableOption "Enable system configuration";
+    enable = lib.mkEnableOption "Enable system";
   };
 
   config = lib.mkIf cfg.enable {

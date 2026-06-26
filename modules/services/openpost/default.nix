@@ -16,7 +16,7 @@ let
 in
 {
   options.vps.openpost = {
-    enable = lib.mkEnableOption "OpenPost social media scheduler";
+    enable = lib.mkEnableOption "Enable OpenPost";
 
     domain = lib.mkOption {
       type = lib.types.str;

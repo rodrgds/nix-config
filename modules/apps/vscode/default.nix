@@ -13,7 +13,7 @@ let
 in
 {
   options.apps.vscode = {
-    enable = lib.mkEnableOption "Enable VS Code:";
+    enable = lib.mkEnableOption "Enable VS Code";
   };
 
   config = lib.mkIf cfg.enable (

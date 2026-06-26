@@ -21,33 +21,34 @@ in
     };
   };
 
-  # Color scheme (Gruvbox)
+  # Color scheme (Flexoki)
   colors = {
-    # Background colors
-    bg0 = "#282828";
-    bg1 = "#1d2021";
-    bg2 = "#3c3836";
+    # Background colors (Flexoki dark theme)
+    bg0 = "#100F0F";    # black
+    bg1 = "#1C1B1A";    # base-950
+    bg2 = "#282726";    # base-900
 
-    # Foreground colors
-    fg0 = "#ebdbb2";
-    fg1 = "#a89984";
-    fg2 = "#928374";
+    # Foreground colors (Flexoki dark theme)
+    fg0 = "#CECDC3";    # base-200
+    fg1 = "#6F6E69";    # base-600
+    fg2 = "#575653";    # base-700
 
-    # Gruvbox accent colors
-    red = "#cc241d";
-    redBright = "#fb4934";
-    green = "#98971a";
-    greenBright = "#b8bb26";
-    yellow = "#d79921";
-    yellowBright = "#fabd2f";
-    blue = "#458588";
-    blueBright = "#83a598";
-    magenta = "#b16286";
-    magentaBright = "#d3869b";
-    cyan = "#689d6a";
-    cyanBright = "#8ec07c";
-    orange = "#d65d0e";
-    orangeBright = "#fe8019";
+    # Flexoki accent colors (dark mode: 600 for UI, 400 for highlights)
+    red = "#AF3029";        # red-600
+    redBright = "#D14D41";  # red-400
+    green = "#66800B";      # green-600
+    greenBright = "#879A39"; # green-400
+    yellow = "#AD8301";     # yellow-600
+    yellowBright = "#D0A215"; # yellow-400
+    blue = "#205EA6";       # blue-600
+    blueBright = "#4385BE";  # blue-400
+    magenta = "#A02F6F";    # magenta-600
+    magentaBright = "#CE5D97"; # magenta-400
+    cyan = "#24837B";       # cyan-600
+    cyanBright = "#3AA99F";  # cyan-400
+    orange = "#BC5215";     # orange-600
+    orangeBright = "#DA702C"; # orange-400
+    purple = "#5E409D";     # purple-600
   };
 
   # Display settings

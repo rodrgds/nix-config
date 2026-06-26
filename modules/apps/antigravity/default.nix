@@ -14,7 +14,7 @@ let
 in
 {
   options.apps.antigravity = {
-    enable = lib.mkEnableOption "Antigravity CLI (agy) - Google's terminal-first AI agent";
+    enable = lib.mkEnableOption "Enable Antigravity";
   };
 
   config = lib.mkIf cfg.enable (

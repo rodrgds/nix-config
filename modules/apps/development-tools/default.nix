@@ -11,7 +11,7 @@ let
 in
 {
   options.apps.development-tools = {
-    enable = lib.mkEnableOption "Enable development tools";
+    enable = lib.mkEnableOption "Enable development-tools";
   };
 
   config = lib.mkIf cfg.enable {

@@ -10,7 +10,7 @@ let
 in
 {
   options.darwin.core.system = {
-    enable = lib.mkEnableOption "Enable Darwin system configuration";
+    enable = lib.mkEnableOption "Enable system";
   };
 
   config = lib.mkIf cfg.enable {

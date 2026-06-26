@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.cap = {
-    enable = lib.mkEnableOption "Enable Cap screen recorder";
+    enable = lib.mkEnableOption "Enable Cap";
   };
 
   config = lib.mkIf cfg.enable {

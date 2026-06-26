@@ -22,7 +22,7 @@ let
 in
 {
   options.vps.postiz = {
-    enable = lib.mkEnableOption "Postiz social media scheduler";
+    enable = lib.mkEnableOption "Enable Postiz";
 
     domain = lib.mkOption {
       type = lib.types.str;

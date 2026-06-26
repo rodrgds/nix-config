@@ -4,7 +4,7 @@ let
 in
 {
   options.core.printing = {
-    enable = lib.mkEnableOption "Enable printing support";
+    enable = lib.mkEnableOption "Enable printing";
   };
 
   config = lib.mkIf cfg.enable {

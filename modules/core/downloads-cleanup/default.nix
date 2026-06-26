@@ -13,7 +13,7 @@ let
 in
 {
   options.core.downloads-cleanup = {
-    enable = lib.mkEnableOption "Enable automatic cleanup for Downloads and Trash";
+    enable = lib.mkEnableOption "Enable downloads-cleanup";
 
     retentionDays = lib.mkOption {
       type = lib.types.ints.positive;

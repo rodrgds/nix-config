@@ -10,7 +10,7 @@ let
 in
 {
   options.core.users = {
-    enable = lib.mkEnableOption "Enable user configuration";
+    enable = lib.mkEnableOption "Enable users";
   };
 
   config = lib.mkIf cfg.enable {

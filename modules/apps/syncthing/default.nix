@@ -15,7 +15,7 @@ let
 in
 {
   options.apps.syncthing = {
-    enable = lib.mkEnableOption "Enable Syncthing file sync";
+    enable = lib.mkEnableOption "Enable Syncthing";
   };
 
   config = lib.mkIf cfg.enable (

@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.mpv = {
-    enable = lib.mkEnableOption "Enable MPV video player";
+    enable = lib.mkEnableOption "Enable MPV";
   };
 
   config = lib.mkIf cfg.enable {

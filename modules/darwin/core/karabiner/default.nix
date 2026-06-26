@@ -53,7 +53,7 @@ let
 in
 {
   options.darwin.core.karabiner = {
-    enable = lib.mkEnableOption "Enable Karabiner-Elements for key remapping";
+    enable = lib.mkEnableOption "Enable Karabiner-Elements";
   };
 
   config = lib.mkIf cfg.enable {

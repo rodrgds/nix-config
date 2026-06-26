@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.synology-drive = {
-    enable = lib.mkEnableOption "Enable Synology Drive Client";
+    enable = lib.mkEnableOption "Enable Synology Drive";
   };
 
   config = lib.mkIf cfg.enable {

@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.laravel = {
-    enable = lib.mkEnableOption "Enable Laravel development environment";
+    enable = lib.mkEnableOption "Enable Laravel";
   };
 
   config = lib.mkIf cfg.enable (

@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.ollama = {
-    enable = lib.mkEnableOption "Enable Ollama local LLM runner";
+    enable = lib.mkEnableOption "Enable Ollama";
     loadModels = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];

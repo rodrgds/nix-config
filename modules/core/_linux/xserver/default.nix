@@ -4,7 +4,7 @@ let
 in
 {
   options.core.xserver = {
-    enable = lib.mkEnableOption "Enable X Server configuration";
+    enable = lib.mkEnableOption "Enable X Server";
   };
 
   config = lib.mkIf cfg.enable {

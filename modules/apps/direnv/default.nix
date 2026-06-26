@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.direnv = {
-    enable = lib.mkEnableOption "Enable direnv with nix-direnv support";
+    enable = lib.mkEnableOption "Enable direnv";
   };
 
   config = lib.mkIf cfg.enable {

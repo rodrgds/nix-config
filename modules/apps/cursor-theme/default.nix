@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.cursor-theme = {
-    enable = lib.mkEnableOption "Enable cursor theme configuration";
+    enable = lib.mkEnableOption "Enable cursor-theme";
   };
 
   config = lib.mkIf cfg.enable {

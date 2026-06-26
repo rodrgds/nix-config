@@ -4,7 +4,7 @@ let
 in
 {
   options.core.peripherals = {
-    enable = lib.mkEnableOption "Enable peripherals configuration";
+    enable = lib.mkEnableOption "Enable peripherals";
   };
 
   config = lib.mkIf cfg.enable {

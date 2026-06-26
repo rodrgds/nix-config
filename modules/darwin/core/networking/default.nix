@@ -8,10 +8,10 @@ let
 in
 {
   options.darwin.core.networking = {
-    enable = lib.mkEnableOption "Enable Darwin networking configuration";
+    enable = lib.mkEnableOption "Enable networking";
 
     tailscale = {
-      enable = lib.mkEnableOption "Enable Tailscale VPN via Homebrew";
+      enable = lib.mkEnableOption "Enable Tailscale";
     };
   };
 

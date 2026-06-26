@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.python = {
-    enable = lib.mkEnableOption "Enable Python with packages";
+    enable = lib.mkEnableOption "Enable Python";
   };
 
   config = lib.mkIf cfg.enable {

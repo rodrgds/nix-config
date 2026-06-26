@@ -11,7 +11,7 @@ let
 in
 {
   options.vps.directus = {
-    enable = lib.mkEnableOption "Directus Headless CMS";
+    enable = lib.mkEnableOption "Enable Directus";
     domain = lib.mkOption {
       type = lib.types.str;
       default = "directus.rgo.pt";

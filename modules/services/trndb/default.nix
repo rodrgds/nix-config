@@ -12,7 +12,7 @@ let
 in
 {
   options.vps.trndb = {
-    enable = lib.mkEnableOption "TRNDb Directus Headless CMS";
+    enable = lib.mkEnableOption "Enable TRNDb";
     domain = lib.mkOption {
       type = lib.types.str;
       default = "trndb.rgo.pt";

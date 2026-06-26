@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.obs = {
-    enable = lib.mkEnableOption "Enable OBS Studio";
+    enable = lib.mkEnableOption "Enable OBS";
   };
 
   config = lib.mkIf cfg.enable {

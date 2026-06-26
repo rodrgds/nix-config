@@ -4,7 +4,7 @@ let
 in
 {
   options.core.boot = {
-    enable = lib.mkEnableOption "Enable boot loader configuration";
+    enable = lib.mkEnableOption "Enable boot";
   };
 
   config = lib.mkIf cfg.enable {

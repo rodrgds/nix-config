@@ -14,7 +14,7 @@ let
 in
 {
   options.vps.unieasy = {
-    enable = lib.mkEnableOption "Uni Easy Postgres database";
+    enable = lib.mkEnableOption "Enable Uni Easy";
   };
 
   config = lib.mkIf cfg.enable {

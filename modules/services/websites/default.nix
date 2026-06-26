@@ -24,11 +24,11 @@ let
 in
 {
   options.vps.websites = {
-    enable = lib.mkEnableOption "Websites (edu-site & personal-site)";
-    edu.enable = lib.mkEnableOption "edu.rgo.pt static site" // {
+    enable = lib.mkEnableOption "Enable Websites";
+    edu.enable = lib.mkEnableOption "Enable edu-site" // {
       default = true;
     };
-    personal.enable = lib.mkEnableOption "personal site at rgo.pt" // {
+    personal.enable = lib.mkEnableOption "Enable personal-site" // {
       default = true;
     };
   };

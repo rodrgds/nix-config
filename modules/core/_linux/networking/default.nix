@@ -9,7 +9,7 @@ let
 in
 {
   options.core.networking = {
-    enable = lib.mkEnableOption "Enable networking configuration";
+    enable = lib.mkEnableOption "Enable networking";
     tailscale.acceptDns = lib.mkOption {
       type = lib.types.bool;
       default = true;

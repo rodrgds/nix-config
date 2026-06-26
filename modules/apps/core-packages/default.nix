@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.core-packages = {
-    enable = lib.mkEnableOption "Enable core system packages";
+    enable = lib.mkEnableOption "Enable core-packages";
   };
 
   config = lib.mkIf cfg.enable {

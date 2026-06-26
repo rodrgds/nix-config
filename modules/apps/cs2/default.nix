@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.cs2 = {
-    enable = lib.mkEnableOption "Enable CS2 configuration";
+    enable = lib.mkEnableOption "Enable CS2";
   };
 
   config = lib.mkIf cfg.enable {

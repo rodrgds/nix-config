@@ -208,7 +208,7 @@ let
 in
 {
   options.vps.caddy = {
-    enable = lib.mkEnableOption "Caddy reverse proxy";
+    enable = lib.mkEnableOption "Enable Caddy";
 
     internalPorts = lib.mkOption {
       type = lib.types.attrsOf lib.types.int;

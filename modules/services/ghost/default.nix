@@ -11,7 +11,7 @@ let
 in
 {
   options.vps.ghost = {
-    enable = lib.mkEnableOption "Ghost blog";
+    enable = lib.mkEnableOption "Enable Ghost";
 
     domain = lib.mkOption {
       type = lib.types.str;

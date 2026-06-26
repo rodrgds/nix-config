@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.pi = {
-    enable = lib.mkEnableOption "Enable Pi coding agent";
+    enable = lib.mkEnableOption "Enable Pi";
   };
 
   config = lib.mkIf cfg.enable {

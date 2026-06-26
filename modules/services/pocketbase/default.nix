@@ -10,7 +10,7 @@ let
 in
 {
   options.vps.pocketbase = {
-    enable = lib.mkEnableOption "PocketBase service";
+    enable = lib.mkEnableOption "Enable PocketBase";
     instances = lib.mkOption {
       description = "Map of PocketBase instance names to their ports";
       type = lib.types.attrsOf lib.types.int;

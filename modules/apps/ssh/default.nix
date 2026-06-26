@@ -11,7 +11,7 @@ let
 in
 {
   options.apps.ssh = {
-    enable = lib.mkEnableOption "Enable SSH client configuration";
+    enable = lib.mkEnableOption "Enable SSH";
   };
 
   config = lib.mkIf cfg.enable {

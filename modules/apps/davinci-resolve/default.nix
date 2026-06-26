@@ -11,7 +11,7 @@ let
 in
 {
   options.apps.davinci-resolve = {
-    enable = lib.mkEnableOption "Enable DaVinci Resolve Studio";
+    enable = lib.mkEnableOption "Enable DaVinci Resolve";
 
     packageMode = lib.mkOption {
       type = lib.types.enum [

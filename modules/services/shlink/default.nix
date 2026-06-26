@@ -49,7 +49,7 @@ let
 in
 {
   options.vps.shlink = {
-    enable = lib.mkEnableOption "Shlink URL shortener";
+    enable = lib.mkEnableOption "Enable Shlink";
 
     domain = lib.mkOption {
       type = lib.types.str;

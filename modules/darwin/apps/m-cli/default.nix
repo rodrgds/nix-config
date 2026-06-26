@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.m-cli = {
-    enable = lib.mkEnableOption "Enable m-cli (Swiss Army Knife for macOS)";
+    enable = lib.mkEnableOption "Enable m-cli";
   };
 
   config = lib.mkIf cfg.enable {

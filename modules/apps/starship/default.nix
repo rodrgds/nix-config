@@ -9,7 +9,7 @@ let
 in
 {
   options.apps.starship = {
-    enable = lib.mkEnableOption "Enable Starship prompt";
+    enable = lib.mkEnableOption "Enable Starship";
   };
 
   config = lib.mkIf cfg.enable {
@@ -61,18 +61,18 @@ in
           palette = "warm_fade";
 
           palettes.warm_fade = {
-            color_1 = "#a04000";
-            color_2 = "#d65d0e";
-            color_3 = "#d58f17";
-            color_4 = "#faba2f";
-            color_5 = "#ffd856";
-            color_6 = "#edd5a8";
-            color_fg0 = "#fbf1c7";
-            color_fg1 = "#ebdbb2";
-            color_fg_dark = "#282828";
-            color_green = "#98971a";
-            color_purple = "#b16286";
-            color_red = "#cc241d";
+            color_1 = "#9D4310";
+            color_2 = "#BC5215";
+            color_3 = "#CB6120";
+            color_4 = "#DA702C";
+            color_5 = "#D0A215";
+            color_6 = "#DFB431";
+            color_fg0 = "#FFFCF0";
+            color_fg1 = "#CECDC3";
+            color_fg_dark = "#100F0F";
+            color_green = "#879A39";
+            color_purple = "#8B7EC8";
+            color_red = "#D14D41";
           };
 
           os = {

@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.lamp = {
-    enable = lib.mkEnableOption "Enable LAMP stack (Apache + PHP + MariaDB)";
+    enable = lib.mkEnableOption "Enable LAMP";
   };
 
   config = lib.mkIf cfg.enable (

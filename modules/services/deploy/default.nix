@@ -9,7 +9,7 @@ let
 in
 {
   options.vps.deploy = {
-    enable = lib.mkEnableOption "GitHub deploy webhook";
+    enable = lib.mkEnableOption "Enable deploy";
   };
 
   config = lib.mkIf cfg.enable {

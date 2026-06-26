@@ -13,7 +13,7 @@ let
 in
 {
   options.apps.i3 = {
-    enable = lib.mkEnableOption "Enable i3 window manager";
+    enable = lib.mkEnableOption "Enable i3";
   };
 
   config = lib.mkIf cfg.enable (

@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.typst = {
-    enable = lib.mkEnableOption "Enable Typst typesetting system";
+    enable = lib.mkEnableOption "Enable Typst";
   };
 
   config = lib.mkIf cfg.enable (

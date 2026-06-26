@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.codex = {
-    enable = lib.mkEnableOption "Enable Codex CLI";
+    enable = lib.mkEnableOption "Enable Codex";
   };
 
   config = lib.mkIf cfg.enable {

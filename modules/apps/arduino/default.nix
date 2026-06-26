@@ -13,7 +13,7 @@ let
 in
 {
   options.apps.arduino = {
-    enable = lib.mkEnableOption "Enable Arduino IDE";
+    enable = lib.mkEnableOption "Enable Arduino";
   };
 
   config = lib.mkIf cfg.enable (

@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.gh = {
-    enable = lib.mkEnableOption "Enable GitHub CLI (gh)";
+    enable = lib.mkEnableOption "Enable gh";
   };
 
   config = lib.mkIf cfg.enable (

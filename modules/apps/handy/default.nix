@@ -11,7 +11,7 @@ let
 in
 {
   options.apps.handy = {
-    enable = lib.mkEnableOption "Enable Handy - Speech-to-text application";
+    enable = lib.mkEnableOption "Enable Handy";
   };
 
   config = lib.mkIf cfg.enable (

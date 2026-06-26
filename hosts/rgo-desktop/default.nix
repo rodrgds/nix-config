@@ -1,4 +1,3 @@
-# Host-specific configuration for rgo-desktop
 {
   config,
   pkgs,
@@ -13,7 +12,6 @@
     ./networking.nix
   ];
 
-  # Enable core modules
   core.boot.enable = true;
   core.nix.enable = true;
   core.users.enable = true;
@@ -27,7 +25,6 @@
   core.nvidia.enable = true;
   core.peripherals.enable = true;
 
-  # Disable wpa_supplicant WiFi (desktop has no wireless adapter)
   networking.wireless.enable = lib.mkForce false;
   apps.syncthing.enable = true;
   core.printing.enable = true;
@@ -35,13 +32,9 @@
   apps.virtualization.enable = true;
   core.downloads-cleanup.enable = true;
 
-  # Enable scripts
   scripts.enable = true;
-
-  # Enable secrets
   secrets.enable = true;
 
-  # Enable apps
   apps.ghostty.enable = true;
   apps.bash.enable = true;
   apps.starship.enable = true;
@@ -51,10 +44,8 @@
   apps.neovim.enable = true;
   apps.thunar.enable = true;
 
-  # Nix tooling
   apps.nix-tools.enable = true;
 
-  # Development
   apps.direnv.enable = true;
   apps.development-tools.enable = true;
   apps.graphviz.enable = true;
@@ -70,15 +61,12 @@
   apps.python.enable = true;
   apps.php.enable = true;
   apps.android-studio.enable = true;
-  # apps.android-studio.packageMode = "frozen";
   apps.android-sdk.enable = true;
   apps.stripe-cli.enable = true;
   apps.dbeaver.enable = true;
   apps.laravel.enable = true;
   apps.affinity.enable = true;
-  # apps.affinity.packageMode = "frozen";
 
-  # Desktop
   apps.i3.enable = true;
   apps.bumblebee-status.enable = true;
   apps.dunst.enable = true;
@@ -87,15 +75,13 @@
   apps.xdg-portals.enable = true;
   apps.gtk-theme.enable = true;
   apps.cursor-theme.enable = true;
-  apps.rofi.enable = false; # Disabled as requested
+  apps.rofi.enable = false;
 
-  # Media
   apps.obs.enable = true;
   apps.mpv.enable = true;
   apps.darktable.enable = true;
   apps.gimp.enable = true;
   apps.davinci-resolve.enable = true;
-  # apps.davinci-resolve.packageMode = "frozen";
   apps.auto-editor.enable = true;
   apps.flameshot.enable = true;
   apps.normcap.enable = true;
@@ -104,7 +90,6 @@
   apps.grayjay.enable = true;
   apps.rescrobbled.enable = true;
 
-  # Gaming
   apps.steam.enable = true;
   apps.gamemode.enable = true;
   apps.cs2.enable = true;
@@ -114,7 +99,6 @@
   apps.winetricks.enable = true;
   apps.mangohud.enable = true;
 
-  # Communication
   apps.microsoft-edge.enable = true;
   apps.ungoogled-chromium.enable = true;
   apps.beeper.enable = true;
@@ -126,35 +110,22 @@
   apps.maestro.enable = true;
   apps.surfshark.enable = true;
 
-  # Productivity
   apps.obsidian.enable = true;
   apps.qbittorrent.enable = true;
   apps.typst.enable = true;
   apps.qdirstat.enable = true;
   apps.cake-wallet.enable = false;
 
-  # System
   apps.core-packages.enable = true;
   apps.synology-drive.enable = true;
   apps.ngrok.enable = true;
 
-  # Coding agents
   apps.opencode.enable = true;
   apps.pi.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;
 
-  # Handy
   apps.handy.enable = true;
 
-  # Ollama
-  # apps.ollama.enable = true; # Disabled: flaky upstream tests causing build failures
-
-  # Vicinae
   apps.vicinae.enable = true;
-
-  # Use Python 3.12 instead of 3.13 (3.13 has failing tests in some packages)
-  # nixpkgs.config.packageOverrides = pkgs: {
-  #   python3 = pkgs.python312;
-  # };
 }

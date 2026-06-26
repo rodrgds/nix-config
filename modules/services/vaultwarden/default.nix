@@ -13,7 +13,7 @@ let
 in
 {
   options.vps.vaultwarden = {
-    enable = lib.mkEnableOption "Vaultwarden password manager";
+    enable = lib.mkEnableOption "Enable Vaultwarden";
 
     domain = lib.mkOption {
       type = lib.types.str;

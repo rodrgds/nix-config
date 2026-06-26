@@ -1,30 +1,30 @@
 _: {
   focused = {
-    background = "#d65d0e";
-    border = "#d65d0e";
-    childBorder = "#d65d0e";
-    indicator = "#d65d0e";
-    text = "#1d2021";
+    background = "#BC5215";
+    border = "#BC5215";
+    childBorder = "#BC5215";
+    indicator = "#BC5215";
+    text = "#1C1B1A";
   };
   unfocused = {
-    background = "#282828";
-    border = "#282828";
-    childBorder = "#282828";
-    indicator = "#282828";
-    text = "#d79921";
+    background = "#100F0F";
+    border = "#100F0F";
+    childBorder = "#100F0F";
+    indicator = "#100F0F";
+    text = "#AD8301";
   };
   focusedInactive = {
-    background = "#1d2021";
-    border = "#1d2021";
-    childBorder = "#1d2021";
-    indicator = "#1d2021";
-    text = "#d79921";
+    background = "#1C1B1A";
+    border = "#1C1B1A";
+    childBorder = "#1C1B1A";
+    indicator = "#1C1B1A";
+    text = "#AD8301";
   };
   urgent = {
-    background = "#cc241d";
-    border = "#cc241d";
-    childBorder = "#cc241d";
-    indicator = "#cc241d";
-    text = "#1d2021";
+    background = "#AF3029";
+    border = "#AF3029";
+    childBorder = "#AF3029";
+    indicator = "#AF3029";
+    text = "#1C1B1A";
   };
 }

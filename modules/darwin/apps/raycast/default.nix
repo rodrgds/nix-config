@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.raycast = {
-    enable = lib.mkEnableOption "Enable Raycast launcher";
+    enable = lib.mkEnableOption "Enable Raycast";
   };
 
   config = lib.mkIf cfg.enable {

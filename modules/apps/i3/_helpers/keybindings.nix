@@ -68,7 +68,7 @@ in
     "exec --no-startup-id bash ${scriptDir}/code_to_image.sh && notify-send 'Image generated and copied!'";
   "${mod}+w" = "exec microsoft-edge";
   "${mod}+n" = "exec thunar";
-  "${mod}+period" = "exec --no-startup-id vicinae 'vicinae://extensions/vicinae/core/search-emojis'";
+  "${mod}+period" = "exec --no-startup-id vicinae 'vicinae://launch/core/search-emojis'";
   "Print" =
     "exec scrot ~/%Y-%m-%d-%T-screenshot.png && notify-send 'Screenshot saved to ~/$(date +%Y-%m-%d-%T)-screenshot.png'";
   "${mod}+d" = "exec vicinae toggle";

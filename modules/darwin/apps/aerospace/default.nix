@@ -16,7 +16,7 @@ let
 in
 {
   options.darwin.apps.aerospace = {
-    enable = lib.mkEnableOption "Enable Aerospace tiling window manager";
+    enable = lib.mkEnableOption "Enable Aerospace";
   };
 
   config = lib.mkIf cfg.enable {
@@ -29,7 +29,7 @@ in
         ".aerospace.toml".text = ''
           # AeroSpace configuration
           # Based on i3 configuration from NixOS
-          # Gruvbox Dark theme
+          # Flexoki Dark theme
 
           # Config version
           config-version = 2

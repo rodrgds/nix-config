@@ -11,7 +11,7 @@ let
 in
 {
   options.darwin.core.fonts = {
-    enable = lib.mkEnableOption "Enable Darwin fonts configuration";
+    enable = lib.mkEnableOption "Enable fonts";
     extraPackages = lib.mkOption {
       type = lib.types.listOf lib.types.package;
       default = [ ];

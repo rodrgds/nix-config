@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.normcap = {
-    enable = lib.mkEnableOption "Enable Normcap OCR tool";
+    enable = lib.mkEnableOption "Enable Normcap";
   };
 
   config = lib.mkIf cfg.enable (

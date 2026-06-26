@@ -15,7 +15,7 @@ let
 in
 {
   options.vps.litellm = {
-    enable = lib.mkEnableOption "LiteLLM OpenAI-compatible LLM router";
+    enable = lib.mkEnableOption "Enable LiteLLM";
 
     host = lib.mkOption {
       type = lib.types.str;
@@ -63,6 +63,12 @@ in
       type = lib.types.str;
       default = "anthropic/minimax-m3";
       description = "Upstream model slug for MiniMax M3 (Go, Anthropic-compatible /messages endpoint).";
+    };
+
+    bestModel = lib.mkOption {
+      type = lib.types.str;
+      default = "opencode-go/glm5.2";
+      description = "Upstream model slug for the best general-purpose model (Go, OpenAI-compatible).";
     };
 
     cooldownTime = lib.mkOption {
@@ -199,6 +205,43 @@ in
               api_key = "os.environ/OPENCODE_KEY_4";
             };
           }
+
+          # Public model: best (GLM 5.2 via Go, OpenAI-compatible)
+          {
+            model_name = "best";
+            litellm_params = {
+              model = cfg.bestModel;
+              api_base = cfg.goApiBase;
+              api_key = "os.environ/OPENCODE_KEY_1";
+            };
+          }
+
+          {
+            model_name = "best-key-2";
+            litellm_params = {
+              model = cfg.bestModel;
+              api_base = cfg.goApiBase;
+              api_key = "os.environ/OPENCODE_KEY_2";
+            };
+          }
+
+          {
+            model_name = "best-key-3";
+            litellm_params = {
+              model = cfg.bestModel;
+              api_base = cfg.goApiBase;
+              api_key = "os.environ/OPENCODE_KEY_3";
+            };
+          }
+
+          {
+            model_name = "best-key-4";
+            litellm_params = {
+              model = cfg.bestModel;
+              api_base = cfg.goApiBase;
+              api_key = "os.environ/OPENCODE_KEY_4";
+            };
+          }
         ];
 
         router_settings = {
@@ -290,6 +333,26 @@ in
 
             {
               "normal-key-3" = [ "normal-key-4" ];
+            }
+
+            {
+              # best: Go key 1 -> 2 -> 3 -> 4
+              "best" = [
+                "best-key-2"
+                "best-key-3"
+                "best-key-4"
+              ];
+            }
+
+            {
+              "best-key-2" = [
+                "best-key-3"
+                "best-key-4"
+              ];
+            }
+
+            {
+              "best-key-3" = [ "best-key-4" ];
             }
           ];
 

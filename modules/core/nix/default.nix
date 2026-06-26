@@ -11,7 +11,7 @@ let
 in
 {
   options.core.nix = {
-    enable = lib.mkEnableOption "Enable Nix configuration";
+    enable = lib.mkEnableOption "Enable Nix";
   };
 
   config = lib.mkIf cfg.enable (

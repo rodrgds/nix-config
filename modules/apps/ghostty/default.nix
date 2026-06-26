@@ -11,7 +11,7 @@ let
   cfg = config.apps.ghostty;
   inherit (constants) isDarwin isLinux;
   ghosttySettings = {
-    theme = "Gruvbox Dark";
+    theme = "Flexoki";
     font-family = constants.fonts.primary;
     font-size = constants.fonts.sizes.large;
     window-decoration = false;
@@ -26,7 +26,7 @@ let
 in
 {
   options.apps.ghostty = {
-    enable = lib.mkEnableOption "Enable Ghostty terminal";
+    enable = lib.mkEnableOption "Enable Ghostty";
   };
 
   config = lib.mkIf cfg.enable (

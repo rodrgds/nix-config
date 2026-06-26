@@ -10,7 +10,7 @@ let
 in
 {
   options.core.fonts = {
-    enable = lib.mkEnableOption "Enable fonts configuration";
+    enable = lib.mkEnableOption "Enable fonts";
     extraPackages = lib.mkOption {
       type = lib.types.listOf lib.types.package;
       default = [ ];

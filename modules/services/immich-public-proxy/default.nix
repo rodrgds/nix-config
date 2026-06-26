@@ -11,7 +11,7 @@ let
 in
 {
   options.vps.immich-public-proxy = {
-    enable = lib.mkEnableOption "Immich Public Proxy";
+    enable = lib.mkEnableOption "Enable Immich Public Proxy";
     immichUrl = lib.mkOption {
       type = lib.types.str;
       default = "http://100.88.5.41:8212";

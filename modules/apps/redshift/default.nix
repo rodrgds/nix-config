@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.redshift = {
-    enable = lib.mkEnableOption "Enable Redshift color temperature adjuster";
+    enable = lib.mkEnableOption "Enable Redshift";
   };
 
   config = lib.mkIf cfg.enable {

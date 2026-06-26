@@ -19,7 +19,7 @@ let
 in
 {
   options.apps.nix-tools = {
-    enable = lib.mkEnableOption "Enable nix-tools (nh, comma, angrr, nurl, nix-init, statix, nil, nixd, home-manager, nixfmt)";
+    enable = lib.mkEnableOption "Enable nix-tools";
   };
 
   config = lib.mkIf cfg.enable {

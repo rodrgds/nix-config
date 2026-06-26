@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.nushell = {
-    enable = lib.mkEnableOption "Enable Nushell shell";
+    enable = lib.mkEnableOption "Enable Nushell";
   };
 
   config = lib.mkIf cfg.enable {

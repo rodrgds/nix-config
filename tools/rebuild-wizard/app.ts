@@ -69,7 +69,7 @@ export class App {
       height: "100%",
       border: true,
       borderStyle: "single",
-      borderColor: "#d65d0e",
+      borderColor: "#BC5215",
       title: ` ${title} `,
       titleAlignment: "center",
       backgroundColor: "transparent",
@@ -84,7 +84,7 @@ export class App {
           id: `subtitle-${Date.now()}-${Math.random()}`,
           height: Math.max(1, subtitle.split("\n").length),
           content: subtitle,
-          fg: "#a89984",
+          fg: "#6F6E69",
         }),
       );
     }
@@ -120,11 +120,11 @@ export class App {
         fastScrollStep: 5,
         backgroundColor: "transparent",
         focusedBackgroundColor: "transparent",
-        selectedBackgroundColor: "#3c3836",
-        textColor: "#ebdbb2",
-        selectedTextColor: "#fe8019",
-        descriptionColor: "#928374",
-        selectedDescriptionColor: "#a89984",
+        selectedBackgroundColor: "#282726",
+        textColor: "#CECDC3",
+        selectedTextColor: "#DA702C",
+        descriptionColor: "#575653",
+        selectedDescriptionColor: "#6F6E69",
       });
 
       screen.add(select);
@@ -216,7 +216,7 @@ export class App {
             id: `checklist-row-${Date.now()}-${Math.random()}-${rows.length}`,
             height: 1,
             content: "",
-            fg: "#ebdbb2",
+            fg: "#CECDC3",
           });
           rows.push(row);
           viewport.add(row);
@@ -253,7 +253,7 @@ export class App {
           if (!item) {
             row.visible = true;
             row.content = "";
-            row.fg = "#ebdbb2";
+            row.fg = "#CECDC3";
             continue;
           }
 
@@ -264,10 +264,10 @@ export class App {
           row.content = `${pointer} ${marker} ${item.label}${suffix}`;
           row.fg =
             index === cursor
-              ? "#fe8019"
+              ? "#DA702C"
               : selected.has(item.value)
-                ? "#b8bb26"
-                : "#ebdbb2";
+                ? "#879A39"
+                : "#CECDC3";
         }
 
         const last = rows[Math.min(height, rows.length) - 1];
@@ -382,7 +382,7 @@ export class App {
         id: `input-box-${Date.now()}-${Math.random()}`,
         border: true,
         borderStyle: "single",
-        borderColor: "#928374",
+        borderColor: "#575653",
         height: 5,
         width: "100%",
         backgroundColor: "transparent",
@@ -393,12 +393,12 @@ export class App {
         width: "100%",
         height: 1,
         placeholder: "Commit message",
-        placeholderColor: "#928374",
+        placeholderColor: "#575653",
         backgroundColor: "transparent",
         focusedBackgroundColor: "transparent",
-        textColor: "#ebdbb2",
-        focusedTextColor: "#ebdbb2",
-        cursorColor: "#fe8019",
+        textColor: "#CECDC3",
+        focusedTextColor: "#CECDC3",
+        cursorColor: "#DA702C",
         wrapMode: "none",
         showCursor: true,
       });
@@ -447,7 +447,7 @@ export class App {
         id: `scroll-${Date.now()}-${Math.random()}`,
         height: "100%",
         content: "",
-        fg: "#ebdbb2",
+        fg: "#CECDC3",
       });
 
       screen.add(body);
@@ -556,21 +556,21 @@ export class App {
       const visibleHeight = () => Math.max(8, this.renderer.terminalHeight - 6);
 
       const colorForLine = (line: string): string => {
-        if (line.startsWith("+") && !line.startsWith("+++")) return "#b8bb26";
-        if (line.startsWith("-") && !line.startsWith("---")) return "#fb4934";
-        if (line.startsWith("@@")) return "#83a598";
-        if (line.startsWith("diff --git")) return "#fe8019";
-        if (line.startsWith("index ")) return "#d3869b";
+        if (line.startsWith("+") && !line.startsWith("+++")) return "#879A39";
+        if (line.startsWith("-") && !line.startsWith("---")) return "#D14D41";
+        if (line.startsWith("@@")) return "#4385BE";
+        if (line.startsWith("diff --git")) return "#DA702C";
+        if (line.startsWith("index ")) return "#CE5D97";
         if (line.startsWith("+++ ") || line.startsWith("--- "))
-          return "#fabd2f";
+          return "#D0A215";
         if (
           line === "GIT STATUS" ||
           line === "DIFF STAT" ||
           line === "FULL DIFF"
         )
-          return "#fe8019";
-        if (/^\s*[MADRCU?]{1,2}\s+/.test(line)) return "#d3869b";
-        return "#ebdbb2";
+          return "#DA702C";
+        if (/^\s*[MADRCU?]{1,2}\s+/.test(line)) return "#CE5D97";
+        return "#CECDC3";
       };
 
       const trimLine = (line: string): string => {
@@ -586,7 +586,7 @@ export class App {
             id: `diff-line-${Date.now()}-${Math.random()}-${lineRenderables.length}`,
             height: 1,
             content: "",
-            fg: "#ebdbb2",
+            fg: "#CECDC3",
           });
           lineRenderables.push(line);
           viewport.add(line);
@@ -689,7 +689,7 @@ export class App {
       id: `log-${Date.now()}-${Math.random()}`,
       height: "100%",
       content: "",
-      fg: "#ebdbb2",
+      fg: "#CECDC3",
     });
 
     screen.add(body);

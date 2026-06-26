@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.lunarclient = {
-    enable = lib.mkEnableOption "Enable Lunar Client (Minecraft)";
+    enable = lib.mkEnableOption "Enable Lunar Client";
   };
 
   config = lib.mkIf cfg.enable (

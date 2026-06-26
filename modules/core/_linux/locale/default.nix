@@ -4,7 +4,7 @@ let
 in
 {
   options.core.locale = {
-    enable = lib.mkEnableOption "Enable locale configuration";
+    enable = lib.mkEnableOption "Enable locale";
   };
 
   config = lib.mkIf cfg.enable {

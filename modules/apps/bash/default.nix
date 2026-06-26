@@ -12,7 +12,7 @@ let
 in
 {
   options.apps.bash = {
-    enable = lib.mkEnableOption "Enable Bash shell with gruvbox theme and all goodies";
+    enable = lib.mkEnableOption "Enable Bash";
   };
 
   config = lib.mkIf cfg.enable {
@@ -58,19 +58,13 @@ in
           fi
 
 
-
-          # Gruvbox LS_COLORS + always colorize ls
           export CLICOLOR=1
           export LS_COLORS="di=1;36:ln=1;35:so=1;32:pi=1;33:ex=1;31:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=30;42:ow=34;43"
           alias ls="ls -G"
-
-          # Colored grep
           alias grep="grep --color=auto"
           alias fgrep="fgrep --color=auto"
           alias egrep="egrep --color=auto"
           export GREP_COLOR="1;33"
-
-          # Colored man pages
           export LESS_TERMCAP_mb=$'\e[1;31m'
           export LESS_TERMCAP_md=$'\e[0;33m'
           export LESS_TERMCAP_me=$'\e[0m'
@@ -78,14 +72,8 @@ in
           export LESS_TERMCAP_so=$'\e[1;44;33m'
           export LESS_TERMCAP_ue=$'\e[0m'
           export LESS_TERMCAP_us=$'\e[1;32m'
-
-          # Timestamp raw `history` output
           export HISTTIMEFORMAT="%F %T  "
-
-          # Sync history across sessions after every command
           PROMPT_COMMAND="history -a; history -n; ''${PROMPT_COMMAND:-}"
-
-          # Shell options
           set -o vi
           set -o ignoreeof
           shopt -s autocd
@@ -93,8 +81,6 @@ in
           shopt -s globstar
           shopt -s checkwinsize
           shopt -s cdspell
-
-          # Readline bindings
           bind '"\e[A": history-search-backward'
           bind '"\e[B": history-search-forward'
           bind "set completion-ignore-case on"
@@ -104,8 +90,6 @@ in
           bind "set visible-stats on"
           bind 'TAB:menu-complete'
           bind '"\\e[Z":menu-complete-backward'
-
-          # fzf keybindings
           if [[ -z "''${FZF_BASH_INTEGRATION_LOADED:-}" ]] && command -v fzf &> /dev/null; then
             source ${pkgs.fzf}/share/fzf/key-bindings.bash
             source ${pkgs.fzf}/share/fzf/completion.bash

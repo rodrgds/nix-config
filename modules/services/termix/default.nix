@@ -23,7 +23,7 @@ let
 in
 {
   options.vps.termix = {
-    enable = lib.mkEnableOption "Termix web-based terminal and remote desktop";
+    enable = lib.mkEnableOption "Enable Termix";
 
     domain = lib.mkOption {
       type = lib.types.str;

@@ -10,7 +10,7 @@ let
 in
 {
   options.apps.bumblebee-status = {
-    enable = lib.mkEnableOption "Enable bumblebee-status with custom stopwatch module";
+    enable = lib.mkEnableOption "Enable bumblebee-status";
   };
 
   config = lib.mkIf cfg.enable {

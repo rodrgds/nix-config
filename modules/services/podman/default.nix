@@ -11,7 +11,7 @@ let
 in
 {
   options.services.podman = {
-    enable = lib.mkEnableOption "Podman container runtime";
+    enable = lib.mkEnableOption "Enable Podman";
   };
 
   config = lib.mkIf cfg.enable {

@@ -17,7 +17,7 @@ let
 in
 {
   options.vps.teamspeak = {
-    enable = lib.mkEnableOption "TeamSpeak 6 server";
+    enable = lib.mkEnableOption "Enable TeamSpeak server";
 
     image = lib.mkOption {
       type = lib.types.str;
