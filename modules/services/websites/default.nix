@@ -74,8 +74,8 @@ in
         EnvironmentFile = config.sops.templates."personal-site-env".path;
         StateDirectory = "personal-site";
         WorkingDirectory = "/var/lib/personal-site";
-        MemoryHigh = "2G";
-        MemoryMax = "2.5G";
+        MemoryHigh = "1.5G";
+        MemoryMax = "2G";
 
         ExecStart = "${pkgs.bash}/bin/bash -c 'if [ ! -d /var/lib/personal-site/.git ]; then git clone https://github.com/rodrgds/personal-website /var/lib/personal-site; fi && cd /var/lib/personal-site && git fetch origin main && git reset --hard origin/main && bun install && bun run build'";
       };
