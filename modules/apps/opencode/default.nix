@@ -171,6 +171,11 @@ in
                   "opencode/opencode.json".text = builtins.toJSON opencodeConfig;
                 }
                 // {
+                  "opencode/tui.json".text = builtins.toJSON {
+                    theme = "flexoki";
+                  };
+                }
+                // {
                   "opencode/opencode-notifier.json".text = builtins.toJSON {
                     sound = true;
                     notification = true;

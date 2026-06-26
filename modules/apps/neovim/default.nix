@@ -8,7 +8,7 @@
 let
   cfg = config.apps.neovim;
 
-  flexoki-neovim = pkgs.vimUtils.buildVimPluginFrom2Nix {
+  flexoki-neovim = pkgs.vimUtils.buildVimPlugin {
     pname = "flexoki-neovim";
     version = "main";
     src = pkgs.fetchFromGitHub {

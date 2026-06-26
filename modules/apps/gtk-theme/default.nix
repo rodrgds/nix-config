@@ -35,6 +35,9 @@ in
             name = "flexoki";
           };
           gtk4.theme = config.gtk.theme;
+          gtk3.extraConfig = {
+            gtk-application-prefer-dark-theme = 1;
+          };
           iconTheme = {
             package = pkgs.papirus-icon-theme;
             name = "Papirus";

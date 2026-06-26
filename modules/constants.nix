@@ -54,7 +54,7 @@ in
   # Display settings
   display = {
     dpi = 96;
-    opacity = 0.90;
+    opacity = 0.92;
   };
 
   inherit isDarwin isLinux;
