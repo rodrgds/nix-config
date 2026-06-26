@@ -11,7 +11,7 @@ let
   cfg = config.apps.ghostty;
   inherit (constants) isDarwin isLinux;
   ghosttySettings = {
-    theme = "Flexoki";
+    theme = "Flexoki Dark";
     font-family = constants.fonts.primary;
     font-size = constants.fonts.sizes.large;
     window-decoration = false;

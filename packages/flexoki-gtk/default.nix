@@ -1,4 +1,8 @@
-{ lib, fetchFromGitHub, stdenvNoCC }:
+{
+  lib,
+  fetchFromGitHub,
+  stdenvNoCC,
+}:
 
 stdenvNoCC.mkDerivation {
   pname = "flexoki-gtk";
@@ -8,7 +12,7 @@ stdenvNoCC.mkDerivation {
     owner = "kepano";
     repo = "flexoki";
     rev = "8d723bac4a9ac46adfdf99d42155286977aac72a";
-    hash = "sha256-qW+YZhQAXYPn0H9VYeyN5NwX5rqnQHRFMbvP/My4wrE=";
+    hash = "sha256-IxnvoZ9hGEvwq/PBbHTL5L2a2kxMSXSINIfd5Dg9ttA=";
   };
 
   installPhase = ''

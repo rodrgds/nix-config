@@ -15,7 +15,7 @@ let
       owner = "kepano";
       repo = "flexoki-neovim";
       rev = "main";
-      hash = "sha256-hq0a9gwgBBOOFxMT63gk+nhZpGwAd4mgfbgNqN4d4Uc=";
+      hash = "sha256-TlBP99MBAT/H0Uut1MF8SnIDoeetcdHLKrWal2oO2Ug=";
     };
   };
 in

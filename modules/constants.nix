@@ -24,31 +24,31 @@ in
   # Color scheme (Flexoki)
   colors = {
     # Background colors (Flexoki dark theme)
-    bg0 = "#100F0F";    # black
-    bg1 = "#1C1B1A";    # base-950
-    bg2 = "#282726";    # base-900
+    bg0 = "#100F0F"; # black
+    bg1 = "#1C1B1A"; # base-950
+    bg2 = "#282726"; # base-900
 
     # Foreground colors (Flexoki dark theme)
-    fg0 = "#CECDC3";    # base-200
-    fg1 = "#6F6E69";    # base-600
-    fg2 = "#575653";    # base-700
+    fg0 = "#CECDC3"; # base-200
+    fg1 = "#6F6E69"; # base-600
+    fg2 = "#575653"; # base-700
 
     # Flexoki accent colors (dark mode: 600 for UI, 400 for highlights)
-    red = "#AF3029";        # red-600
-    redBright = "#D14D41";  # red-400
-    green = "#66800B";      # green-600
+    red = "#AF3029"; # red-600
+    redBright = "#D14D41"; # red-400
+    green = "#66800B"; # green-600
     greenBright = "#879A39"; # green-400
-    yellow = "#AD8301";     # yellow-600
+    yellow = "#AD8301"; # yellow-600
     yellowBright = "#D0A215"; # yellow-400
-    blue = "#205EA6";       # blue-600
-    blueBright = "#4385BE";  # blue-400
-    magenta = "#A02F6F";    # magenta-600
+    blue = "#205EA6"; # blue-600
+    blueBright = "#4385BE"; # blue-400
+    magenta = "#A02F6F"; # magenta-600
     magentaBright = "#CE5D97"; # magenta-400
-    cyan = "#24837B";       # cyan-600
-    cyanBright = "#3AA99F";  # cyan-400
-    orange = "#BC5215";     # orange-600
+    cyan = "#24837B"; # cyan-600
+    cyanBright = "#3AA99F"; # cyan-400
+    orange = "#BC5215"; # orange-600
     orangeBright = "#DA702C"; # orange-400
-    purple = "#5E409D";     # purple-600
+    purple = "#5E409D"; # purple-600
   };
 
   # Display settings

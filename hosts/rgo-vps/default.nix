@@ -107,7 +107,11 @@
   };
 
   networking.firewall.enable = lib.mkForce true;
-  networking.firewall.allowedTCPPorts = [ 22 80 443 ];
+  networking.firewall.allowedTCPPorts = [
+    22
+    80
+    443
+  ];
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 4000 ];
 
   users.users.${username} = {

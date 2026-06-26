@@ -24,17 +24,17 @@ in
           };
         };
 
-          gtk = {
-            enable = true;
-            font = {
-              name = constants.fonts.ui;
-              size = constants.fonts.sizes.normal;
-            };
-            theme = {
-              package = pkgs.flexoki-gtk;
-              name = "flexoki";
-            };
-            gtk4.theme = config.gtk.theme;
+        gtk = {
+          enable = true;
+          font = {
+            name = constants.fonts.ui;
+            size = constants.fonts.sizes.normal;
+          };
+          theme = {
+            package = pkgs.flexoki-gtk;
+            name = "flexoki";
+          };
+          gtk4.theme = config.gtk.theme;
           iconTheme = {
             package = pkgs.papirus-icon-theme;
             name = "Papirus";

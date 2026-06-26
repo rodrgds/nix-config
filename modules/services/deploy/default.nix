@@ -45,7 +45,8 @@ in
         export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
 
         echo "Redeploying personal site..."
-        systemctl restart personal-site personal-site-run
+        systemctl restart personal-site
+        systemctl restart personal-site-run
 
         echo "Deployment complete!"
       '';

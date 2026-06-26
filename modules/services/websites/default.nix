@@ -85,7 +85,7 @@ in
       description = "Personal Astro Website Server";
       after = [ "personal-site.service" ];
       wantedBy = [ "multi-user.target" ];
-      requires = [ "personal-site.service" ];
+      wants = [ "personal-site.service" ];
 
       path = [ pkgs.bun ];
 

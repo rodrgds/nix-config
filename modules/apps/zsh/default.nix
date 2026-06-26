@@ -28,7 +28,6 @@ in
 
         zsh-abbr.enable = true;
 
-
         history = {
           size = 100000;
           save = 100000;
@@ -87,7 +86,6 @@ in
         '';
 
         defaultKeymap = "viins";
-
 
         sessionVariables = {
           EDITOR = "nvim";
