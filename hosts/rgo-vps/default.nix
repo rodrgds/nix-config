@@ -126,6 +126,15 @@
 
   security.sudo.wheelNeedsPassword = false;
 
+  # Persistent swap file (VPS has only ~3.7 GiB RAM; builds OOM without this)
+  swapDevices = [
+    {
+      device = "/swapfile";
+      size = 2048;
+      priority = -2;
+    }
+  ];
+
   services.journald.extraConfig = ''
     SystemMaxUse=50M
     SystemMaxFileSize=10M
