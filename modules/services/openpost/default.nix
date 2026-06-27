@@ -20,7 +20,7 @@ in
 
     domain = lib.mkOption {
       type = lib.types.str;
-      default = "openpost.rgo.pt";
+      default = "app.openpost.social";
       description = "Domain for OpenPost";
     };
 
@@ -52,7 +52,7 @@ in
         OPENPOST_MEDIA_URL = "https://${cfg.domain}/media";
         OPENPOST_APP_URL = "https://${cfg.domain}";
         OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain}";
-        OPENPOST_DISABLE_REGISTRATIONS = "true";
+        OPENPOST_DISABLE_REGISTRATIONS = "false";
         LINKEDIN_DISABLE_THREAD_REPLIES = "true";
         TZ = cfg.timezone;
       };

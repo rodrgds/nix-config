@@ -106,8 +106,8 @@ let
       '';
     };
 
-    # OpenPost - social media scheduler
-    "openpost.rgo.pt" = {
+    # OpenPost app
+    "app.openpost.social" = {
       extraConfig = ''
         reverse_proxy localhost:${toString (cfg.internalPorts.openpost or 8090)}
 
@@ -118,6 +118,13 @@ let
           X-XSS-Protection "1; mode=block"
           Referrer-Policy "strict-origin-when-cross-origin"
         }
+      '';
+    };
+
+    # Redirect old domain to app
+    "openpost.rgo.pt" = {
+      extraConfig = ''
+        redir https://app.openpost.social{uri} permanent
       '';
     };
 
