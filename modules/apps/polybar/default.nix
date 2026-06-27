@@ -71,21 +71,21 @@ in
           label-mode-padding = 4
           label-mode-foreground = ''${colors.bg}
           label-mode-background = ''${colors.warning}
-          label-focused = %name% 
+          label-focused = %name%
           label-focused-foreground = ''${colors.bg}
           label-focused-background = ''${colors.accent}
-          label-focused-padding = 2
+          label-focused-padding = 1
           label-unfocused = %name% 
           label-unfocused-foreground = ''${colors.fg-alt}
-          label-unfocused-padding = 2
+          label-unfocused-padding = 1
           label-visible = %name% 
           label-visible-foreground = ''${colors.fg}
           label-visible-underline = ''${colors.fg-alt}
-          label-visible-padding = 2
+          label-visible-padding = 1
           label-urgent = %name% 
           label-urgent-foreground = ''${colors.bg}
           label-urgent-background = ''${colors.urgent}
-          label-urgent-padding = 2
+          label-urgent-padding = 1
 
           [module/cpu]
           type = internal/cpu
@@ -152,30 +152,26 @@ in
 
           [module/layout]
           type = custom/script
-          exec = echo " 󰍹 "
+          exec = echo "󰍹 "
           interval = 999999
-          format-padding = 1
           click-left = "${constants.scriptDir}/1monitor.sh && sleep 1 && ${constants.homeDir}/.config/polybar/launch.sh"
 
           [module/kb]
           type = custom/script
-          exec = echo "  "
+          exec = echo " "
           interval = 999999
-          format-padding = 1
           click-left = ${constants.scriptDir}/toggle_keyboard_layout.sh
 
           [module/sound]
           type = custom/script
-          exec = echo "  "
+          exec = echo " "
           interval = 999999
-          format-padding = 1
           click-left = ${constants.scriptDir}/toggle_sound_device.sh
 
           [module/res]
           type = custom/script
-          exec = echo "  "
+          exec = echo " "
           interval = 999999
-          format-padding = 1
           click-left = "${constants.scriptDir}/fullres.sh && sleep 1 && ${constants.homeDir}/.config/polybar/launch.sh"
 
           [module/tray]
@@ -184,9 +180,9 @@ in
 
           [module/power]
           type = custom/menu
-          label-open = ⏻
+          label-open = ⏻ 
           label-open-foreground = ''${colors.fg}
-          label-close = ✕
+          label-close = ✕ 
           label-close-foreground = ''${colors.fg-alt}
           label-separator = |
           menu-0-0 = Lock
