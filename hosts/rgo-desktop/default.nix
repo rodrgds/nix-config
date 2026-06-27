@@ -68,7 +68,8 @@
   apps.affinity.enable = true;
 
   apps.i3.enable = true;
-  apps.bumblebee-status.enable = true;
+  # apps.bumblebee-status.enable = true;
+  apps.polybar.enable = true;
   apps.dunst.enable = true;
   apps.redshift.enable = true;
   apps.solaar.enable = true;

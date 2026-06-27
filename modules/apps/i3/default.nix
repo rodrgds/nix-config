@@ -104,6 +104,11 @@ in
                   always = true;
                   notification = false;
                 }
+                {
+                  command = "${constants.homeDir}/.config/polybar/launch.sh";
+                  always = true;
+                  notification = false;
+                }
               ];
               keybindings = import ./_helpers/keybindings.nix { inherit pkgs constants; };
               workspaceOutputAssign = import ./_helpers/workspaces.nix { };

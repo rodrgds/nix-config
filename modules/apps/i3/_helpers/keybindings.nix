@@ -29,7 +29,7 @@ in
   "${mod}+q" = "kill";
   "${mod}+l" = "exec bash ${scriptDir}/show_random_wall.sh && i3lock";
   "${mod}+Shift+c" = "reload";
-  "${mod}+Shift+r" = "restart";
+  "${mod}+Shift+r" = "exec polybar-msg cmd restart; restart";
   "${mod}+j" = "focus left";
   "${mod}+k" = "focus down";
   "${mod}+b" = "focus up";
