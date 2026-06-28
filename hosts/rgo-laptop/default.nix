@@ -42,6 +42,7 @@
   apps.doxygen.enable = true;
   apps.golang.enable = true;
   apps.nodejs.enable = true;
+  apps.pnpm.enable = true;
   apps.bun.enable = true;
   apps.python.enable = true;
   apps.php.enable = true;
@@ -76,6 +77,7 @@
 
   apps.mpv.enable = true;
   apps.stremio.enable = true;
+  apps.losslesscut.enable = true;
 
   apps.syncthing.enable = true;
 

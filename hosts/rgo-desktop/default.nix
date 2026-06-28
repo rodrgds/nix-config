@@ -56,6 +56,7 @@
   apps.antigravity.enable = true;
   apps.arduino.enable = true;
   apps.nodejs.enable = true;
+  apps.pnpm.enable = true;
   apps.bun.enable = true;
   apps.openjdk.enable = true;
   apps.python.enable = true;
@@ -84,6 +85,7 @@
   apps.gimp.enable = true;
   apps.davinci-resolve.enable = true;
   apps.auto-editor.enable = true;
+  apps.losslesscut.enable = true;
   apps.flameshot.enable = true;
   apps.normcap.enable = true;
   apps.charm-freeze.enable = true;

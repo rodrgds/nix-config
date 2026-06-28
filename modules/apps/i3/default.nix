@@ -54,10 +54,10 @@ in
                 names = [ constants.fonts.primary ];
                 size = constants.fonts.sizes.normal;
               };
-              gaps = {
-                inner = 6;
-                outer = 3;
-              };
+              #gaps = {
+              #  inner = 6;
+              #  outer = 3;
+              #};
               startup = [
                 {
                   command = "dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_RUNTIME_DIR XDG_CURRENT_DESKTOP=i3";
