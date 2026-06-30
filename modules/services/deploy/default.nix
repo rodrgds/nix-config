@@ -46,7 +46,9 @@ in
 
         echo "Redeploying personal site..."
         systemctl restart personal-site
-        systemctl restart personal-site-run
+        systemctl stop personal-site-run
+        systemctl start personal-site-run
+        systemctl is-active --quiet personal-site-run
 
         echo "Deployment complete!"
       '';

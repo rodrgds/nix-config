@@ -78,6 +78,7 @@ in
         MemoryMax = "2G";
 
         ExecStart = "${pkgs.bash}/bin/bash -c 'if [ ! -d /var/lib/personal-site/.git ]; then git clone https://github.com/rodrgds/personal-website /var/lib/personal-site; fi && cd /var/lib/personal-site && git fetch origin main && git reset --hard origin/main && bun install && bun run build'";
+        ExecStartPost = "${pkgs.systemd}/bin/systemctl --no-block try-restart personal-site-run.service";
       };
     };
 
@@ -117,7 +118,15 @@ in
       // lib.mkIf cfg.personal.enable {
         "rgo.pt" = {
           extraConfig = ''
-            reverse_proxy 127.0.0.1:${toString personalPort}
+            handle /_astro/* {
+              root * /var/lib/personal-site/dist/client
+              header Cache-Control "public, max-age=31536000, immutable"
+              file_server
+            }
+
+            handle {
+              reverse_proxy 127.0.0.1:${toString personalPort}
+            }
           '';
         };
       };
