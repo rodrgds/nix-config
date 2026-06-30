@@ -57,6 +57,8 @@ in
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
 
+      environment.NODE_OPTIONS = "--max-old-space-size=3072";
+
       path = [
         pkgs.bun
         pkgs.git
@@ -74,8 +76,8 @@ in
         EnvironmentFile = config.sops.templates."personal-site-env".path;
         StateDirectory = "personal-site";
         WorkingDirectory = "/var/lib/personal-site";
-        MemoryHigh = "1.5G";
-        MemoryMax = "2G";
+        MemoryHigh = "3G";
+        MemoryMax = "4G";
 
         ExecStart = "${pkgs.bash}/bin/bash -c 'if [ ! -d /var/lib/personal-site/.git ]; then git clone https://github.com/rodrgds/personal-website /var/lib/personal-site; fi && cd /var/lib/personal-site && git fetch origin main && git reset --hard origin/main && bun install && bun run build'";
         ExecStartPost = "${pkgs.systemd}/bin/systemctl --no-block try-restart personal-site-run.service";
