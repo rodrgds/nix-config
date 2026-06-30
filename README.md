@@ -227,6 +227,24 @@ Then:
 4. Copy the key to `/root/.config/sops/age/keys.txt`
 5. Run `rebuild` and choose the VPS target in the TUI
 
+#### Unprompted production env
+
+`rgo-vps` defines `unprompted.to`, `www.unprompted.to`, and `api.unprompted.to` through Caddy.
+Before starting the app, create the production EnvironmentFile on the VPS:
+
+```bash
+sudo install -d -m 0750 /var/lib/unprompted
+sudo cp /etc/unprompted/production.env.example /var/lib/unprompted/production.env
+sudo $EDITOR /var/lib/unprompted/production.env
+sudo systemctl restart podman-unprompted-postgres unprompted-build unprompted-api unprompted-worker unprompted-web
+```
+
+Point DNS for `unprompted.to`, `www.unprompted.to`, and `api.unprompted.to` at the VPS. The
+systemd units are guarded with `ConditionPathExists`, so the NixOS switch succeeds before the real
+env file exists, but the app services intentionally stay inactive until it is present.
+The build unit clones `https://github.com/rodrgds/unprompted` by default, so publish that repo or
+override `vps.unprompted.repository` before starting `unprompted-build`.
+
 ## Operations
 
 ### Rebuilds

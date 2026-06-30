@@ -77,6 +77,11 @@
   vps.pocketbase.enable = false;
   vps.immich-public-proxy.enable = false;
   vps.openpost.enable = true;
+  vps.unprompted = {
+    enable = true;
+    domain = "unprompted.to";
+    apiDomain = "api.unprompted.to";
+  };
   vps.litellm = {
     enable = true;
     host = "0.0.0.0";
