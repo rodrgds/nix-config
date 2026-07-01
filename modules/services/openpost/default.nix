@@ -61,6 +61,28 @@ in
       description = "Timezone for OpenPost";
     };
 
+    image = lib.mkOption {
+      type = lib.types.str;
+      default = "ghcr.io/rodrgds/openpost:latest";
+      description = ''
+        OpenPost container image. Pin this to a release tag or digest for
+        reproducible production deploys.
+      '';
+    };
+
+    pullPolicy = lib.mkOption {
+      type = lib.types.enum [
+        "always"
+        "missing"
+        "never"
+      ];
+      default = "always";
+      description = ''
+        Podman image pull policy for OpenPost. The default keeps the hosted
+        service from reusing a stale local `latest` image after a Nix switch.
+      '';
+    };
+
     extraEnvironment = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
@@ -95,7 +117,7 @@ in
 
     # OpenPost application
     virtualisation.oci-containers.containers.openpost = {
-      image = "ghcr.io/rodrgds/openpost:latest";
+      image = cfg.image;
 
       environment = {
         OPENPOST_PORT = toString openpostContainerPort;
@@ -139,6 +161,7 @@ in
 
       extraOptions = [
         "--network=podman"
+        "--pull=${cfg.pullPolicy}"
         "--health-cmd=wget --spider http://localhost:${toString openpostContainerPort}/api/v1/ready"
         "--health-interval=30s"
         "--health-timeout=3s"
