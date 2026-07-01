@@ -77,6 +77,7 @@
   vps.pocketbase.enable = false;
   vps.immich-public-proxy.enable = false;
   vps.openpost.enable = true;
+  vps.openpost.image = "ghcr.io/rodrgds/openpost:v1.0.21";
   vps.unprompted = {
     enable = true;
     domain = "unprompted.to";
