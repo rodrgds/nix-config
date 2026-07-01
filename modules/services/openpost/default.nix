@@ -15,6 +15,85 @@ let
   # Container port (internal) - OpenPost listens on 8080 inside container
   openpostContainerPort = 8080;
 
+  openpostFileSecrets = [
+    {
+      name = "jwt-secret";
+      env = "OPENPOST_JWT_SECRET_FILE";
+      target = "/run/secrets/openpost_jwt_secret";
+      value = config.sops.placeholder.openpost_jwt_secret;
+    }
+    {
+      name = "encryption-key";
+      env = "OPENPOST_ENCRYPTION_KEY_FILE";
+      target = "/run/secrets/openpost_encryption_key";
+      value = config.sops.placeholder.openpost_encryption_key;
+    }
+    {
+      name = "x-client-id";
+      env = "X_CLIENT_ID_FILE";
+      target = "/run/secrets/openpost_twitter_client_id";
+      value = config.sops.placeholder.openpost_twitter_client_id;
+    }
+    {
+      name = "x-client-secret";
+      env = "X_CLIENT_SECRET_FILE";
+      target = "/run/secrets/openpost_twitter_client_secret";
+      value = config.sops.placeholder.openpost_twitter_client_secret;
+    }
+    {
+      name = "linkedin-client-id";
+      env = "LINKEDIN_CLIENT_ID_FILE";
+      target = "/run/secrets/openpost_linkedin_client_id";
+      value = config.sops.placeholder.openpost_linkedin_client_id;
+    }
+    {
+      name = "linkedin-client-secret";
+      env = "LINKEDIN_CLIENT_SECRET_FILE";
+      target = "/run/secrets/openpost_linkedin_client_secret";
+      value = config.sops.placeholder.openpost_linkedin_client_secret;
+    }
+    {
+      name = "threads-client-id";
+      env = "THREADS_CLIENT_ID_FILE";
+      target = "/run/secrets/openpost_threads_client_id";
+      value = config.sops.placeholder.openpost_threads_client_id;
+    }
+    {
+      name = "threads-client-secret";
+      env = "THREADS_CLIENT_SECRET_FILE";
+      target = "/run/secrets/openpost_threads_client_secret";
+      value = config.sops.placeholder.openpost_threads_client_secret;
+    }
+    {
+      name = "mastodon-servers";
+      env = "MASTODON_SERVERS_FILE";
+      target = "/run/secrets/openpost_mastodon_servers";
+      value = config.sops.placeholder.openpost_mastodon_servers;
+    }
+  ];
+
+  openpostFileSecretEnvironment = lib.listToAttrs (
+    map (secret: lib.nameValuePair secret.env secret.target) openpostFileSecrets
+  );
+
+  openpostFileSecretTemplates = lib.listToAttrs (
+    map (
+      secret:
+      lib.nameValuePair "openpost-${secret.name}" {
+        content = secret.value;
+        mode = "0444";
+      }
+    ) openpostFileSecrets
+  );
+
+  openpostFileSecretMounts = map (
+    secret:
+    let
+      templateName = "openpost-${secret.name}";
+    in
+    "--mount=type=bind,source=${config.sops.templates.${templateName}.path},target=${secret.target},ro"
+  ) openpostFileSecrets;
+
   cloudRequiredEnvNames = [
     "OPENPOST_DATABASE_URL"
     "OPENPOST_S3_REGION"
@@ -29,8 +108,9 @@ let
     "OPENPOST_POLAR_PRO_PRODUCT_ID"
   ];
 
-  hasCloudInlineEnv = builtins.all (
-    name: builtins.hasAttr name cfg.extraEnvironment
+  hasCloudConfigEnv = builtins.all (
+    name:
+    builtins.hasAttr name cfg.extraEnvironment || builtins.hasAttr "${name}_FILE" cfg.extraEnvironment
   ) cloudRequiredEnvNames;
 in
 {
@@ -88,7 +168,7 @@ in
       default = { };
       description = ''
         Extra OpenPost environment variables. Use this for non-secret cloud
-        settings or temporary overrides.
+        settings, temporary overrides, or *_FILE pointers to mounted secrets.
       '';
     };
 
@@ -97,8 +177,17 @@ in
       default = [ ];
       description = ''
         Extra env files passed to the OpenPost container. In cloud mode this
-        should provide OPENPOST_DATABASE_URL, S3 credentials, and Polar product
-        secrets unless they are set via extraEnvironment.
+        should provide OPENPOST_DATABASE_URL, S3 credentials, Polar product
+        secrets, or *_FILE pointers unless they are set via extraEnvironment.
+      '';
+    };
+
+    extraOptions = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Extra Podman options for OpenPost. Use this to bind-mount additional
+        secret files referenced by *_FILE environment variables.
       '';
     };
   };
@@ -127,8 +216,13 @@ in
         OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain}";
         OPENPOST_DISABLE_REGISTRATIONS = "false";
         LINKEDIN_DISABLE_THREAD_REPLIES = "true";
+        X_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/x/callback";
+        LINKEDIN_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/linkedin/callback";
+        THREADS_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/threads/callback";
+        MASTODON_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/mastodon/callback";
         TZ = cfg.timezone;
       }
+      // openpostFileSecretEnvironment
       // (
         if isCloud then
           {
@@ -146,10 +240,7 @@ in
       )
       // cfg.extraEnvironment;
 
-      environmentFiles = [
-        config.sops.templates.openpost-env.path
-      ]
-      ++ cfg.extraEnvironmentFiles;
+      environmentFiles = cfg.extraEnvironmentFiles;
 
       volumes = lib.optionals (!isCloud) [
         "/var/lib/openpost/data:/data"
@@ -166,38 +257,22 @@ in
         "--health-interval=30s"
         "--health-timeout=3s"
         "--health-retries=3"
-      ];
+      ]
+      ++ openpostFileSecretMounts
+      ++ cfg.extraOptions;
     };
 
-    sops.templates = {
-      "openpost-env" = {
-        content = ''
-          OPENPOST_JWT_SECRET=${config.sops.placeholder.openpost_jwt_secret}
-          OPENPOST_ENCRYPTION_KEY=${config.sops.placeholder.openpost_encryption_key}
-          X_CLIENT_ID=${config.sops.placeholder.openpost_twitter_client_id}
-          X_CLIENT_SECRET=${config.sops.placeholder.openpost_twitter_client_secret}
-          X_REDIRECT_URI=https://${cfg.domain}/api/v1/accounts/x/callback
-          LINKEDIN_CLIENT_ID=${config.sops.placeholder.openpost_linkedin_client_id}
-          LINKEDIN_CLIENT_SECRET=${config.sops.placeholder.openpost_linkedin_client_secret}
-          LINKEDIN_REDIRECT_URI=https://${cfg.domain}/api/v1/accounts/linkedin/callback
-          THREADS_CLIENT_ID=${config.sops.placeholder.openpost_threads_client_id}
-          THREADS_CLIENT_SECRET=${config.sops.placeholder.openpost_threads_client_secret}
-          THREADS_REDIRECT_URI=https://${cfg.domain}/api/v1/accounts/threads/callback
-          MASTODON_REDIRECT_URI=https://${cfg.domain}/api/v1/accounts/mastodon/callback
-          MASTODON_SERVERS=${config.sops.placeholder.openpost_mastodon_servers}
-        '';
-        mode = "0444";
-      };
-    };
+    sops.templates = openpostFileSecretTemplates;
 
     vps.caddy.internalPorts.openpost = openpostHostPort;
 
     assertions = [
       {
-        assertion = !isCloud || cfg.extraEnvironmentFiles != [ ] || hasCloudInlineEnv;
+        assertion = !isCloud || cfg.extraEnvironmentFiles != [ ] || hasCloudConfigEnv;
         message = ''
           vps.openpost.edition = "cloud" requires either vps.openpost.extraEnvironmentFiles
-          or these keys in vps.openpost.extraEnvironment: ${lib.concatStringsSep ", " cloudRequiredEnvNames}.
+          or these keys in vps.openpost.extraEnvironment, with direct values or *_FILE
+          pointers: ${lib.concatStringsSep ", " cloudRequiredEnvNames}.
         '';
       }
     ];
