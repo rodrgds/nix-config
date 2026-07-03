@@ -14,6 +14,8 @@ let
   openpostHostPort = 8090;
   # Container port (internal) - OpenPost listens on 8080 inside container
   openpostContainerPort = 8080;
+  openpostPostgresUser = "openpost";
+  openpostPostgresDatabase = "openpost";
 
   openpostFileSecrets = [
     {
@@ -94,24 +96,6 @@ let
     "--mount=type=bind,source=${config.sops.templates.${templateName}.path},target=${secret.target},ro"
   ) openpostFileSecrets;
 
-  cloudRequiredEnvNames = [
-    "OPENPOST_DATABASE_URL"
-    "OPENPOST_S3_REGION"
-    "OPENPOST_S3_BUCKET"
-    "OPENPOST_S3_ACCESS_KEY_ID"
-    "OPENPOST_S3_SECRET_ACCESS_KEY"
-    "OPENPOST_S3_PUBLIC_BASE_URL"
-    "OPENPOST_POLAR_ACCESS_TOKEN"
-    "OPENPOST_POLAR_WEBHOOK_SECRET"
-    "OPENPOST_POLAR_STARTER_PRODUCT_ID"
-    "OPENPOST_POLAR_CREATOR_PRODUCT_ID"
-    "OPENPOST_POLAR_PRO_PRODUCT_ID"
-  ];
-
-  hasCloudConfigEnv = builtins.all (
-    name:
-    builtins.hasAttr name cfg.extraEnvironment || builtins.hasAttr "${name}_FILE" cfg.extraEnvironment
-  ) cloudRequiredEnvNames;
 in
 {
   options.vps.openpost = {
@@ -198,6 +182,10 @@ in
     systemd.tmpfiles.rules = [
       "d /var/lib/openpost 0755 root root -"
     ]
+    ++ lib.optionals isCloud [
+      "d /var/lib/openpost/postgres 0700 70 70 -"
+      "d /var/backup/openpost 0750 root root -"
+    ]
     ++ lib.optionals (!isCloud) [
       "d /var/lib/openpost/data 0755 1000 1000 -"
       "d /var/lib/openpost/data/db 0755 1000 1000 -"
@@ -240,11 +228,17 @@ in
       )
       // cfg.extraEnvironment;
 
-      environmentFiles = cfg.extraEnvironmentFiles;
+      environmentFiles =
+        cfg.extraEnvironmentFiles
+        ++ lib.optionals isCloud [
+          config.sops.templates.openpost-cloud-env.path
+        ];
 
       volumes = lib.optionals (!isCloud) [
         "/var/lib/openpost/data:/data"
       ];
+
+      dependsOn = lib.optionals isCloud [ "openpost-postgres" ];
 
       ports = [
         "127.0.0.1:${toString openpostHostPort}:${toString openpostContainerPort}"
@@ -262,19 +256,88 @@ in
       ++ cfg.extraOptions;
     };
 
-    sops.templates = openpostFileSecretTemplates;
+    virtualisation.oci-containers.containers.openpost-postgres = lib.mkIf isCloud {
+      image = "docker.io/postgres:17-alpine";
+
+      environmentFiles = [
+        config.sops.templates.openpost-postgres-env.path
+      ];
+
+      volumes = [
+        "/var/lib/openpost/postgres:/var/lib/postgresql/data"
+      ];
+
+      extraOptions = [
+        "--network=podman"
+        "--health-cmd=pg_isready -U ${openpostPostgresUser} -d ${openpostPostgresDatabase}"
+        "--health-interval=10s"
+        "--health-timeout=5s"
+        "--health-retries=12"
+      ];
+    };
+
+    sops.templates =
+      openpostFileSecretTemplates
+      // lib.optionalAttrs isCloud {
+        "openpost-postgres-env" = {
+          content = ''
+            POSTGRES_USER=${openpostPostgresUser}
+            POSTGRES_DB=${openpostPostgresDatabase}
+            POSTGRES_PASSWORD=${config.sops.placeholder.openpost_postgres_password}
+          '';
+          mode = "0444";
+        };
+        "openpost-cloud-env" = {
+          content = ''
+            OPENPOST_DATABASE_URL=postgres://${openpostPostgresUser}:${config.sops.placeholder.openpost_postgres_password}@openpost-postgres:5432/${openpostPostgresDatabase}?sslmode=disable
+            OPENPOST_S3_ENDPOINT=${config.sops.placeholder.openpost_s3_endpoint}
+            OPENPOST_S3_REGION=${config.sops.placeholder.openpost_s3_region}
+            OPENPOST_S3_BUCKET=${config.sops.placeholder.openpost_s3_bucket}
+            OPENPOST_S3_ACCESS_KEY_ID=${config.sops.placeholder.openpost_s3_access_key_id}
+            OPENPOST_S3_SECRET_ACCESS_KEY=${config.sops.placeholder.openpost_s3_secret_access_key}
+            OPENPOST_S3_PUBLIC_BASE_URL=${config.sops.placeholder.openpost_s3_public_base_url}
+            OPENPOST_POLAR_ACCESS_TOKEN=${config.sops.placeholder.openpost_polar_access_token}
+            OPENPOST_POLAR_WEBHOOK_SECRET=${config.sops.placeholder.openpost_polar_webhook_secret}
+            OPENPOST_POLAR_CHECKOUT_SUCCESS_URL=https://${cfg.domain}/settings?tab=billing&checkout_id={CHECKOUT_ID}
+            OPENPOST_POLAR_RETURN_URL=https://${cfg.domain}/settings?tab=billing
+            OPENPOST_POLAR_STARTER_PRODUCT_ID=${config.sops.placeholder.openpost_polar_starter_product_id}
+            OPENPOST_POLAR_CREATOR_PRODUCT_ID=${config.sops.placeholder.openpost_polar_creator_product_id}
+            OPENPOST_POLAR_PRO_PRODUCT_ID=${config.sops.placeholder.openpost_polar_pro_product_id}
+            OPENPOST_POLAR_TEAM_PRODUCT_ID=${config.sops.placeholder.openpost_polar_team_product_id}
+            OPENPOST_POLAR_AGENCY_PRODUCT_ID=${config.sops.placeholder.openpost_polar_agency_product_id}
+          '';
+          mode = "0444";
+        };
+      };
+
+    systemd.services.openpost-postgres-backup = lib.mkIf isCloud {
+      description = "Backup OpenPost Postgres database";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "openpost-postgres-backup" ''
+          set -euo pipefail
+          timestamp=$(${pkgs.coreutils}/bin/date +%Y%m%d_%H%M%S)
+          backup_dir=/var/backup/openpost
+          ${pkgs.coreutils}/bin/mkdir -p "$backup_dir"
+
+          ${pkgs.podman}/bin/podman exec openpost-postgres pg_dump \
+            -U ${openpostPostgresUser} \
+            -d ${openpostPostgresDatabase} | ${pkgs.gzip}/bin/gzip > "$backup_dir/openpost_$timestamp.sql.gz"
+
+          ${pkgs.findutils}/bin/find "$backup_dir" -name 'openpost_*.sql.gz' -mtime +14 -delete
+        '';
+      };
+    };
+
+    systemd.timers.openpost-postgres-backup = lib.mkIf isCloud {
+      description = "Daily OpenPost Postgres backup";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+      };
+    };
 
     vps.caddy.internalPorts.openpost = openpostHostPort;
-
-    assertions = [
-      {
-        assertion = !isCloud || cfg.extraEnvironmentFiles != [ ] || hasCloudConfigEnv;
-        message = ''
-          vps.openpost.edition = "cloud" requires either vps.openpost.extraEnvironmentFiles
-          or these keys in vps.openpost.extraEnvironment, with direct values or *_FILE
-          pointers: ${lib.concatStringsSep ", " cloudRequiredEnvNames}.
-        '';
-      }
-    ];
   };
 }
