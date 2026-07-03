@@ -31,16 +31,31 @@ in
               "/bin/sh"
               "-lc"
               ''
-                find ${lib.escapeShellArg homeDir}/Downloads -mindepth 1 -mtime +${toString cfg.retentionDays} -exec rm -rf {} +
-                find ${lib.escapeShellArg homeDir}/.Trash -mindepth 1 -mtime +${toString cfg.retentionDays} -exec rm -rf {} +
+                set -eu
+
+                downloads=${lib.escapeShellArg homeDir}/Downloads
+                trash=${lib.escapeShellArg homeDir}/.Trash
+                days=${toString cfg.retentionDays}
+
+                echo "[$(/bin/date '+%Y-%m-%dT%H:%M:%S%z')] cleanup-user-folders: deleting top-level Downloads and Trash entries older than $days days"
+
+                if [ -d "$downloads" ]; then
+                  /usr/bin/find "$downloads" -xdev -mindepth 1 -maxdepth 1 -mtime +"$days" -exec /bin/rm -rf -- {} +
+                fi
+
+                if [ -d "$trash" ]; then
+                  /usr/bin/find "$trash" -xdev -mindepth 1 -maxdepth 1 -mtime +"$days" -exec /bin/rm -rf -- {} +
+                fi
               ''
             ];
+            RunAtLoad = true;
             StartCalendarInterval = [
               {
                 Hour = 3;
                 Minute = 0;
               }
             ];
+            StartInterval = 86400;
             StandardOutPath = "/tmp/cleanup-user-folders.log";
             StandardErrorPath = "/tmp/cleanup-user-folders.err";
           };

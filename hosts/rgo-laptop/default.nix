@@ -51,7 +51,7 @@
   apps.qbittorrent.enable = true;
   apps.vscode.enable = true;
   apps.antigravity.enable = true;
-  apps.clion.enable = true;
+  apps.clion.enable = false;
   apps.virtualization.enable = true;
   apps.opencode.enable = true;
   apps.pi.enable = true;
@@ -89,4 +89,5 @@
 
   darwin.core.networking.tailscale.enable = true;
   core.downloads-cleanup.enable = true;
+  core.cache-cleanup.enable = true;
 }

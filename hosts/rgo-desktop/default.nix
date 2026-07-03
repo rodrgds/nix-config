@@ -31,6 +31,7 @@
   core.docker.enable = true;
   apps.virtualization.enable = true;
   core.downloads-cleanup.enable = true;
+  core.cache-cleanup.enable = true;
 
   scripts.enable = true;
   secrets.enable = true;
