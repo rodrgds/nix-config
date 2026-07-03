@@ -68,22 +68,6 @@
     edu.enable = false;
   };
   vps.deploy.enable = true;
-
-  vps.trndb.enable = false;
-  vps.termix.enable = false;
-  vps.postiz.enable = false;
-  vps.ghost.enable = false;
-  vps.unieasy.enable = false;
-  vps.pocketbase.enable = false;
-  vps.immich-public-proxy.enable = false;
-  vps.openpost.enable = true;
-  vps.openpost.edition = "cloud";
-  vps.openpost.image = "ghcr.io/rodrgds/openpost:v1.0.24";
-  vps.unprompted = {
-    enable = true;
-    domain = "unprompted.to";
-    apiDomain = "api.unprompted.to";
-  };
   vps.litellm = {
     enable = true;
     host = "0.0.0.0";
@@ -97,6 +81,23 @@
     bestModel = "opencode-go/glm5.2";
     cooldownTime = 3600;
   };
+  vps.openpost = {
+    enable = true;
+    edition = "cloud";
+  };
+  vps.unprompted = {
+    enable = true;
+    domain = "unprompted.to";
+    apiDomain = "api.unprompted.to";
+  };
+
+  vps.trndb.enable = false;
+  vps.termix.enable = false;
+  vps.postiz.enable = false;
+  vps.ghost.enable = false;
+  vps.unieasy.enable = false;
+  vps.pocketbase.enable = false;
+  vps.immich-public-proxy.enable = false;
 
   apps.bash.enable = true;
 
