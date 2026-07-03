@@ -189,7 +189,8 @@ in
         filtering = {
           protection_enabled = true;
           filtering_enabled = true;
-          parental_enabled = true;
+          # Twitch started being blocked by parental control, why???
+          # parental_enabled = true;
           safe_search.enabled = false;
 
           blocked_services = {
