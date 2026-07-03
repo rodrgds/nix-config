@@ -84,7 +84,7 @@
   vps.openpost = {
     enable = true;
     edition = "cloud";
-    image = "ghcr.io/rodrgds/openpost:v1.0.28";
+    image = "ghcr.io/rodrgds/openpost:v1.0.30";
   };
   vps.unprompted = {
     enable = true;
