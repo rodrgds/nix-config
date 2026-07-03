@@ -120,7 +120,7 @@ let
     "openpost_linkedin_client_secret"
     "openpost_threads_client_id"
     "openpost_threads_client_secret"
-    "openpost_mastodon_servers"
+    # "openpost_mastodon_servers"
     # LiteLLM
     "litellm_master_key"
     "litellm_opencode_key_1"

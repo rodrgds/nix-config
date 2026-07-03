@@ -66,12 +66,12 @@ let
       target = "/run/secrets/openpost_threads_client_secret";
       value = config.sops.placeholder.openpost_threads_client_secret;
     }
-    {
-      name = "mastodon-servers";
-      env = "MASTODON_SERVERS_FILE";
-      target = "/run/secrets/openpost_mastodon_servers";
-      value = config.sops.placeholder.openpost_mastodon_servers;
-    }
+    # {
+    #   name = "mastodon-servers";
+    #   env = "MASTODON_SERVERS_FILE";
+    #   target = "/run/secrets/openpost_mastodon_servers";
+    #   value = config.sops.placeholder.openpost_mastodon_servers;
+    # }
   ];
 
   openpostFileSecretEnvironment = lib.listToAttrs (
