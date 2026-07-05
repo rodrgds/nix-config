@@ -8,7 +8,7 @@
 }:
 let
   cfg = config.apps.vesktop;
-  inherit (constants) isLinux;
+  inherit (constants) isDarwin isLinux;
 in
 {
   options.apps.vesktop = {
@@ -19,6 +19,9 @@ in
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
         environment.systemPackages = [ pkgs.vesktop ];
+      })
+      (lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "vesktop" ];
       })
     ]
   );
