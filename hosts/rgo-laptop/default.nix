@@ -70,6 +70,7 @@
   apps.maestro.enable = true;
   apps.surfshark.enable = true;
 
+  apps.vesktop.enable = true;
   apps.obsidian.enable = true;
   apps.typst.enable = true;
   apps.flameshot.enable = true;
