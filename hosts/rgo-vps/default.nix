@@ -84,7 +84,6 @@
   vps.openpost = {
     enable = true;
     edition = "cloud";
-    image = "ghcr.io/rodrgds/openpost:v1.0.30";
   };
   vps.unprompted = {
     enable = true;
@@ -130,6 +129,7 @@
       constants.sshPublicKeys.rgo-laptop
       constants.sshPublicKeys.rgo-desktop
       constants.sshPublicKeys.rgo-termix
+      constants.sshPublicKeys.hermes-nas
     ];
   };
 
