@@ -130,6 +130,7 @@ in
         extraOptions = [
           "--network=podman"
           "--pull=always"
+          "--shm-size=1g"
           "--health-cmd=pg_isready -U montra -d montra"
           "--health-interval=10s"
           "--health-retries=18"
