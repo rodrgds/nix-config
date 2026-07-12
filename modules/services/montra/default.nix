@@ -51,6 +51,8 @@ in
           WEB_ORIGIN=https://${cfg.domain}
           API_ORIGIN=https://${cfg.domain}
           ADMIN_EMAILS=${config.sops.placeholder.montra_admin_emails}
+          GOOGLE_CLIENT_ID=${config.sops.placeholder.montra_google_client_id}
+          GOOGLE_CLIENT_SECRET=${config.sops.placeholder.montra_google_client_secret}
           AI_PROVIDER=openrouter
           OPENROUTER_API_KEY=${config.sops.placeholder.montra_openrouter_api_key}
           SEARCH_PROVIDER=meilisearch
