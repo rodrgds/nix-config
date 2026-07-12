@@ -85,6 +85,7 @@
     enable = true;
     edition = "cloud";
   };
+  vps.montra.enable = true;
   vps.unprompted = {
     enable = true;
     domain = "unprompted.to";
