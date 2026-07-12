@@ -175,7 +175,7 @@ in
           "--health-cmd=bun -e \"const r=await fetch('http://127.0.0.1:8787/health/ready');process.exit(r.ok?0:1)\""
           "--health-interval=15s"
           "--health-retries=12"
-          "--memory=3g"
+          "--memory=4g"
         ];
       };
       montra-worker = {
