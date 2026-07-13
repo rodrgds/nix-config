@@ -105,6 +105,10 @@
 
   apps.microsoft-edge.enable = true;
   apps.ungoogled-chromium.enable = true;
+  apps.playwright = {
+    enable = true;
+    browserPackage = pkgs.ungoogled-chromium;
+  };
   apps.beeper.enable = true;
   apps.vesktop.enable = true;
   apps.telegram.enable = true;
