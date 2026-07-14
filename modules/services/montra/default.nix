@@ -50,6 +50,7 @@ in
           BETTER_AUTH_SECRET=${config.sops.placeholder.montra_better_auth_secret}
           WEB_ORIGIN=https://${cfg.domain}
           API_ORIGIN=https://${cfg.domain}
+          API_RATE_LIMIT_ENABLED=true
           ADMIN_EMAILS=${config.sops.placeholder.montra_admin_emails}
           GOOGLE_CLIENT_ID=${config.sops.placeholder.montra_google_client_id}
           GOOGLE_CLIENT_SECRET=${config.sops.placeholder.montra_google_client_secret}
@@ -265,6 +266,13 @@ in
 
     services.caddy.virtualHosts.${cfg.domain}.extraConfig = ''
       encode zstd gzip
+      header {
+        -Server
+        Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://analytics.rgo.pt; connect-src 'self' https://analytics.rgo.pt; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+      }
       handle /api/* {
         reverse_proxy 127.0.0.1:${toString apiPort}
       }
