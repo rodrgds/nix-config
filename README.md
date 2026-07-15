@@ -89,6 +89,12 @@ Current enabled services include:
 
 Some heavier or experimental services remain disabled until needed.
 
+### Application and website hosting
+
+User-facing application delivery is grouped under `modules/hosting/`, separate from reusable service/runtime declarations. `modules/hosting/sites/` owns static/source-built sites, while `modules/hosting/deployments/default.nix` owns the authenticated webhook receiver, repository allow-listing, systemd deploy units, health checks, and old-image pruning. Runtime/container modules remain under `modules/services/`.
+
+OpenPost and Montra publish verified GHCR images before calling their signed VPS hooks. Personal Website, `edu.rgo.pt`, and Unprompted deploy verified source revisions and build or sync on the VPS. When changing a repository, image name, unit name, domain, health endpoint, or build directory, update both the project workflow/`AGENTS.md` and the matching Nix hosting module. Do not add parallel ad-hoc deploy scripts on the server. After rebuilding `rgo-vps`, verify `webhook.service`, the relevant `deploy-*.service`, its application units, and the public health URL.
+
 ## Platform Differences
 
 | Area | `rgo-desktop` | `rgo-laptop` |
