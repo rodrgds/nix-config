@@ -57,7 +57,10 @@ in
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
 
-      environment.NODE_OPTIONS = "--max-old-space-size=3072";
+      environment = {
+        NODE_OPTIONS = "--max-old-space-size=3072";
+        TYPST_PACKAGE_CACHE_PATH = "/var/cache/personal-site/typst";
+      };
 
       path = [
         pkgs.bun
@@ -74,6 +77,7 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         EnvironmentFile = config.sops.templates."personal-site-env".path;
+        CacheDirectory = "personal-site";
         StateDirectory = "personal-site";
         WorkingDirectory = "/var/lib/personal-site";
         MemoryHigh = "3G";
