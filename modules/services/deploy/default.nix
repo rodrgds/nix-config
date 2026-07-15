@@ -64,7 +64,7 @@ let
     systemctl start podman-montra-api.service podman-montra-worker.service
 
     for attempt in $(seq 1 90); do
-      if curl -fsS http://127.0.0.1:8787/health/ready >/dev/null; then
+      if curl -fsS http://127.0.0.1:8788/health/ready >/dev/null; then
         break
       fi
       if [ "$attempt" = 90 ]; then
