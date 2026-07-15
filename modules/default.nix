@@ -4,6 +4,7 @@
   imports = [
     ./apps
     ./core
+    ./hosting
     ./scripts
     ./services
     ../secrets

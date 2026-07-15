@@ -62,12 +62,11 @@
     enable = true;
     extraDomains = [ "ref.rgo.pt" ];
   };
-  vps.websites = {
-    enable = true;
+  vps.hosting.sites = {
     personal.enable = true;
-    edu.enable = false;
+    edu.enable = true;
   };
-  vps.deploy.enable = true;
+  vps.hosting.deployments.enable = true;
   vps.litellm = {
     enable = true;
     host = "0.0.0.0";
