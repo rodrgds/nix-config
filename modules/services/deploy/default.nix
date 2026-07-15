@@ -75,7 +75,6 @@ let
     done
 
     systemctl start podman-montra-web.service
-    podman network reload --all
     for attempt in $(seq 1 60); do
       if curl -fsS http://127.0.0.1:8091/ >/dev/null; then
         break
