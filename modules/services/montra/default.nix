@@ -250,9 +250,27 @@ in
         Type = "oneshot";
         ExecStart = pkgs.writeShellScript "montra-postgres-backup" ''
           set -euo pipefail
+          umask 0077
           stamp=$(${pkgs.coreutils}/bin/date +%Y%m%d_%H%M%S)
-          ${pkgs.podman}/bin/podman exec montra-postgres pg_dump -U ${postgresUser} -d ${postgresDatabase} | ${pkgs.gzip}/bin/gzip > /var/backup/montra/montra_$stamp.sql.gz
-          ${pkgs.findutils}/bin/find /var/backup/montra -name 'montra_*.sql.gz' -mtime +3 -delete
+          backup_dir=/var/backup/montra
+          backup="$backup_dir/montra_$stamp.sql.gz"
+          partial="$backup.partial"
+          trap '${pkgs.coreutils}/bin/rm -f "$partial"' EXIT
+
+          ${pkgs.podman}/bin/podman exec montra-postgres pg_dump \
+            -U ${postgresUser} -d ${postgresDatabase} | ${pkgs.gzip}/bin/gzip > "$partial"
+          ${pkgs.gzip}/bin/gzip -t "$partial"
+          ${pkgs.coreutils}/bin/mv "$partial" "$backup"
+          trap - EXIT
+
+          # Full dumps are roughly 2 GiB each on this host. Keep exactly the
+          # two newest verified recovery points instead of accumulating by age.
+          ${pkgs.findutils}/bin/find "$backup_dir" -maxdepth 1 -type f \
+            -name 'montra_*.sql.gz' -printf '%T@ %p\0' \
+            | ${pkgs.coreutils}/bin/sort -z -nr \
+            | ${pkgs.coreutils}/bin/tail -z -n +3 \
+            | ${pkgs.coreutils}/bin/cut -z -d ' ' -f 2- \
+            | ${pkgs.findutils}/bin/xargs -0r ${pkgs.coreutils}/bin/rm -f --
         '';
       };
     };
