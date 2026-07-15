@@ -19,6 +19,29 @@ let
     podman image prune --all --force --build-cache
   '';
 
+  personalWebsiteDeploy = pkgs.writeShellScript "deploy-personal-website" ''
+    set -euo pipefail
+    export PATH=${maintenancePath}:$PATH
+    exec 9>/run/podman-maintenance.lock
+    flock --exclusive 9
+
+    systemctl restart personal-site.service
+    systemctl restart personal-site-run.service
+
+    for attempt in $(seq 1 60); do
+      if curl -fsS http://127.0.0.1:4321/ >/dev/null; then
+        break
+      fi
+      if [ "$attempt" = 60 ]; then
+        journalctl -u personal-site.service -u personal-site-run.service -n 160 --no-pager >&2
+        exit 1
+      fi
+      sleep 2
+    done
+
+    curl -fsS https://rgo.pt/ >/dev/null
+  '';
+
   openpostDeploy = pkgs.writeShellScript "deploy-openpost" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
@@ -140,12 +163,12 @@ in
       content = ''
         [
           {
-            "id": "redeploy",
-            "execute-command": "/etc/scripts/redeploy.sh",
-            "pass-arguments-to-command": [],
+            "id": "deploy-personal-website",
+            "execute-command": "${triggerDeploy "personal-website"}",
+            "include-command-output-in-response": true,
             "trigger-rule": {
               "match": {
-                "type": "payload-hash-sha256",
+                "type": "payload-hmac-sha256",
                 "secret": "${config.sops.placeholder.deploy_webhook_secret}",
                 "parameter": {
                   "source": "header",
@@ -160,7 +183,7 @@ in
             "include-command-output-in-response": true,
             "trigger-rule": {
               "match": {
-                "type": "payload-hash-sha256",
+                "type": "payload-hmac-sha256",
                 "secret": "${config.sops.placeholder.deploy_webhook_secret}",
                 "parameter": {
                   "source": "header",
@@ -175,7 +198,7 @@ in
             "include-command-output-in-response": true,
             "trigger-rule": {
               "match": {
-                "type": "payload-hash-sha256",
+                "type": "payload-hmac-sha256",
                 "secret": "${config.sops.placeholder.deploy_webhook_secret}",
                 "parameter": {
                   "source": "header",
@@ -190,7 +213,7 @@ in
             "include-command-output-in-response": true,
             "trigger-rule": {
               "match": {
-                "type": "payload-hash-sha256",
+                "type": "payload-hmac-sha256",
                 "secret": "${config.sops.placeholder.deploy_webhook_secret}",
                 "parameter": {
                   "source": "header",
@@ -205,24 +228,6 @@ in
       restartUnits = [ "webhook-deploy.service" ];
     };
 
-    environment.etc."scripts/redeploy.sh" = {
-      mode = "0755";
-      text = ''
-        #!${pkgs.bash}/bin/bash
-        set -e
-
-        export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
-
-        echo "Redeploying personal site..."
-        systemctl restart personal-site
-        systemctl stop personal-site-run
-        systemctl start personal-site-run
-        systemctl is-active --quiet personal-site-run
-
-        echo "Deployment complete!"
-      '';
-    };
-
     vps.caddy.internalPorts."webhooks.rgo.pt" = 9000;
 
     systemd.services.webhook-deploy = {
@@ -234,6 +239,17 @@ in
         Restart = "always";
       };
       wantedBy = [ "multi-user.target" ];
+    };
+
+    systemd.services.deploy-personal-website = {
+      description = "Deploy the verified personal website main branch";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = personalWebsiteDeploy;
+        TimeoutStartSec = "15min";
+      };
     };
 
     systemd.services.deploy-openpost = {
