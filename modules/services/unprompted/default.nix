@@ -74,6 +74,7 @@ let
     pkgs.git
     pkgs.gnugrep
     pkgs.nodejs_22
+    pkgs.openssh
     pkgs.pnpm
     pkgs.postgresql_16
     pkgs.systemd
@@ -86,6 +87,7 @@ let
     export HOME=/var/lib/unprompted
     export CI=true
     export NEXT_TELEMETRY_DISABLED=1
+    export GIT_SSH_COMMAND="ssh -i ${config.sops.secrets.unprompted_deploy_key.path} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/unprompted/github-known-hosts"
 
     if [ ! -f ${lib.escapeShellArg cfg.environmentFile} ]; then
       echo "Missing ${cfg.environmentFile}; copy /etc/unprompted/production.env.example and fill production values." >&2
@@ -135,7 +137,7 @@ in
 
     repository = lib.mkOption {
       type = lib.types.str;
-      default = "https://github.com/rodrgds/unprompted";
+      default = "git@github.com:rodrgds/unprompted.git";
       description = "Git repository cloned on the VPS for source builds.";
     };
 
@@ -172,6 +174,9 @@ in
 
   config = lib.mkIf cfg.enable {
     environment.etc."unprompted/production.env.example".text = envExample;
+    environment.etc."unprompted/github-known-hosts".text = ''
+      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+    '';
 
     systemd.tmpfiles.rules = [
       "d /var/lib/unprompted 0750 root root -"

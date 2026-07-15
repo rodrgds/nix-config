@@ -131,6 +131,8 @@ let
     "montra_meili_master_key"
     "montra_r2_access_key_id"
     "montra_r2_secret_access_key"
+    # Unprompted
+    "unprompted_deploy_key"
     # "openpost_mastodon_servers"
     # LiteLLM
     "litellm_master_key"
