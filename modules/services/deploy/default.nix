@@ -203,6 +203,7 @@ in
         ]
       '';
       mode = "0644";
+      restartUnits = [ "webhook-deploy.service" ];
     };
 
     environment.etc."scripts/redeploy.sh" = {
