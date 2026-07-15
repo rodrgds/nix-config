@@ -30,6 +30,7 @@
   core.networking.tailscale.acceptDns = false;
 
   apps.nix-tools.enable = true;
+  apps.typst.enable = true;
   environment.systemPackages = [ pkgs.git ];
 
   core.audio.enable = lib.mkForce false;
