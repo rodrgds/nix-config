@@ -125,10 +125,14 @@ let
     "montra_postgres_password"
     "montra_better_auth_secret"
     "montra_admin_emails"
+    "montra_google_client_id"
+    "montra_google_client_secret"
     "montra_openrouter_api_key"
     "montra_meili_master_key"
     "montra_r2_access_key_id"
     "montra_r2_secret_access_key"
+    # Unprompted
+    "unprompted_deploy_key"
     # "openpost_mastodon_servers"
     # LiteLLM
     "litellm_master_key"

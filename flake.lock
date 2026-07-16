@@ -269,22 +269,6 @@
         "type": "github"
       }
     },
-    "edu": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1770856303,
-        "narHash": "sha256-UDpteqwyGhYXa93TbxfOMyqX00kK9/hk1RPycER5awg=",
-        "owner": "rodrgds",
-        "repo": "edu",
-        "rev": "e7001eadfd46d45d328b8e6c5d8fa5223a08fef0",
-        "type": "github"
-      },
-      "original": {
-        "owner": "rodrgds",
-        "repo": "edu",
-        "type": "github"
-      }
-    },
     "fenix": {
       "inputs": {
         "nixpkgs": [
@@ -1003,22 +987,6 @@
         "type": "github"
       }
     },
-    "personal-website": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1782859577,
-        "narHash": "sha256-hRLewqpAGDDMt+OZF9r6iUXXcKV3vITVSAQwryiXopo=",
-        "owner": "rodrgds",
-        "repo": "personal-website",
-        "rev": "bc09a665c1f927091d56c0ca42ec425a125dc619",
-        "type": "github"
-      },
-      "original": {
-        "owner": "rodrgds",
-        "repo": "personal-website",
-        "type": "github"
-      }
-    },
     "plugin-loader-src": {
       "flake": false,
       "locked": {
@@ -1043,7 +1011,6 @@
         "angrr": "angrr",
         "devenv": "devenv",
         "disko": "disko",
-        "edu": "edu",
         "handy": "handy",
         "home-manager": "home-manager",
         "import-tree": "import-tree_2",
@@ -1055,7 +1022,6 @@
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-davinci": "nixpkgs-davinci",
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "personal-website": "personal-website",
         "sops-nix": "sops-nix",
         "steam-config-nix": "steam-config-nix",
         "vicinae-extensions": "vicinae-extensions"

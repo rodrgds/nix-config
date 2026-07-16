@@ -64,16 +64,6 @@
       url = "github:cachix/devenv";
     };
 
-    edu = {
-      url = "github:rodrgds/edu";
-      flake = false;
-    };
-
-    personal-website = {
-      url = "github:rodrgds/personal-website";
-      flake = false;
-    };
-
     handy = {
       url = "github:cjpais/Handy";
       #inputs.nixpkgs.follows = "nixpkgs";

@@ -119,9 +119,11 @@ in
       serviceConfig = {
         Type = "oneshot";
         ExecStart = pkgs.writeShellScript "umami-backup" ''
-          set -e
+          set -euo pipefail
           TIMESTAMP=$(${pkgs.coreutils}/bin/date +%Y%m%d_%H%M%S)
           BACKUP_DIR="/var/backup/umami"
+          UMAMI_DB_USER=$(${pkgs.coreutils}/bin/cat ${config.sops.templates.umami-db-user.path})
+          UMAMI_DB_NAME=$(${pkgs.coreutils}/bin/cat ${config.sops.templates.umami-db-name.path})
           ${pkgs.coreutils}/bin/mkdir -p "$BACKUP_DIR"
 
           # Dump database and pipe to gzip
@@ -133,10 +135,6 @@ in
 
           ${pkgs.coreutils}/bin/echo "Backup completed: $BACKUP_DIR/umami_$TIMESTAMP.sql.gz"
         '';
-        Environment = [
-          "UMAMI_DB_USER=${config.sops.placeholder.umami_db_user}"
-          "UMAMI_DB_NAME=${config.sops.placeholder.umami_db_name}"
-        ];
       };
     };
 
