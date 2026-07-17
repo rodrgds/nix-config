@@ -100,6 +100,7 @@ let
     # OpenPost
     "openpost_jwt_secret"
     "openpost_encryption_key"
+    "openpost_provider_apps"
     "openpost_postgres_password"
     "openpost_s3_endpoint"
     "openpost_s3_region"

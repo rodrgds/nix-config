@@ -31,6 +31,12 @@ let
       value = config.sops.placeholder.openpost_encryption_key;
     }
     {
+      name = "provider-apps";
+      env = "OPENPOST_PROVIDER_APPS_FILE";
+      target = "/run/secrets/openpost_provider_apps";
+      value = config.sops.placeholder.openpost_provider_apps;
+    }
+    {
       name = "x-client-id";
       env = "X_CLIENT_ID_FILE";
       target = "/run/secrets/openpost_twitter_client_id";
