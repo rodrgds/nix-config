@@ -286,8 +286,9 @@ in
             touch /var/lib/montra/bootstrap/.needs-search-index
           fi
           ${pkgs.podman}/bin/podman run --rm --network=podman --env-file=${config.sops.templates.montra-env.path} ${apiImage} bun run db:migrate
+          ${pkgs.podman}/bin/podman run --rm --network=podman --env-file=${config.sops.templates.montra-env.path} ${apiImage} bun run configure:search
           if [ -f /var/lib/montra/bootstrap/.needs-search-index ]; then
-            ${pkgs.podman}/bin/podman run --rm --network=podman --env-file=${config.sops.templates.montra-env.path} ${apiImage} bun run index:search
+            ${pkgs.podman}/bin/podman run --rm --network=podman --env-file=${config.sops.templates.montra-env.path} ${apiImage} bun run index:search:incremental
             rm -f /var/lib/montra/bootstrap/.needs-search-index
           fi
         '';
