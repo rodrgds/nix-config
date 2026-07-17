@@ -88,15 +88,16 @@ let
     for image in \
       ghcr.io/rodrgds/montra-postgres:latest \
       ghcr.io/rodrgds/montra-embedding:latest \
+      ghcr.io/rodrgds/montra-detector:latest \
       ghcr.io/rodrgds/montra-api:latest \
       ghcr.io/rodrgds/montra-web:latest; do
       podman pull "$image"
     done
 
-    systemctl stop podman-montra-web.service podman-montra-api.service podman-montra-worker.service
-    systemctl restart podman-montra-postgres.service podman-montra-embedding.service
+    systemctl stop podman-montra-web.service podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service
+    systemctl restart podman-montra-postgres.service podman-montra-embedding.service podman-montra-detector.service
     systemctl restart montra-initialize.service
-    systemctl start podman-montra-api.service podman-montra-worker.service
+    systemctl start podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service
 
     for attempt in $(seq 1 90); do
       if curl -fsS http://127.0.0.1:8788/health/ready >/dev/null; then
@@ -121,7 +122,7 @@ let
       sleep 2
     done
 
-    systemctl is-active --quiet podman-montra-api.service podman-montra-worker.service podman-montra-web.service
+    systemctl is-active --quiet podman-montra-detector.service podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service podman-montra-web.service
     curl -fsS https://montra.style/ >/dev/null
     ${pruneImages}
   '';
