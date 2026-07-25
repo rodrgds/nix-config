@@ -10,6 +10,81 @@ let
   cfg = config.core.downloads-cleanup;
   inherit (constants) isDarwin isLinux homeDir;
   retention = "${toString cfg.retentionDays}d";
+  logDir = "${homeDir}/Library/Logs/rgo-maintenance";
+
+  darwinCleanupScript = pkgs.writeShellApplication {
+    name = "rgo-cleanup-user-folders";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      mode="''${1:---dry-run}"
+      days=${toString cfg.retentionDays}
+      log_dir=${lib.escapeShellArg logDir}
+      log_file="$log_dir/downloads-cleanup.log"
+
+      mkdir -p "$log_dir"
+      exec >>"$log_file" 2>&1
+
+      log() {
+        printf '[%s] cleanup-user-folders: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*"
+      }
+
+      if [ "$mode" != "--apply" ] && [ "$mode" != "--dry-run" ]; then
+        log "invalid mode: $mode"
+        exit 2
+      fi
+
+      log "started mode=$mode retention_days=$days"
+
+      if result=$(/usr/bin/osascript - "$days" "$mode" <<'APPLESCRIPT'
+      on run argv
+        set retentionDays to (item 1 of argv) as integer
+        set cleanupMode to item 2 of argv
+        set cutoffDate to (current date) - (retentionDays * days)
+        set eligibleCount to 0
+        set movedCount to 0
+        set failedCount to 0
+
+        with timeout of 3600 seconds
+          tell application "Finder"
+            set downloadsFolder to path to downloads folder
+            set candidates to every item of folder downloadsFolder whose modification date is less than cutoffDate
+            set eligibleCount to count of candidates
+
+            if cleanupMode is "--apply" then
+              repeat with candidateItem in candidates
+                try
+                  delete candidateItem
+                  set movedCount to movedCount + 1
+                on error
+                  set failedCount to failedCount + 1
+                end try
+              end repeat
+            end if
+          end tell
+        end timeout
+
+        return "eligible=" & eligibleCount & " moved=" & movedCount & " failed=" & failedCount
+      end run
+      APPLESCRIPT
+      ); then
+        log "$result"
+      else
+        status=$?
+        log "Finder cleanup failed with status=$status"
+        exit "$status"
+      fi
+
+      case "$result" in
+        *"failed=0")
+          log "finished"
+          ;;
+        *)
+          log "finished with failed items"
+          exit 1
+          ;;
+      esac
+    '';
+  };
 in
 {
   options.core.downloads-cleanup = {
@@ -18,7 +93,7 @@ in
     retentionDays = lib.mkOption {
       type = lib.types.ints.positive;
       default = 30;
-      description = "Delete Downloads and Trash entries older than this many days.";
+      description = "Move Downloads entries older than this many days to Trash.";
     };
   };
 
@@ -28,38 +103,21 @@ in
         launchd.agents.cleanup-user-folders = {
           serviceConfig = {
             ProgramArguments = [
-              "/bin/sh"
-              "-lc"
-              ''
-                set -eu
-
-                downloads=${lib.escapeShellArg homeDir}/Downloads
-                trash=${lib.escapeShellArg homeDir}/.Trash
-                days=${toString cfg.retentionDays}
-
-                echo "[$(/bin/date '+%Y-%m-%dT%H:%M:%S%z')] cleanup-user-folders: deleting top-level Downloads and Trash entries older than $days days"
-
-                if [ -d "$downloads" ]; then
-                  /usr/bin/find "$downloads" -xdev -mindepth 1 -maxdepth 1 -mtime +"$days" -exec /bin/rm -rf -- {} +
-                fi
-
-                if [ -d "$trash" ]; then
-                  /usr/bin/find "$trash" -xdev -mindepth 1 -maxdepth 1 -mtime +"$days" -exec /bin/rm -rf -- {} +
-                fi
-              ''
+              "${darwinCleanupScript}/bin/rgo-cleanup-user-folders"
+              "--apply"
             ];
-            RunAtLoad = true;
             StartCalendarInterval = [
               {
                 Hour = 3;
                 Minute = 0;
               }
             ];
-            StartInterval = 86400;
             StandardOutPath = "/tmp/cleanup-user-folders.log";
             StandardErrorPath = "/tmp/cleanup-user-folders.err";
           };
         };
+
+        system.defaults.finder.FXRemoveOldTrashItems = true;
       })
 
       {

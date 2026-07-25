@@ -84,6 +84,10 @@
   vps.openpost = {
     enable = true;
     edition = "cloud";
+    extraEnvironment = {
+      OPENPOST_FEEDBACK_ENABLED = "true";
+      OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";
+    };
   };
   vps.montra.enable = true;
   vps.unprompted = {

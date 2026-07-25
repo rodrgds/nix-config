@@ -65,6 +65,12 @@ in
           VISUAL_INDEX_BACKEND=postgres
           VISUAL_EMBEDDING_URL=http://montra-embedding:8811/embed-image
           VISUAL_EMBEDDING_MODEL=openai/clip-vit-base-patch32
+          IMAGE_ITEM_DETECTOR=yolo-world
+          FASHION_DETECTOR_URL=http://montra-detector:8812/detect
+          FASHION_DETECTOR_MODEL=/app/models/yolov8s-worldv2.pt
+          FASHION_DETECTOR_REQUIRE_EXTERNAL=1
+          FASHION_DETECTOR_TIMEOUT_MS=8000
+          PINTEREST_IMPORT_MODE=off
           OBJECT_STORAGE_PROVIDER=r2
           OBJECT_STORAGE_ENDPOINT=https://1e84f0262ece6e76da6df50801960036.r2.cloudflarestorage.com
           OBJECT_STORAGE_REGION=auto
@@ -90,8 +96,10 @@ in
       before = [
         "podman-montra-postgres.service"
         "podman-montra-embedding.service"
+        "podman-montra-detector.service"
         "podman-montra-api.service"
         "podman-montra-worker.service"
+        "podman-montra-integration-worker.service"
         "podman-montra-web.service"
       ];
       wantedBy = [ "multi-user.target" ];
@@ -112,11 +120,19 @@ in
       after = [ "montra-registry-login.service" ];
       requires = [ "montra-registry-login.service" ];
     };
+    systemd.services.podman-montra-detector = {
+      after = [ "montra-registry-login.service" ];
+      requires = [ "montra-registry-login.service" ];
+    };
     systemd.services.podman-montra-api = {
       after = [ "montra-registry-login.service" ];
       requires = [ "montra-registry-login.service" ];
     };
     systemd.services.podman-montra-worker = {
+      after = [ "montra-registry-login.service" ];
+      requires = [ "montra-registry-login.service" ];
+    };
+    systemd.services.podman-montra-integration-worker = {
       after = [ "montra-registry-login.service" ];
       requires = [ "montra-registry-login.service" ];
     };
@@ -161,6 +177,17 @@ in
           "--memory=3g"
         ];
       };
+      montra-detector = {
+        image = "ghcr.io/rodrgds/montra-detector:latest";
+        extraOptions = [
+          "--network=podman"
+          "--pull=always"
+          "--health-cmd=python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8812/health/ready')\""
+          "--health-interval=30s"
+          "--health-retries=10"
+          "--memory=2g"
+        ];
+      };
       montra-api = {
         image = apiImage;
         environmentFiles = [ config.sops.templates.montra-env.path ];
@@ -169,6 +196,7 @@ in
           "montra-postgres"
           "montra-meilisearch"
           "montra-embedding"
+          "montra-detector"
         ];
         extraOptions = [
           "--network=podman"
@@ -191,11 +219,27 @@ in
           "montra-postgres"
           "montra-meilisearch"
           "montra-embedding"
+          "montra-detector"
         ];
         extraOptions = [
           "--network=podman"
           "--pull=always"
           "--memory=1g"
+        ];
+      };
+      montra-integration-worker = {
+        image = apiImage;
+        cmd = [
+          "bun"
+          "run"
+          "integration:worker"
+        ];
+        environmentFiles = [ config.sops.templates.montra-env.path ];
+        dependsOn = [ "montra-postgres" ];
+        extraOptions = [
+          "--network=podman"
+          "--pull=always"
+          "--memory=512m"
         ];
       };
       montra-web = {
@@ -215,15 +259,19 @@ in
       after = [
         "podman-montra-postgres.service"
         "podman-montra-meilisearch.service"
+        "podman-montra-detector.service"
         "montra-registry-login.service"
       ];
+      requires = [ "podman-montra-detector.service" ];
       before = [
         "podman-montra-api.service"
         "podman-montra-worker.service"
+        "podman-montra-integration-worker.service"
       ];
       requiredBy = [
         "podman-montra-api.service"
         "podman-montra-worker.service"
+        "podman-montra-integration-worker.service"
       ];
       serviceConfig = {
         Type = "oneshot";
@@ -232,13 +280,15 @@ in
         ExecStart = pkgs.writeShellScript "montra-initialize" ''
           set -euo pipefail
           until ${pkgs.podman}/bin/podman exec montra-postgres pg_isready -U ${postgresUser} -d ${postgresDatabase}; do sleep 2; done
+          until ${pkgs.podman}/bin/podman exec montra-detector python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8812/health/ready')"; do sleep 2; done
           if [ -f /var/lib/montra/bootstrap/montra.dump ] && ! ${pkgs.podman}/bin/podman exec montra-postgres psql -U ${postgresUser} -d ${postgresDatabase} -Atqc "select to_regclass('public.product') is not null" | ${pkgs.gnugrep}/bin/grep -qx t; then
             ${pkgs.podman}/bin/podman exec -i montra-postgres pg_restore -U ${postgresUser} -d ${postgresDatabase} --no-owner --no-acl < /var/lib/montra/bootstrap/montra.dump
             touch /var/lib/montra/bootstrap/.needs-search-index
           fi
           ${pkgs.podman}/bin/podman run --rm --network=podman --env-file=${config.sops.templates.montra-env.path} ${apiImage} bun run db:migrate
+          ${pkgs.podman}/bin/podman run --rm --network=podman --env-file=${config.sops.templates.montra-env.path} ${apiImage} bun run configure:search
           if [ -f /var/lib/montra/bootstrap/.needs-search-index ]; then
-            ${pkgs.podman}/bin/podman run --rm --network=podman --env-file=${config.sops.templates.montra-env.path} ${apiImage} bun run index:search
+            ${pkgs.podman}/bin/podman run --rm --network=podman --env-file=${config.sops.templates.montra-env.path} ${apiImage} bun run index:search:incremental
             rm -f /var/lib/montra/bootstrap/.needs-search-index
           fi
         '';

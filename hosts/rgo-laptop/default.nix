@@ -92,4 +92,8 @@
   core.docker.enable = true;
   core.downloads-cleanup.enable = true;
   core.cache-cleanup.enable = true;
+  core.cache-cleanup.pnpm.projectRoots = [
+    "/Users/rgo"
+    "/Users/rgo/dev/openpost"
+  ];
 }

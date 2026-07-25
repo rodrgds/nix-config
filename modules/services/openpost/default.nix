@@ -31,6 +31,18 @@ let
       value = config.sops.placeholder.openpost_encryption_key;
     }
     {
+      name = "provider-apps";
+      env = "OPENPOST_PROVIDER_APPS_FILE";
+      target = "/run/secrets/openpost_provider_apps";
+      value = config.sops.placeholder.openpost_provider_apps;
+    }
+    {
+      name = "feedback-webhook";
+      env = "OPENPOST_FEEDBACK_DESTINATION_URL_FILE";
+      target = "/run/secrets/openpost_feedback_webhook";
+      value = config.sops.placeholder.openpost_feedback_webhook;
+    }
+    {
       name = "x-client-id";
       env = "X_CLIENT_ID_FILE";
       target = "/run/secrets/openpost_twitter_client_id";
@@ -296,6 +308,18 @@ in
             OPENPOST_S3_ACCESS_KEY_ID=${config.sops.placeholder.openpost_s3_access_key_id}
             OPENPOST_S3_SECRET_ACCESS_KEY=${config.sops.placeholder.openpost_s3_secret_access_key}
             OPENPOST_S3_PUBLIC_BASE_URL=${config.sops.placeholder.openpost_s3_public_base_url}
+            OPENPOST_LEGAL_ACCEPTANCE_REQUIRED=true
+            OPENPOST_TERMS_URL=https://openpost.social/terms
+            OPENPOST_PRIVACY_URL=https://openpost.social/privacy
+            OPENPOST_TERMS_VERSION=2026-07-22
+            OPENPOST_PRIVACY_VERSION=2026-07-22
+            OPENPOST_SUPPORT_EMAIL=openpost@rgo.pt
+            OPENPOST_SMTP_HOST=smtp.eu.mailgun.org
+            OPENPOST_SMTP_PORT=465
+            OPENPOST_SMTP_USERNAME=${config.sops.placeholder.ghost_mailgun_user}
+            OPENPOST_SMTP_PASSWORD=${config.sops.placeholder.ghost_mailgun_password}
+            OPENPOST_SMTP_FROM=openpost@rgo.pt
+            OPENPOST_SMTP_TLS_MODE=tls
             OPENPOST_POLAR_ACCESS_TOKEN=${config.sops.placeholder.openpost_polar_access_token}
             OPENPOST_POLAR_WEBHOOK_SECRET=${config.sops.placeholder.openpost_polar_webhook_secret}
             OPENPOST_POLAR_CHECKOUT_SUCCESS_URL=https://${cfg.domain}/settings?tab=billing&checkout_id={CHECKOUT_ID}
@@ -307,6 +331,18 @@ in
             OPENPOST_POLAR_AGENCY_PRODUCT_ID=${config.sops.placeholder.openpost_polar_agency_product_id}
           '';
           mode = "0444";
+        };
+        "openpost-backup-env" = {
+          content = ''
+            RCLONE_CONFIG_OPENPOST_TYPE=s3
+            RCLONE_CONFIG_OPENPOST_PROVIDER=Other
+            RCLONE_CONFIG_OPENPOST_ENDPOINT=${config.sops.placeholder.openpost_s3_endpoint}
+            RCLONE_CONFIG_OPENPOST_REGION=${config.sops.placeholder.openpost_s3_region}
+            RCLONE_CONFIG_OPENPOST_ACCESS_KEY_ID=${config.sops.placeholder.openpost_s3_access_key_id}
+            RCLONE_CONFIG_OPENPOST_SECRET_ACCESS_KEY=${config.sops.placeholder.openpost_s3_secret_access_key}
+            OPENPOST_BACKUP_S3_BUCKET=${config.sops.placeholder.openpost_s3_bucket}
+          '';
+          mode = "0400";
         };
       };
 
@@ -334,6 +370,137 @@ in
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "daily";
+        Persistent = true;
+      };
+    };
+
+    systemd.services.openpost-media-backup = lib.mkIf isCloud {
+      description = "Backup OpenPost S3 media with retained changed and deleted objects";
+      serviceConfig = {
+        Type = "oneshot";
+        EnvironmentFile = config.sops.templates."openpost-backup-env".path;
+        ExecStart = pkgs.writeShellScript "openpost-media-backup" ''
+          set -euo pipefail
+          timestamp=$(${pkgs.coreutils}/bin/date -u +%Y%m%d_%H%M%S)
+          backup_root=/var/backup/openpost
+          media_current="$backup_root/media-current"
+          media_versions="$backup_root/media-versions/$timestamp"
+          ${pkgs.coreutils}/bin/mkdir -p "$media_current" "$media_versions"
+
+          ${pkgs.rclone}/bin/rclone sync \
+            "openpost:$OPENPOST_BACKUP_S3_BUCKET" \
+            "$media_current" \
+            --backup-dir "$media_versions" \
+            --fast-list \
+            --checkers 8 \
+            --transfers 4
+
+          ${pkgs.rclone}/bin/rclone check \
+            "openpost:$OPENPOST_BACKUP_S3_BUCKET" \
+            "$media_current" \
+            --one-way \
+            --size-only
+
+          ${pkgs.findutils}/bin/find "$backup_root/media-versions" \
+            -mindepth 1 -maxdepth 1 -type d -mtime +14 \
+            -exec ${pkgs.coreutils}/bin/rm -rf -- {} +
+        '';
+      };
+    };
+
+    systemd.timers.openpost-media-backup = lib.mkIf isCloud {
+      description = "Daily OpenPost media backup";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+      };
+    };
+
+    systemd.services.openpost-restore-drill = lib.mkIf isCloud {
+      description = "Restore and validate the latest OpenPost backup";
+      after = [ "podman-openpost-postgres.service" ];
+      requires = [ "podman-openpost-postgres.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "openpost-restore-drill" ''
+          set -euo pipefail
+          backup_root=/var/backup/openpost
+          latest_backup=$(${pkgs.findutils}/bin/find "$backup_root" -maxdepth 1 -type f -name 'openpost_*.sql.gz' -printf '%T@ %p\n' | ${pkgs.coreutils}/bin/sort -nr | ${pkgs.gawk}/bin/awk 'NR == 1 { print $2 }')
+          if [ -z "$latest_backup" ]; then
+            echo "No OpenPost database backup found" >&2
+            exit 1
+          fi
+
+          ${pkgs.gzip}/bin/gzip -t "$latest_backup"
+          restore_database="openpost_restore_drill_$(${pkgs.coreutils}/bin/date -u +%Y%m%d_%H%M%S)"
+          database_created=false
+          cleanup() {
+            if [ "$database_created" = true ]; then
+              ${pkgs.podman}/bin/podman exec openpost-postgres dropdb \
+                --if-exists -U ${openpostPostgresUser} "$restore_database" >/dev/null
+            fi
+          }
+          trap cleanup EXIT
+
+          ${pkgs.podman}/bin/podman exec openpost-postgres createdb \
+            -U ${openpostPostgresUser} "$restore_database"
+          database_created=true
+          ${pkgs.gzip}/bin/gzip -dc "$latest_backup" | ${pkgs.podman}/bin/podman exec -i \
+            openpost-postgres psql -v ON_ERROR_STOP=1 \
+            -U ${openpostPostgresUser} -d "$restore_database" >/dev/null
+
+          table_count=$(${pkgs.podman}/bin/podman exec openpost-postgres psql -Atqc \
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'" \
+            -U ${openpostPostgresUser} -d "$restore_database")
+          user_count=$(${pkgs.podman}/bin/podman exec openpost-postgres psql -Atqc \
+            "SELECT count(*) FROM users" -U ${openpostPostgresUser} -d "$restore_database")
+          workspace_count=$(${pkgs.podman}/bin/podman exec openpost-postgres psql -Atqc \
+            "SELECT count(*) FROM workspaces" -U ${openpostPostgresUser} -d "$restore_database")
+          post_count=$(${pkgs.podman}/bin/podman exec openpost-postgres psql -Atqc \
+            "SELECT count(*) FROM posts" -U ${openpostPostgresUser} -d "$restore_database")
+          database_media_count=$(${pkgs.podman}/bin/podman exec openpost-postgres psql -Atqc \
+            "SELECT count(*) FROM media_attachments" -U ${openpostPostgresUser} -d "$restore_database")
+          media_file_count=$(${pkgs.findutils}/bin/find "$backup_root/media-current" -type f | ${pkgs.coreutils}/bin/wc -l)
+
+          if [ "$table_count" -lt 10 ]; then
+            echo "Restore has too few public tables: $table_count" >&2
+            exit 1
+          fi
+          if [ "$database_media_count" -gt 0 ] && [ "$media_file_count" -eq 0 ]; then
+            echo "Restore contains media records but the media snapshot is empty" >&2
+            exit 1
+          fi
+
+          checked_at=$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)
+          backup_name=$(${pkgs.coreutils}/bin/basename "$latest_backup")
+          backup_size=$(${pkgs.coreutils}/bin/wc -c < "$latest_backup")
+          evidence_tmp=$(${pkgs.coreutils}/bin/mktemp "$backup_root/restore-drill-latest.json.XXXXXX")
+          {
+            printf '{\n'
+            printf '  "status": "passed",\n'
+            printf '  "checked_at": "%s",\n' "$checked_at"
+            printf '  "backup": "%s",\n' "$backup_name"
+            printf '  "backup_bytes": %s,\n' "$backup_size"
+            printf '  "public_tables": %s,\n' "$table_count"
+            printf '  "users": %s,\n' "$user_count"
+            printf '  "workspaces": %s,\n' "$workspace_count"
+            printf '  "posts": %s,\n' "$post_count"
+            printf '  "database_media": %s,\n' "$database_media_count"
+            printf '  "media_files": %s\n' "$media_file_count"
+            printf '}\n'
+          } > "$evidence_tmp"
+          ${pkgs.coreutils}/bin/chmod 0640 "$evidence_tmp"
+          ${pkgs.coreutils}/bin/mv "$evidence_tmp" "$backup_root/restore-drill-latest.json"
+        '';
+      };
+    };
+
+    systemd.timers.openpost-restore-drill = lib.mkIf isCloud {
+      description = "Weekly OpenPost restore drill";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "Sun 04:00";
         Persistent = true;
       };
     };
