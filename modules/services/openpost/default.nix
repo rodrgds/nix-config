@@ -37,6 +37,12 @@ let
       value = config.sops.placeholder.openpost_provider_apps;
     }
     {
+      name = "feedback-webhook";
+      env = "OPENPOST_FEEDBACK_DESTINATION_URL_FILE";
+      target = "/run/secrets/openpost_feedback_webhook";
+      value = config.sops.placeholder.openpost_feedback_webhook;
+    }
+    {
       name = "x-client-id";
       env = "X_CLIENT_ID_FILE";
       target = "/run/secrets/openpost_twitter_client_id";
