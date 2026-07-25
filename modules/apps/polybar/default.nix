@@ -179,22 +179,10 @@ in
           tray-spacing = 4
 
           [module/power]
-          type = custom/menu
-          label-open = ⏻ 
-          label-open-foreground = ''${colors.fg}
-          label-close = ✕ 
-          label-close-foreground = ''${colors.fg-alt}
-          label-separator = |
-          menu-0-0 = Lock
-          menu-0-0-exec = i3lock
-          menu-0-1 = Logout
-          menu-0-1-exec = i3-msg exit
-          menu-0-2 = Suspend
-          menu-0-2-exec = systemctl suspend
-          menu-0-3 = Reboot
-          menu-0-3-exec = systemctl reboot
-          menu-0-4 = Shutdown
-          menu-0-4-exec = systemctl poweroff
+          type = custom/text
+          format = ⏻
+          format-foreground = ''${colors.fg}
+          click-left = vicinae 'vicinae://launch/power'
         '';
 
         ".config/polybar/launch.sh".text = ''
