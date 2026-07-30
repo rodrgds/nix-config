@@ -87,6 +87,7 @@
     extraEnvironment = {
       OPENPOST_FEEDBACK_ENABLED = "true";
       OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";
+      OPENPOST_VIDEO_STUDIO_ENABLED = "true";
     };
   };
   vps.montra.enable = true;
