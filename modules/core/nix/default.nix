@@ -72,13 +72,15 @@ in
           })
           (lib.optionalAttrs isDarwin {
             home.activation.setupNixSecretConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-              mkdir -p "${homeDir}/.config/nix"
-              if [ -f "${config.sops.secrets.github_pat.path}" ]; then
-                cat > "${homeDir}/.config/nix/nix.conf" << EOF
+                            conf_dir="${homeDir}/.config/nix"
+                            mkdir -p "$conf_dir"
+                            rm -f "$conf_dir/nix.conf"
+                            if [ -f "${config.sops.secrets.github_pat.path}" ]; then
+                              install -m 600 /dev/null "$conf_dir/nix.conf"
+                              cat > "$conf_dir/nix.conf" <<EOF
               access-tokens = github.com=$(cat ${config.sops.secrets.github_pat.path})
               EOF
-                chmod 600 "${homeDir}/.config/nix/nix.conf"
-              fi
+                            fi
             '';
           })
         ];

@@ -88,7 +88,8 @@
   apps.golang.enable = true;
   apps.vscode.enable = true;
   apps.zed.enable = true;
-  apps.antigravity.enable = true;
+  apps.cursor.enable = false;
+  apps.antigravity.enable = false;
   apps.arduino.enable = true;
   apps.nodejs.enable = true;
   apps.pnpm.enable = true;
@@ -101,7 +102,7 @@
   apps.stripe-cli.enable = true;
   apps.dbeaver.enable = true;
   apps.laravel.enable = true;
-  apps.affinity.enable = true;
+  apps.affinity.enable = false;
 
   apps.i3.enable = true;
   # apps.bumblebee-status.enable = true;

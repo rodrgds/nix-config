@@ -50,7 +50,8 @@
   apps.m-cli.enable = true;
   apps.qbittorrent.enable = true;
   apps.vscode.enable = true;
-  apps.antigravity.enable = true;
+  apps.cursor.enable = false;
+  apps.antigravity.enable = false;
   apps.clion.enable = false;
   apps.virtualization.enable = true;
   apps.opencode.enable = true;
@@ -62,7 +63,7 @@
   apps.cap.enable = true;
   apps.android-studio.enable = true;
   apps.android-sdk.enable = true;
-  apps.affinity.enable = true;
+  apps.affinity.enable = false;
   apps.zed.enable = true;
 
   apps.telegram.enable = true;

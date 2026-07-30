@@ -31,9 +31,18 @@ in
       # Note: homebrew/cask, homebrew/cask-versions, and homebrew/services
       # are deprecated - casks and services are now built into Homebrew core
       taps = [
-        "nikitabobko/tap" # For Aerospace
-        "FelixKratz/formulae" # For JankyBorders
-        "gromgit/fuse" # For sshfs-mac
+        {
+          name = "nikitabobko/tap";
+          trusted = true;
+        } # For Aerospace
+        {
+          name = "FelixKratz/formulae";
+          trusted = true;
+        } # For JankyBorders
+        {
+          name = "gromgit/fuse";
+          trusted = true;
+        } # For sshfs-mac
       ];
 
       # Brews (CLI tools installed via Homebrew)

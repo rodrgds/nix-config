@@ -14,6 +14,7 @@ let
   packageName = "opencode-ai";
   updateScript = pkgs.writeShellScript "update-opencode-cli" ''
     set -eu
+    export PATH="${pkgs.nodejs}/bin:$PATH"
     install_root="$HOME/${installDir}"
     mkdir -p "$install_root"
     exec ${pkgs.nodejs}/bin/npm install --global --force --prefix "$install_root" ${packageName}
