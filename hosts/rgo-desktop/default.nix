@@ -3,10 +3,12 @@
   pkgs,
   username,
   lib,
+  inputs,
   ...
 }:
 {
   imports = [
+    inputs.vicinae.nixosModules.default
     ./hardware-configuration.nix
     ./hardware.nix
     ./networking.nix
@@ -18,6 +20,33 @@
   core.locale.enable = true;
   core.security.enable = true;
   core.system.enable = true;
+  # Updating a pinned local flake requires an intentional lock-file change.
+  # The generic root-run auto-upgrade service cannot do that and also rejects
+  # this user-owned Git checkout, so keep upgrades in the rebuild workflow.
+  system.autoUpgrade.enable = lib.mkForce false;
+
+  # Give systemd-oomd real reclaim headroom without consuming SSD space.
+  zramSwap = {
+    enable = true;
+    memoryPercent = 25;
+    priority = 100;
+  };
+
+  # Four GiB of historical journals is excessive on the 457 GiB root volume.
+  services.journald.extraConfig = ''
+    SystemMaxUse=1G
+    SystemKeepFree=10G
+    MaxRetentionSec=14day
+  '';
+
+  # The root NVMe has historical media/data-integrity errors and is beyond its
+  # published TBW rating. Monitor both local drives so any further degradation
+  # is recorded and surfaced in the desktop session.
+  services.smartd = {
+    enable = true;
+    notifications.wall.enable = false;
+    notifications.x11.enable = true;
+  };
   core.audio.enable = true;
   core.fonts.enable = true;
   core.networking.enable = true;
@@ -31,7 +60,12 @@
   core.docker.enable = true;
   apps.virtualization.enable = true;
   core.downloads-cleanup.enable = true;
-  core.cache-cleanup.enable = true;
+  core.cache-cleanup = {
+    enable = true;
+    goBuildCache.extraDirectories = [
+      "/home/${username}/dev/openpost/.devenv/state/go-build"
+    ];
+  };
 
   scripts.enable = true;
   secrets.enable = true;
@@ -98,7 +132,6 @@
   apps.gamemode.enable = true;
   apps.cs2.enable = true;
   apps.prismlauncher.enable = true;
-  apps.lunarclient.enable = true;
   apps.wine.enable = true;
   apps.winetricks.enable = true;
   apps.mangohud.enable = true;
@@ -132,6 +165,7 @@
   apps.pi.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;
+  apps.t3-code.enable = true;
 
   apps.handy.enable = true;
 

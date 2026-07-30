@@ -22,7 +22,10 @@ in
       programs.zsh = {
         enable = true;
         enableCompletion = true;
-        completionInit = "autoload -U compinit && compinit -C";
+        completionInit = ''
+          fpath+=("${pkgs.zsh-completions}/share/zsh/site-functions")
+          autoload -U compinit && compinit -C
+        '';
         autosuggestion.enable = true;
         syntaxHighlighting.enable = true;
 
@@ -45,11 +48,6 @@ in
         initContent = lib.mkBefore ''
           export LS_COLORS="di=1;36;40:ln=1;35;40:so=1;32;40:pi=1;33;40:ex=1;31;40:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=30;42:ow=34;43"
           ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=${colors.fg2}"
-          if command -v fzf &> /dev/null; then
-            source ${pkgs.fzf}/share/fzf/key-bindings.zsh
-            source ${pkgs.fzf}/share/fzf/completion.zsh
-          fi
-
           autoload -U up-line-or-beginning-search
           autoload -U down-line-or-beginning-search
           zle -N up-line-or-beginning-search
@@ -99,26 +97,9 @@ in
           LC_ALL = "en_US.UTF-8";
         };
 
-        # Plugins
-        plugins = [
-          {
-            name = "zsh-autosuggestions";
-            src = pkgs.zsh-autosuggestions;
-            file = "share/zsh-autosuggestions/zsh-autosuggestions.zsh";
-          }
-          {
-            name = "zsh-syntax-highlighting";
-            src = pkgs.zsh-syntax-highlighting;
-            file = "share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh";
-          }
-          {
-            name = "zsh-completions";
-            src = pkgs.zsh-completions;
-            file = "share/zsh/site-functions";
-          }
-        ];
-
-        envExtra = lib.optionalString isDarwin ''
+        # Keep Homebrew setup out of .zshenv so non-interactive zsh commands do
+        # not spawn Homebrew just to initialize their environment.
+        profileExtra = lib.optionalString isDarwin ''
           if [ -d /opt/homebrew/bin ]; then
             export PATH="/opt/homebrew/bin:$PATH"
           fi
@@ -131,8 +112,14 @@ in
         '';
       };
 
-      programs.fzf.enableZshIntegration = true;
-      programs.zoxide.enableZshIntegration = true;
+      programs.fzf = {
+        enable = true;
+        enableZshIntegration = true;
+      };
+      programs.zoxide = {
+        enable = true;
+        enableZshIntegration = true;
+      };
       programs.direnv.enableZshIntegration = true;
     };
   };

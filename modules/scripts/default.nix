@@ -106,9 +106,6 @@ in
   config = lib.mkIf cfg.enable (
     # Use optionalAttrs to only include Linux-specific options on Linux
     lib.optionalAttrs isLinux {
-      environment.sessionVariables = {
-        PATH = lib.mkForce "${homeDir}/.config/home/scripts:$PATH";
-      };
       environment.shellAliases = linuxAliases;
     }
     # Merge with Darwin-specific configuration

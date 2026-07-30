@@ -30,8 +30,11 @@ in
     home-manager.users.${username} = _: {
       programs.neovim = {
         enable = true;
+        # Preserve the pre-26.05 provider behavior explicitly.
+        withPython3 = true;
+        withRuby = true;
         plugins = [ flexoki-neovim ];
-        extraLuaConfig = ''
+        initLua = ''
           vim.cmd('colorscheme flexoki-dark')
         '';
       };

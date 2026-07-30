@@ -131,15 +131,25 @@ let
   mkActivation = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (
       name: entry:
-      lib.optionalString (entry.mode == "frozen") ''
-        if [ ! -e ${mkRoot entry} ] && [ -x /run/current-system/sw/bin/${entry.command} ]; then
-          resolved="$(${pkgs.coreutils}/bin/readlink -f /run/current-system/sw/bin/${entry.command})"
-          store_entry="''${resolved#/nix/store/}"
-          store_path="/nix/store/''${store_entry%%/*}"
-          mkdir -p /nix/var/nix/gcroots
-          ${pkgs.nix}/bin/nix-store --add-root ${mkRoot entry} --indirect --realise "$store_path" || true
-        fi
-      ''
+      if entry.mode == "frozen" then
+        ''
+          if [ ! -e ${mkRoot entry} ] && [ -x /run/current-system/sw/bin/${entry.command} ]; then
+            resolved="$(${pkgs.coreutils}/bin/readlink -f /run/current-system/sw/bin/${entry.command})"
+            store_entry="''${resolved#/nix/store/}"
+            store_path="/nix/store/''${store_entry%%/*}"
+            mkdir -p /nix/var/nix/gcroots
+            ${pkgs.nix}/bin/nix-store --add-root ${mkRoot entry} --indirect --realise "$store_path" || true
+          fi
+        ''
+      else
+        ''
+          # A managed package is already protected by the system closure. An
+          # older frozen root would only pin a duplicate package indefinitely.
+          if [ -e ${mkRoot entry} ] || [ -L ${mkRoot entry} ]; then
+            echo "Removing obsolete managed-package GC root: ${mkRoot entry}"
+            rm -f ${mkRoot entry}
+          fi
+        ''
     ) enabledEntries
   );
 in

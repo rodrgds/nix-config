@@ -19,8 +19,11 @@ in
 
   config = lib.mkIf cfg.enable {
     networking.useDHCP = false;
-    networking.networkmanager.enable = true;
-    networking.dhcpcd.extraConfig = "nohook resolv.conf";
+    networking.dhcpcd.enable = false;
+    networking.networkmanager = {
+      enable = true;
+      dns = "systemd-resolved";
+    };
 
     services.resolved = {
       enable = true;

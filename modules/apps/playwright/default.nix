@@ -20,11 +20,13 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && isLinux) {
-    environment.systemPackages = [ cfg.browserPackage ];
-    environment.sessionVariables = {
-      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${cfg.browserPackage}/bin/chromium";
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
-    };
-  };
+  config = lib.mkIf cfg.enable (
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ cfg.browserPackage ];
+      environment.sessionVariables = {
+        PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${cfg.browserPackage}/bin/chromium";
+        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+      };
+    }
+  );
 }

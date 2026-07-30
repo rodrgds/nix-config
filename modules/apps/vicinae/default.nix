@@ -10,6 +10,7 @@
 let
   cfg = config.apps.vicinae;
   inherit (constants) isLinux;
+  vicinaePackage = inputs.vicinae.packages.${pkgs.stdenv.hostPlatform.system}.default;
 in
 {
   options.apps.vicinae = {
@@ -23,34 +24,50 @@ in
           substituters = [ "https://vicinae.cachix.org" ];
           trusted-public-keys = [ "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc=" ];
         };
+
+        programs.vicinae.input-server.package = vicinaePackage;
       })
 
       {
         home-manager.users.${username} = _: {
           programs.vicinae = lib.mkIf isLinux {
             enable = true;
-            package = pkgs.vicinae;
+            package = vicinaePackage;
 
             systemd = {
               enable = true;
               autoStart = true;
             };
 
-            useLayerShell = true;
-
             settings = {
-              closeOnFocusLoss = true;
-              considerPreedit = true;
-              popToRootOnClose = true;
-              rootSearch.searchFiles = true;
-              window.opacity = constants.display.opacity;
-              font = {
-                normal = constants.fonts.ui;
+              close_on_focus_loss = true;
+              consider_preedit = true;
+              favorites = [
+                "@ShyAssassin/vicinae-extension-vscode-recents-0:open-recents"
+                "clipboard:history"
+                "@nikbpetrov/vicinae-extension-it-tools-0:it-tools-command"
+                "@LuggaPugga/vicinae-extension-port-killer-0:port-killer"
+                "@marcjulian/store.raycast.obsidian:dailyNoteCommand"
+              ];
+              pop_to_root_on_close = true;
+              search_files_in_root = true;
+              launcher_window = {
+                layer_shell.enabled = false;
+                opacity = constants.display.opacity;
+              };
+              font.normal = {
+                family = constants.fonts.ui;
                 size = constants.fonts.sizes.large;
               };
               theme = {
-                name = "flexoki-custom";
-                iconTheme = "Papirus";
+                light = {
+                  name = "flexoki-custom";
+                  icon_theme = "Papirus";
+                };
+                dark = {
+                  name = "flexoki-custom";
+                  icon_theme = "Papirus";
+                };
               };
             };
 
@@ -113,7 +130,7 @@ in
             Unit.After = [ "graphical-session.target" ];
             Service = {
               Environment = [
-                "PATH=/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin"
+                "PATH=${vicinaePackage}/libexec/vicinae:/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin"
                 "XDG_DATA_DIRS=/run/current-system/sw/share:/var/lib/flatpak/exports/share:/home/${username}/.local/share/flatpak/exports/share:/home/${username}/.local/share"
               ];
               KillMode = lib.mkForce "control-group";

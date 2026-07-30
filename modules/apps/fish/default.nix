@@ -1,9 +1,7 @@
 {
   lib,
   config,
-  pkgs,
   username,
-  system,
   constants,
   ...
 }:
@@ -22,17 +20,14 @@ in
     home-manager.users.${username} = {
       programs.fish = {
         enable = true;
-        plugins = [
-          {
-            name = "fzf";
-            src = pkgs.fishPlugins.fzf;
-          }
-        ];
 
         shellInit = ''
           set -g fish_greeting ""
-        ''
-        + lib.optionalString isDarwin ''
+        '';
+
+        # Homebrew is only needed for login setup; running it for every Fish
+        # process makes interactive and scripted shells unnecessarily slow.
+        loginShellInit = lib.optionalString isDarwin ''
           if test -d /opt/homebrew/bin
             set -gx PATH /opt/homebrew/bin $PATH
           end
@@ -43,6 +38,15 @@ in
             eval (/opt/homebrew/bin/brew shellenv)
           end
         '';
+      };
+
+      programs.fzf = {
+        enable = true;
+        enableFishIntegration = true;
+      };
+      programs.zoxide = {
+        enable = true;
+        enableFishIntegration = true;
       };
     };
   };

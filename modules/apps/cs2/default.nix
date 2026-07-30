@@ -71,7 +71,7 @@ in
 
       programs.steam.config = lib.mkIf isLinux {
         enable = true;
-        closeSteam = true;
+        onSteamRunning = "close";
         apps.cs2-stretched = {
           id = 730;
           launchOptions = {
@@ -85,14 +85,6 @@ in
               "%command%"
               "-novid"
               "-nojoy"
-              "+fps_max"
-              "0"
-              # "+mat_queue_mode"
-              # "2"
-              # "+cl_forcepreload"
-              # "1"
-              "+fps_max_menu"
-              "60"
               "-fullscreen"
               "-h"
               "960"

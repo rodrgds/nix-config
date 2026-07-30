@@ -68,7 +68,6 @@ in
                 icon_position = "left";
                 min_icon_size = 32;
                 max_icon_size = 64;
-                icon_path = "/usr/share/icons/Papirus/32x32/status/:/usr/share/icons/Papirus/32x32/devices/";
                 sticky_history = "yes";
                 history_length = 20;
                 browser = "${pkgs.xdg-utils}/bin/xdg-open";

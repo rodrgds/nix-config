@@ -8,6 +8,7 @@
 }:
 let
   cfg = config.apps.polybar;
+  workspaces = (import ../i3/_helpers/workspaces.nix).names;
 in
 {
   options.apps.polybar = {
@@ -68,21 +69,30 @@ in
           enable-click = true
           enable-scroll = false
           wrapping-scroll = true
+          fuzzy-match = true
+          ws-icon-0 = ${workspaces.terminal};:%{T4}%{T-}
+          ws-icon-1 = ${workspaces.web};:%{T4}%{T-}
+          ws-icon-2 = ${workspaces.files};:%{T4}%{T-}
+          ws-icon-3 = ${workspaces.personal};:%{T4}%{T-}
+          ws-icon-4 = ${workspaces.chat};:%{T4}%{T-}
+          ws-icon-5 = ${workspaces.gaming};:%{T4}%{T-}
+          ws-icon-6 = ${workspaces.music};:%{T4}%{T-}
+          ws-icon-default =
           label-mode-padding = 4
           label-mode-foreground = ''${colors.bg}
           label-mode-background = ''${colors.warning}
-          label-focused = %name%
+          label-focused = %index%%icon%%{O2}
           label-focused-foreground = ''${colors.bg}
           label-focused-background = ''${colors.accent}
           label-focused-padding = 1
-          label-unfocused = %name% 
+          label-unfocused = %index%%icon%%{O2}
           label-unfocused-foreground = ''${colors.fg-alt}
           label-unfocused-padding = 1
-          label-visible = %name% 
+          label-visible = %index%%icon%%{O2}
           label-visible-foreground = ''${colors.fg}
           label-visible-underline = ''${colors.fg-alt}
           label-visible-padding = 1
-          label-urgent = %name% 
+          label-urgent = %index%%icon%%{O2}
           label-urgent-foreground = ''${colors.bg}
           label-urgent-background = ''${colors.urgent}
           label-urgent-padding = 1

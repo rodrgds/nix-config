@@ -11,10 +11,6 @@ affinityOverlay
     config.allowUnfree = true;
   };
 
-  # Home Manager's xresources module expects pkgs.xrdb, but on the stable set
-  # the binary is namespaced under xorg.
-  inherit (prev.xorg) xrdb;
-
   stable = import inputs.nixpkgs {
     inherit (prev.stdenv.hostPlatform) system;
     config.allowUnfree = true;

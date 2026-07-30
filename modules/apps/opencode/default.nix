@@ -12,6 +12,12 @@ let
   installDir = ".local/share/npm-global";
   installRoot = "${constants.homeDir}/${installDir}";
   packageName = "opencode-ai";
+  updateScript = pkgs.writeShellScript "update-opencode-cli" ''
+    set -eu
+    install_root="$HOME/${installDir}"
+    mkdir -p "$install_root"
+    exec ${pkgs.nodejs}/bin/npm install --global --force --prefix "$install_root" ${packageName}
+  '';
   opencodeSkills = lib.mapAttrs' (
     name: _:
     lib.nameValuePair "opencode/skills/${lib.removeSuffix ".md" name}/SKILL.md" {
@@ -140,13 +146,39 @@ in
                 };
               };
 
-              home.activation.installOpencodeCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-                export PATH="${pkgs.nodejs}/bin:$PATH"
-                INSTALL_ROOT="$HOME/${installDir}"
+              home.activation.installOpencodeCli = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+                if isLinux then
+                  ''
+                    if [ ! -x "$HOME/${installDir}/bin/opencode" ]; then
+                      ${updateScript}
+                    fi
+                  ''
+                else
+                  ''
+                    ${updateScript}
+                  ''
+              );
 
-                mkdir -p "$INSTALL_ROOT"
-                ${pkgs.nodejs}/bin/npm install --global --force --prefix "$INSTALL_ROOT" ${packageName}
-              '';
+              systemd.user.services.update-opencode-cli = {
+                Unit.Description = "Update OpenCode from npm";
+                Service = {
+                  Type = "oneshot";
+                  ExecStart = updateScript;
+                  Nice = 10;
+                  IOSchedulingClass = "idle";
+                };
+              };
+
+              systemd.user.timers.update-opencode-cli = {
+                Unit.Description = "Periodically update OpenCode";
+                Timer = {
+                  OnBootSec = "15m";
+                  OnUnitActiveSec = "1d";
+                  RandomizedDelaySec = "1h";
+                  Persistent = true;
+                };
+                Install.WantedBy = [ "timers.target" ];
+              };
 
               programs.bash.initExtra = lib.mkAfter ''
                 if [ -z "''${LITELLM_MASTER_KEY:-}" ] && [ -r "${litellmMasterKeyPath}" ]; then

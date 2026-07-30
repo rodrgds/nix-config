@@ -36,7 +36,7 @@ in
       pkgs.dmidecode
       pkgs.smartmontools
       pkgs.mesa-demos
-      pkgs.xorg.xdpyinfo
+      pkgs.xdpyinfo
       pkgs.usbutils
       pkgs.xclip
       pkgs.dex

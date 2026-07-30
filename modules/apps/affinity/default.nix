@@ -32,6 +32,9 @@ in
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
         nix.settings = {
+          # Garnix narinfos contain signed download URLs that expire after two
+          # hours. Do not retain those URLs for Nix's default 30-day TTL.
+          narinfo-cache-positive-ttl = 3600;
           substituters = [ "https://cache.garnix.io" ];
           trusted-public-keys = [ "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g=" ];
         };

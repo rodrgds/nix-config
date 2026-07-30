@@ -32,6 +32,7 @@ import {
   defaultCommitMessage,
   detectHost,
   detectPlatform,
+  detectSystemdMajorUpgrade,
   isNixOS,
   notify,
   parseFlakeInputs,
@@ -177,12 +178,86 @@ async function listPlainSecretFiles(): Promise<string[]> {
   return output.split("\n").filter(Boolean).sort();
 }
 
+const DESKTOP_REBUILD_MIN_FREE_GIB = 64;
+
+async function freeDiskGiB(): Promise<number | null> {
+  const output = await runCapture("df", ["-Pk", REPO_DIR], {
+    cwd: REPO_DIR,
+    check: false,
+  });
+  const fields = output.trim().split("\n").at(-1)?.trim().split(/\s+/);
+  const availableKiB = Number.parseInt(fields?.[3] ?? "", 10);
+  if (!Number.isFinite(availableKiB)) return null;
+  return availableKiB / 1024 / 1024;
+}
+
+async function ensureRebuildDiskSpace(
+  app: App,
+  target: Target,
+): Promise<boolean> {
+  if (target.name !== "rgo-desktop") return true;
+
+  let available = await freeDiskGiB();
+  if (available === null || available >= DESKTOP_REBUILD_MIN_FREE_GIB) {
+    return true;
+  }
+
+  await app.scrollText(
+    "Low disk space",
+    `Free: ${available.toFixed(1)} GiB · recommended: ${DESKTOP_REBUILD_MIN_FREE_GIB} GiB`,
+    [
+      "This desktop closure contains unusually large DaVinci Resolve, Affinity,",
+      "Android Studio, and Rust outputs. Starting with less space risks a late",
+      "unpack failure.",
+      "",
+      "The pressure cleaner only removes reproducible package/build caches.",
+      "It does not touch browser profiles, games, projects, emulator data,",
+      "application databases, Docker images, or Docker volumes.",
+    ].join("\n"),
+    { allowBack: false, enterLabel: "Enter continue" },
+  );
+
+  if (await commandExists("rgo-cache-cleanup")) {
+    const clean = await app.confirm(
+      "Safe cache cleanup",
+      "Run pressure-aware cache cleanup before rebuilding?",
+      true,
+    );
+
+    if (clean) {
+      await app.logScreen(
+        "Safe cache cleanup",
+        "Reclaiming reproducible caches while preserving app and project data.",
+        async (append) => {
+          await runLogged(append, "rgo-cache-cleanup", ["--pressure"], {
+            cwd: REPO_DIR,
+            check: false,
+          });
+        },
+      );
+      available = await freeDiskGiB();
+    }
+  }
+
+  if (available === null || available >= DESKTOP_REBUILD_MIN_FREE_GIB) {
+    return true;
+  }
+
+  return await app.confirm(
+    "Space still low",
+    `Only ${available.toFixed(1)} GiB is free. Continue at risk of another disk-full failure?`,
+    false,
+  );
+}
+
 async function runPreparationAndRebuild(
   app: App,
   platform: PlatformKind,
   target: Target,
   options: RebuildOptions,
 ): Promise<boolean> {
+  if (!(await ensureRebuildDiskSpace(app, target))) return false;
+
   const prepared = await app.logScreen(
     "Preparation log",
     `Target: ${target.name}. Running flake updates, statix, and nixfmt.`,
@@ -228,8 +303,27 @@ async function runPreparationAndRebuild(
 
   if (!prepared) return false;
 
-  const [cmd, args] = rebuildCommand(target);
-  const subtitle = `Target: ${target.name}. Asking for sudo up front and keeping it fresh while building.`;
+  const systemdUpgrade = await detectSystemdMajorUpgrade(target);
+  const nixosMode = systemdUpgrade ? "boot" : "switch";
+
+  if (systemdUpgrade) {
+    await app.scrollText(
+      "Reboot required",
+      `systemd ${systemdUpgrade.currentVersion} -> ${systemdUpgrade.targetVersion}`,
+      [
+        "A live PID 1 re-exec across systemd major versions can hang and leave services stopped.",
+        "",
+        "The wizard will install this generation as the boot default without activating it live.",
+        "Reboot after the rebuild completes to finish the upgrade.",
+      ].join("\n"),
+      { allowBack: false, enterLabel: "Enter build boot generation" },
+    );
+  }
+
+  const [cmd, args] = rebuildCommand(target, nixosMode);
+  const subtitle = systemdUpgrade
+    ? `Target: ${target.name}. Building the boot generation; reboot required.`
+    : `Target: ${target.name}. Asking for sudo up front and keeping it fresh while building.`;
 
   const success = await app.externalCommandScreen(
     "Rebuild",
@@ -240,7 +334,19 @@ async function runPreparationAndRebuild(
   );
 
   if (success) {
-    await notify(platform, "Rebuild successful", target.name);
+    const message = systemdUpgrade
+      ? `${target.name}: reboot required`
+      : target.name;
+    await notify(platform, "Rebuild successful", message);
+
+    if (systemdUpgrade) {
+      await app.scrollText(
+        "Rebuild successful",
+        target.name,
+        "The new generation is the boot default. Reboot to activate it.",
+        { allowBack: false },
+      );
+    }
   }
 
   return success;
@@ -666,6 +772,13 @@ type CleanupAction = {
 };
 
 const CLEANUP_ACTIONS: CleanupAction[] = [
+  {
+    label: "Safe cache cleanup (pressure mode)",
+    value: "safe-cache-pressure",
+    description: "Clear only reproducible package/build caches; preserve app data.",
+    command: ["rgo-cache-cleanup", ["--pressure"]],
+    options: { check: false },
+  },
   {
     label: "nh clean all --keep 5",
     value: "nh-keep-5",

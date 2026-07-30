@@ -111,7 +111,7 @@ in
                 }
               ];
               keybindings = import ./_helpers/keybindings.nix { inherit pkgs constants; };
-              workspaceOutputAssign = import ./_helpers/workspaces.nix { };
+              workspaceOutputAssign = (import ./_helpers/workspaces.nix).outputAssign;
               assigns = import ./_helpers/assigns.nix { };
               window.commands = import ./_helpers/window-rules.nix { };
               colors = import ./_helpers/colors.nix { };

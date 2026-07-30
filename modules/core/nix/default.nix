@@ -22,6 +22,11 @@ in
       ];
 
       nix.settings = {
+        # Let the daemon reclaim only unreferenced store paths before a large
+        # build can exhaust the filesystem. Generations and GC roots remain
+        # protected, and normal operation keeps the cache untouched.
+        min-free = 32 * 1024 * 1024 * 1024;
+        max-free = 64 * 1024 * 1024 * 1024;
         trusted-users = [
           "root"
           username

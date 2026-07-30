@@ -24,7 +24,11 @@ in
         systemd.user.services.rescrobbled = lib.mkIf isLinux {
           Unit = {
             Description = "MPRIS scrobbler daemon";
-            After = [ "graphical-session.target" ];
+            After = [
+              "graphical-session.target"
+              "sops-nix.service"
+            ];
+            Requires = [ "sops-nix.service" ];
           };
           Install = {
             WantedBy = [ "default.target" ];

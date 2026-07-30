@@ -3,9 +3,9 @@
 
   inputs = {
     # Default package set: keep the overall system on stable.
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
     # macOS must track a darwin-specific nixpkgs branch that matches nix-darwin.
-    nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
+    nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     # Fast-moving packages can explicitly opt into unstable.
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     # DaVinci Resolve is intentionally pinned separately so normal flake updates
@@ -13,12 +13,12 @@
     nixpkgs-davinci.url = "github:nixos/nixpkgs/755f5aa91337890c432639c60b6064bb7fe67769";
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-darwin = {
-      url = "github:lnl7/nix-darwin/nix-darwin-25.11";
+      url = "github:lnl7/nix-darwin/nix-darwin-26.05";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
@@ -60,8 +60,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Use Vicinae's own package set: the nixpkgs 26.05 build links against
+    # Qt 6.11 and produces invalid X11 window geometry under i3.
+    vicinae.url = "github:vicinaehq/vicinae";
+
     devenv = {
-      url = "github:cachix/devenv";
+      # 32f6747 builds a binary that segfaults while generating completions on
+      # x86_64-linux. Keep the last known-good revision until upstream moves on.
+      url = "github:cachix/devenv/e30eb49258bee68353bd9c619823f635f4afa86c";
     };
 
     handy = {

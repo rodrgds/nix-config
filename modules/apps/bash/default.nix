@@ -9,6 +9,7 @@
 let
   cfg = config.apps.bash;
   inherit (constants) isDarwin;
+  lsColorFlag = if isDarwin then "-G" else "--color=auto";
 in
 {
   options.apps.bash = {
@@ -59,15 +60,13 @@ in
 
           export CLICOLOR=1
           export LS_COLORS="di=1;36:ln=1;35:so=1;32:pi=1;33:ex=1;31:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=30;42:ow=34;43"
-          alias ls="ls -G"
+          alias ls="ls ${lsColorFlag}"
 
           # Colored grep
           alias grep="grep --color=auto"
           alias fgrep="fgrep --color=auto"
           alias egrep="egrep --color=auto"
-          alias fgrep="fgrep --color=auto"
-          alias egrep="egrep --color=auto"
-          export GREP_COLOR="1;33"
+          export GREP_COLORS="ms=1;33"
 
           # Colored man pages
           export LESS_TERMCAP_mb=$'\e[1;31m'
@@ -102,11 +101,6 @@ in
           bind 'TAB:menu-complete'
           bind '"\\e[Z":menu-complete-backward'
 
-          # fzf keybindings
-          if [[ -z "''${FZF_BASH_INTEGRATION_LOADED:-}" ]] && command -v fzf &> /dev/null; then
-            source ${pkgs.fzf}/share/fzf/key-bindings.bash
-            source ${pkgs.fzf}/share/fzf/completion.bash
-          fi
         '';
 
         sessionVariables = {
@@ -142,8 +136,17 @@ in
         LC_ALL = "en_US.UTF-8";
       };
 
-      programs.fzf.enableBashIntegration = true;
-      programs.zoxide.enableBashIntegration = true;
+      # Let Home Manager generate one shell integration instead of sourcing
+      # fzf manually. The previous integration flags did nothing because the
+      # programs themselves were not enabled.
+      programs.fzf = {
+        enable = true;
+        enableBashIntegration = true;
+      };
+      programs.zoxide = {
+        enable = true;
+        enableBashIntegration = true;
+      };
       programs.direnv.enableBashIntegration = true;
     };
   };

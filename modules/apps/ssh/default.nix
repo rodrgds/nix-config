@@ -23,8 +23,8 @@ in
           enableDefaultConfig = false;
           # When using Ghostty, set TERM to a known value for all SSH connections
           # This fixes 'xterm-ghostty: unknown terminal type' on remote servers
-          matchBlocks."*" = lib.mkIf isGhosttyEnabled {
-            setEnv.TERM = "xterm-256color";
+          settings."*" = lib.mkIf isGhosttyEnabled {
+            SetEnv.TERM = "xterm-256color";
           };
         };
 

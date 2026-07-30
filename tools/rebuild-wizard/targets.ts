@@ -140,7 +140,51 @@ export async function notify(
   }
 }
 
-export function rebuildCommand(target: Target): [string, string[]] {
+export type SystemdMajorUpgrade = {
+  currentVersion: string;
+  targetVersion: string;
+};
+
+export async function detectSystemdMajorUpgrade(
+  target: Target,
+): Promise<SystemdMajorUpgrade | null> {
+  if (target.kind !== "nixos") return null;
+
+  const currentOutput = await runCapture("systemctl", ["--version"], {
+    check: false,
+    cwd: "/",
+  });
+  const targetVersion = (
+    await runCapture(
+      "nix",
+      [
+        "eval",
+        "--raw",
+        "--impure",
+        `path:.#nixosConfigurations.${target.flakeAttr}.config.systemd.package.version`,
+      ],
+      { check: false, cwd: REPO_DIR },
+    )
+  ).trim();
+
+  const currentMatch = currentOutput.match(/^systemd\s+(\d+)(?:\.(\d+))?/m);
+  const targetMatch = targetVersion.match(/^(\d+)(?:\.(\d+))?/);
+  if (!currentMatch || !targetMatch || currentMatch[1] === targetMatch[1]) {
+    return null;
+  }
+
+  return {
+    currentVersion: currentMatch[2]
+      ? `${currentMatch[1]}.${currentMatch[2]}`
+      : currentMatch[1],
+    targetVersion,
+  };
+}
+
+export function rebuildCommand(
+  target: Target,
+  nixosMode: "switch" | "boot" = "switch",
+): [string, string[]] {
   if (target.kind === "darwin") {
     return withEarlySudo([
       "nh",
@@ -151,7 +195,7 @@ export function rebuildCommand(target: Target): [string, string[]] {
   if (target.kind === "nixos") {
     return withEarlySudo([
       "nh",
-      ["os", "switch", "path:.", "-H", target.flakeAttr, "--", "--impure"],
+      ["os", nixosMode, "path:.", "-H", target.flakeAttr, "--", "--impure"],
     ]);
   }
 
