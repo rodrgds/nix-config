@@ -1,0 +1,25 @@
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
+let
+  fonts = import ../../../core/_linux/fonts/_helpers/packages.nix { inherit pkgs; };
+  cfg = config.darwin.core.fonts;
+  darwinSharedPackages = builtins.filter (pkg: pkg != pkgs.jetbrains-mono) fonts.sharedPackages;
+in
+{
+  options.darwin.core.fonts = {
+    enable = lib.mkEnableOption "Enable fonts";
+    extraPackages = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [ ];
+      description = "Additional font packages to install";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    fonts.packages = darwinSharedPackages ++ cfg.extraPackages;
+  };
+}

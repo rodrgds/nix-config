@@ -1,0 +1,13 @@
+{ lib, config, ... }:
+let
+  cfg = config.core.printing;
+in
+{
+  options.core.printing = {
+    enable = lib.mkEnableOption "Enable printing";
+  };
+
+  config = lib.mkIf cfg.enable {
+    services.printing.enable = true;
+  };
+}
