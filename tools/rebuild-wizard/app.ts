@@ -769,14 +769,25 @@ export class App {
     await sleep(150);
 
     const rendererAny = this.renderer as unknown as {
+      suspend?: () => void;
+      resume?: () => void;
       stop?: () => void;
       start?: () => void;
     };
 
     try {
-      rendererAny.stop?.();
+      // stop() only halts the render loop: the native renderer thread stays
+      // active and OpenTUI's stdin 'data' listener stays attached, so the
+      // parent can still steal keystrokes from sudo/nh password prompts.
+      // suspend() also removes the stdin listener, disables mouse tracking,
+      // suspends the native renderer, and pauses stdin.
+      if (rendererAny.suspend) {
+        rendererAny.suspend();
+      } else {
+        rendererAny.stop?.();
+      }
     } catch {
-      // Older OpenTUI versions may not expose stop().
+      // Older OpenTUI versions may not expose suspend().
     }
 
     try {
@@ -835,7 +846,11 @@ export class App {
     }
 
     try {
-      rendererAny.start?.();
+      if (rendererAny.resume) {
+        rendererAny.resume();
+      } else {
+        rendererAny.start?.();
+      }
     } catch {
       // If OpenTUI has no resumable start(), the next render still often works.
     }
