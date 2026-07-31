@@ -72,13 +72,6 @@
     enable = true;
     host = "0.0.0.0";
     port = 4000;
-    zenApiBase = "https://opencode.ai/zen/v1";
-    goApiBase = "https://opencode.ai/zen/go/v1";
-    goAnthropicBase = "https://opencode.ai/zen/go";
-    flashFreeModel = "openai/deepseek-v4-flash-free";
-    flashPaidModel = "openai/deepseek-v4-flash";
-    normalModel = "anthropic/minimax-m3";
-    bestModel = "opencode-go/glm5.2";
     cooldownTime = 3600;
   };
   vps.openpost = {

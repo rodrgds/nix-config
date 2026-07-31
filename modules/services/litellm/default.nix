@@ -1,8 +1,8 @@
 # LiteLLM OpenAI-compatible LLM router/load balancer
 # Routes requests across multiple API keys with failover.
-# Uses separate upstream bases:
-#   zenApiBase — OpenCode Zen  (openai-compatible, free models)
-#   goApiBase  — OpenCode Go   (openai + anthropic compatible, paid models)
+# Model catalog lives in modules/shared/litellm.nix and is shared with the
+# opencode app module so both sides always agree on the public model list.
+# Upstream bases are configured via options (zen = free, go = paid).
 {
   config,
   lib,
@@ -12,6 +12,78 @@
 let
   cfg = config.vps.litellm;
   yaml = pkgs.formats.yaml { };
+  catalog = import ../../shared/litellm.nix;
+
+  apiBase =
+    name:
+    {
+      zen = cfg.zenApiBase;
+      go = cfg.goApiBase;
+      goAnthropic = cfg.goAnthropicBase;
+    }
+    .${name};
+
+  # Expand a catalog model into its concrete variants:
+  #   - first tier, first key -> plain alias (e.g. "flash")
+  #   - single tier, other keys -> "<alias>-key-<n>"
+  #   - multi tier, other variants -> "<alias>-<tier>-key-<n>"
+  mkVariants =
+    model:
+    let
+      tierCount = builtins.length model.tiers;
+    in
+    lib.concatLists (
+      lib.imap1 (
+        ti: tier:
+        lib.genList (
+          ki:
+          let
+            keyNum = ki + 1;
+            isPrimary = ti == 1 && keyNum == 1;
+            name =
+              if isPrimary then
+                model.alias
+              else if tierCount == 1 then
+                "${model.alias}-key-${toString keyNum}"
+              else
+                "${model.alias}-${tier.name}-key-${toString keyNum}";
+          in
+          {
+            inherit name;
+            inherit (tier) model;
+            api_base = apiBase tier.api;
+            api_key = "os.environ/OPENCODE_KEY_${toString keyNum}";
+          }
+        ) catalog.keyCount
+      ) model.tiers
+    );
+
+  variants = lib.concatMap mkVariants catalog.models;
+
+  # Chain fallbacks per model: every variant falls back to the later variants
+  # of the same model only, never crossing into another model.
+  mkFallbacks =
+    variants:
+    let
+      total = builtins.length variants;
+    in
+    lib.flatten (
+      lib.imap1 (
+        i: v:
+        lib.optional (i < total) {
+          ${v.name} = map (x: x.name) (lib.drop i variants);
+        }
+      ) variants
+    );
+
+  fallbacks = lib.concatMap (model: mkFallbacks (mkVariants model)) catalog.models;
+
+  modelList = map (v: {
+    model_name = v.name;
+    litellm_params = {
+      inherit (v) model api_base api_key;
+    };
+  }) variants;
 in
 {
   options.vps.litellm = {
@@ -47,30 +119,6 @@ in
       description = "OpenCode Go base URL for Anthropic-compatible models (LiteLLM appends /v1/messages).";
     };
 
-    flashFreeModel = lib.mkOption {
-      type = lib.types.str;
-      default = "openai/deepseek-v4-flash-free";
-      description = "Upstream model slug for the free DeepSeek V4 Flash route (Zen).";
-    };
-
-    flashPaidModel = lib.mkOption {
-      type = lib.types.str;
-      default = "openai/deepseek-v4-flash";
-      description = "Upstream model slug for the paid/normal DeepSeek V4 Flash route (Go).";
-    };
-
-    normalModel = lib.mkOption {
-      type = lib.types.str;
-      default = "anthropic/minimax-m3";
-      description = "Upstream model slug for MiniMax M3 (Go, Anthropic-compatible /messages endpoint).";
-    };
-
-    bestModel = lib.mkOption {
-      type = lib.types.str;
-      default = "opencode-go/glm5.2";
-      description = "Upstream model slug for the best general-purpose model (Go, OpenAI-compatible).";
-    };
-
     cooldownTime = lib.mkOption {
       type = lib.types.int;
       default = 3600;
@@ -95,154 +143,7 @@ in
 
     environment.etc."litellm/config.yaml" = {
       source = yaml.generate "litellm-config.yaml" {
-        model_list = [
-          # Public model: flash (DeepSeek V4 Flash Free via Zen, then paid via Go)
-          {
-            model_name = "flash";
-            litellm_params = {
-              model = cfg.flashFreeModel;
-              api_base = cfg.zenApiBase;
-              api_key = "os.environ/OPENCODE_KEY_1";
-            };
-          }
-
-          {
-            model_name = "flash-free-key-2";
-            litellm_params = {
-              model = cfg.flashFreeModel;
-              api_base = cfg.zenApiBase;
-              api_key = "os.environ/OPENCODE_KEY_2";
-            };
-          }
-
-          {
-            model_name = "flash-free-key-3";
-            litellm_params = {
-              model = cfg.flashFreeModel;
-              api_base = cfg.zenApiBase;
-              api_key = "os.environ/OPENCODE_KEY_3";
-            };
-          }
-
-          {
-            model_name = "flash-free-key-4";
-            litellm_params = {
-              model = cfg.flashFreeModel;
-              api_base = cfg.zenApiBase;
-              api_key = "os.environ/OPENCODE_KEY_4";
-            };
-          }
-
-          {
-            model_name = "flash-paid-key-1";
-            litellm_params = {
-              model = cfg.flashPaidModel;
-              api_base = cfg.goApiBase;
-              api_key = "os.environ/OPENCODE_KEY_1";
-            };
-          }
-
-          {
-            model_name = "flash-paid-key-2";
-            litellm_params = {
-              model = cfg.flashPaidModel;
-              api_base = cfg.goApiBase;
-              api_key = "os.environ/OPENCODE_KEY_2";
-            };
-          }
-
-          {
-            model_name = "flash-paid-key-3";
-            litellm_params = {
-              model = cfg.flashPaidModel;
-              api_base = cfg.goApiBase;
-              api_key = "os.environ/OPENCODE_KEY_3";
-            };
-          }
-
-          {
-            model_name = "flash-paid-key-4";
-            litellm_params = {
-              model = cfg.flashPaidModel;
-              api_base = cfg.goApiBase;
-              api_key = "os.environ/OPENCODE_KEY_4";
-            };
-          }
-
-          # Public model: normal (MiniMax M3 via Go, Anthropic-compatible)
-          {
-            model_name = "normal";
-            litellm_params = {
-              model = cfg.normalModel;
-              api_base = cfg.goAnthropicBase;
-              api_key = "os.environ/OPENCODE_KEY_1";
-            };
-          }
-
-          {
-            model_name = "normal-key-2";
-            litellm_params = {
-              model = cfg.normalModel;
-              api_base = cfg.goAnthropicBase;
-              api_key = "os.environ/OPENCODE_KEY_2";
-            };
-          }
-
-          {
-            model_name = "normal-key-3";
-            litellm_params = {
-              model = cfg.normalModel;
-              api_base = cfg.goAnthropicBase;
-              api_key = "os.environ/OPENCODE_KEY_3";
-            };
-          }
-
-          {
-            model_name = "normal-key-4";
-            litellm_params = {
-              model = cfg.normalModel;
-              api_base = cfg.goAnthropicBase;
-              api_key = "os.environ/OPENCODE_KEY_4";
-            };
-          }
-
-          # Public model: best (GLM 5.2 via Go, OpenAI-compatible)
-          {
-            model_name = "best";
-            litellm_params = {
-              model = cfg.bestModel;
-              api_base = cfg.goApiBase;
-              api_key = "os.environ/OPENCODE_KEY_1";
-            };
-          }
-
-          {
-            model_name = "best-key-2";
-            litellm_params = {
-              model = cfg.bestModel;
-              api_base = cfg.goApiBase;
-              api_key = "os.environ/OPENCODE_KEY_2";
-            };
-          }
-
-          {
-            model_name = "best-key-3";
-            litellm_params = {
-              model = cfg.bestModel;
-              api_base = cfg.goApiBase;
-              api_key = "os.environ/OPENCODE_KEY_3";
-            };
-          }
-
-          {
-            model_name = "best-key-4";
-            litellm_params = {
-              model = cfg.bestModel;
-              api_base = cfg.goApiBase;
-              api_key = "os.environ/OPENCODE_KEY_4";
-            };
-          }
-        ];
+        inherit modelList;
 
         router_settings = {
           num_retries = 0;
@@ -250,111 +151,7 @@ in
           allowed_fails = 0;
           cooldown_time = cfg.cooldownTime;
 
-          fallbacks = [
-            {
-              # flash: Zen free key 1 -> 2 -> 3 -> 4
-              #        -> Go paid key 1 -> 2 -> 3 -> 4
-              "flash" = [
-                "flash-free-key-2"
-                "flash-free-key-3"
-                "flash-free-key-4"
-                "flash-paid-key-1"
-                "flash-paid-key-2"
-                "flash-paid-key-3"
-                "flash-paid-key-4"
-              ];
-            }
-
-            {
-              # Continue the flash chain if an intermediate alias fails.
-              "flash-free-key-2" = [
-                "flash-free-key-3"
-                "flash-free-key-4"
-                "flash-paid-key-1"
-                "flash-paid-key-2"
-                "flash-paid-key-3"
-                "flash-paid-key-4"
-              ];
-            }
-
-            {
-              "flash-free-key-3" = [
-                "flash-free-key-4"
-                "flash-paid-key-1"
-                "flash-paid-key-2"
-                "flash-paid-key-3"
-                "flash-paid-key-4"
-              ];
-            }
-
-            {
-              "flash-free-key-4" = [
-                "flash-paid-key-1"
-                "flash-paid-key-2"
-                "flash-paid-key-3"
-                "flash-paid-key-4"
-              ];
-            }
-
-            {
-              "flash-paid-key-1" = [
-                "flash-paid-key-2"
-                "flash-paid-key-3"
-                "flash-paid-key-4"
-              ];
-            }
-
-            {
-              "flash-paid-key-2" = [
-                "flash-paid-key-3"
-                "flash-paid-key-4"
-              ];
-            }
-
-            {
-              "flash-paid-key-3" = [ "flash-paid-key-4" ];
-            }
-
-            {
-              # normal: Go key 1 -> 2 -> 3 -> 4
-              "normal" = [
-                "normal-key-2"
-                "normal-key-3"
-                "normal-key-4"
-              ];
-            }
-
-            {
-              "normal-key-2" = [
-                "normal-key-3"
-                "normal-key-4"
-              ];
-            }
-
-            {
-              "normal-key-3" = [ "normal-key-4" ];
-            }
-
-            {
-              # best: Go key 1 -> 2 -> 3 -> 4
-              "best" = [
-                "best-key-2"
-                "best-key-3"
-                "best-key-4"
-              ];
-            }
-
-            {
-              "best-key-2" = [
-                "best-key-3"
-                "best-key-4"
-              ];
-            }
-
-            {
-              "best-key-3" = [ "best-key-4" ];
-            }
-          ];
+          inherit fallbacks;
 
           max_fallbacks = 7;
 
