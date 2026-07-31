@@ -45,7 +45,7 @@ in
     ];
 
     virtualisation.oci-containers.containers.teamspeak = {
-      image = cfg.image;
+      inherit (cfg) image;
       autoStart = true;
 
       environment = {

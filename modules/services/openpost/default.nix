@@ -206,7 +206,7 @@ in
 
     # OpenPost application
     virtualisation.oci-containers.containers.openpost = {
-      image = cfg.image;
+      inherit (cfg) image;
 
       environment = {
         OPENPOST_PORT = toString openpostContainerPort;
