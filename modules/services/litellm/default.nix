@@ -143,7 +143,7 @@ in
 
     environment.etc."litellm/config.yaml" = {
       source = yaml.generate "litellm-config.yaml" {
-        inherit modelList;
+        model_list = modelList;
 
         router_settings = {
           num_retries = 0;
