@@ -3,6 +3,30 @@ import { commandExists, runCapture } from "./command";
 import { join, pathExists, readText } from "./fs";
 import type { PlatformKind, Target } from "./types";
 
+const REBUILD_STORE_SPACE_ARGS = [
+  "--option",
+  "min-free",
+  String(8 * 1024 * 1024 * 1024),
+  "--option",
+  "max-free",
+  String(16 * 1024 * 1024 * 1024),
+];
+
+const NIXOS_CACHE_ONLY_ARGS = [
+  "--option",
+  "substituters",
+  "https://cache.nixos.org",
+];
+
+// The currently configured Garnix endpoint is returning 502s, which can hit
+// Nix's TunnelLogger crash path. Affinity is disabled, so rebuilds only need
+// the Vicinae and official NixOS caches.
+const DESKTOP_CACHE_ARGS = [
+  "--option",
+  "substituters",
+  "https://vicinae.cachix.org https://cache.nixos.org",
+];
+
 export async function detectPlatform(): Promise<PlatformKind> {
   const uname = (
     await runCapture("uname", ["-s"], { cwd: "/", check: false })
@@ -161,7 +185,8 @@ export async function detectSystemdMajorUpgrade(
         "eval",
         "--raw",
         "--impure",
-        `path:.#nixosConfigurations.${target.flakeAttr}.config.systemd.package.version`,
+        "--expr",
+        `(builtins.getFlake (toString (builtins.toPath ${JSON.stringify(REPO_DIR)}))).inputs.nixpkgs.legacyPackages.\${builtins.currentSystem}.systemd.version`,
       ],
       { check: false, cwd: REPO_DIR },
     )
@@ -195,7 +220,17 @@ export function rebuildCommand(
   if (target.kind === "nixos") {
     return withEarlySudo([
       "nh",
-      ["os", nixosMode, "path:.", "-H", target.flakeAttr, "--", "--impure"],
+      [
+        "os",
+        nixosMode,
+        "path:.",
+        "-H",
+        target.flakeAttr,
+        ...REBUILD_STORE_SPACE_ARGS,
+        ...DESKTOP_CACHE_ARGS,
+        "--",
+        "--impure",
+      ],
     ]);
   }
 
@@ -211,6 +246,8 @@ export function rebuildCommand(
     target.remote.targetHost,
     "--sudo",
     "--ask-sudo-password",
+    ...REBUILD_STORE_SPACE_ARGS,
+    ...NIXOS_CACHE_ONLY_ARGS,
   ];
 
   if (target.remote.buildHost === "target") {

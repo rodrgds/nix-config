@@ -3,12 +3,10 @@
   pkgs,
   username,
   lib,
-  inputs,
   ...
 }:
 {
   imports = [
-    inputs.vicinae.nixosModules.default
     ./hardware-configuration.nix
     ./hardware.nix
     ./networking.nix
@@ -90,7 +88,7 @@
   apps.zed.enable = true;
   apps.cursor.enable = false;
   apps.antigravity.enable = false;
-  apps.arduino.enable = true;
+  apps.arduino.enable = false;
   apps.nodejs.enable = true;
   apps.pnpm.enable = true;
   apps.bun.enable = true;
@@ -101,12 +99,12 @@
   apps.android-sdk.enable = true;
   apps.stripe-cli.enable = true;
   apps.dbeaver.enable = true;
-  apps.laravel.enable = true;
+  apps.laravel.enable = false;
   apps.affinity.enable = false;
 
   apps.i3.enable = true;
-  # apps.bumblebee-status.enable = true;
   apps.polybar.enable = true;
+  apps.bumblebee-status.enable = false;
   apps.dunst.enable = true;
   apps.redshift.enable = true;
   apps.solaar.enable = true;
@@ -117,9 +115,9 @@
 
   apps.obs.enable = true;
   apps.mpv.enable = true;
-  apps.darktable.enable = true;
-  apps.gimp.enable = true;
-  apps.davinci-resolve.enable = true;
+  apps.darktable.enable = false;
+  apps.gimp.enable = false;
+  apps.davinci-resolve.enable = false;
   apps.auto-editor.enable = true;
   apps.losslesscut.enable = true;
   apps.flameshot.enable = true;
@@ -149,7 +147,7 @@
   apps.teamspeak.enable = true;
   apps.thunderbird.enable = true;
   apps.anydesk.enable = true;
-  apps.maestro.enable = true;
+  apps.maestro.enable = false;
   apps.surfshark.enable = true;
 
   apps.obsidian.enable = true;

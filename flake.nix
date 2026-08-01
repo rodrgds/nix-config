@@ -155,6 +155,8 @@
             nix-index-database.nixosModules.nix-index
             # angrr for automatic GC root retention
             angrr.nixosModules.angrr
+            # Register the options everywhere; hosts still opt in separately.
+            inputs.vicinae.nixosModules.default
             # Declarative Flatpak manager
             inputs.nix-flatpak.nixosModules.nix-flatpak
             # Home-manager as NixOS module
@@ -176,6 +178,7 @@
                 sharedModules = [
                   sops-nix.homeManagerModules.sops
                   steam-config-nix.homeModules.default
+                  inputs.vicinae.homeManagerModules.default
                   # nix-openclaw.homeManagerModules.openclaw
                 ];
               };

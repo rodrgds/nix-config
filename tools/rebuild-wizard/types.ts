@@ -18,6 +18,7 @@ export type CommandOptions = {
   cwd?: string;
   env?: Record<string, string | undefined>;
   check?: boolean;
+  retryNixDaemonCrash?: boolean;
 };
 
 export type LogCommandOptions = CommandOptions & {

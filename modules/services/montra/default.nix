@@ -201,8 +201,12 @@ in
         extraOptions = [
           "--network=podman"
           "--pull=always"
-          "--health-cmd=bun -e \"const r=await fetch('http://127.0.0.1:8787/health/ready');process.exit(r.ok?0:1)\""
+          # Podman runs the first check immediately. Keep that transient
+          # systemd unit active while the API boots instead of briefly
+          # failing the entire NixOS switch before Bun starts listening.
+          "--health-cmd=bun -e \"for(let i=0;i<25;i++){try{const r=await fetch('http://127.0.0.1:8787/health/ready');if(r.ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)\""
           "--health-interval=15s"
+          "--health-timeout=30s"
           "--health-retries=12"
           "--memory=4g"
         ];

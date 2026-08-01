@@ -58,21 +58,61 @@ export async function runInteractive(
   args: string[],
   options: CommandOptions = {},
 ): Promise<number> {
-  const proc = Bun.spawn([cmd, ...args], {
-    cwd: options.cwd ?? REPO_DIR,
-    env: { ...Bun.env, ...(options.env ?? {}) },
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  });
+  for (let attempt = 0; ; attempt++) {
+    const startedAt = Math.floor(Date.now() / 1000) - 1;
+    const proc = Bun.spawn([cmd, ...args], {
+      cwd: options.cwd ?? REPO_DIR,
+      env: { ...Bun.env, ...(options.env ?? {}) },
+      stdin: "inherit",
+      stdout: "inherit",
+      stderr: "inherit",
+    });
 
-  const code = await proc.exited;
+    const code = await proc.exited;
+    const shouldRetry =
+      code !== 0 &&
+      attempt === 0 &&
+      options.retryNixDaemonCrash === true &&
+      (await nixDaemonCrashedSince(startedAt));
 
-  if ((options.check ?? true) && code !== 0) {
-    throw new Error(`Command failed (${code}): ${visibleCommand(cmd, args)}`);
+    if (shouldRetry) {
+      process.stdout.write(
+        "\nNix daemon worker crashed; retrying the rebuild once with completed work cached.\n\n",
+      );
+      continue;
+    }
+
+    if ((options.check ?? true) && code !== 0) {
+      throw new Error(`Command failed (${code}): ${visibleCommand(cmd, args)}`);
+    }
+
+    return code;
   }
+}
 
-  return code;
+async function nixDaemonCrashedSince(startedAt: number): Promise<boolean> {
+  if (process.platform !== "linux") return false;
+
+  try {
+    const logs = await runCapture(
+      "journalctl",
+      [
+        "-u",
+        "nix-daemon.service",
+        "--since",
+        `@${startedAt}`,
+        "--no-pager",
+        "-o",
+        "cat",
+        "--grep",
+        "Nix crashed\\. This is a bug\\.",
+      ],
+      { cwd: "/", check: false },
+    );
+    return logs.includes("Nix crashed. This is a bug.");
+  } catch {
+    return false;
+  }
 }
 
 function stripAnsiAndControl(text: string): string {

@@ -286,45 +286,45 @@ in
             };
           };
       }
-      (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.unstable.opencode-desktop ];
-      })
-      (lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "opencode-desktop" ];
-      })
-      (lib.optionalAttrs isLinux (
-        lib.mkIf cfg.web.enable {
-          systemd.services.opencode-web = {
-            description = "Opencode Web Server";
-            after = [
-              "network.target"
-              "tailscaled.service"
-            ];
-            wants = [ "tailscaled.service" ];
-            wantedBy = [ "multi-user.target" ];
+      # (lib.optionalAttrs isLinux {
+      #   environment.systemPackages = [ pkgs.unstable.opencode-desktop ];
+      # })
+      # (lib.optionalAttrs isDarwin {
+      #   homebrew.casks = [ "opencode-desktop" ];
+      # })
+      # (lib.optionalAttrs isLinux (
+      #   lib.mkIf cfg.web.enable {
+      #     systemd.services.opencode-web = {
+      #       description = "Opencode Web Server";
+      #       after = [
+      #         "network.target"
+      #         "tailscaled.service"
+      #       ];
+      #       wants = [ "tailscaled.service" ];
+      #       wantedBy = [ "multi-user.target" ];
 
-            serviceConfig = {
-              Type = "simple";
-              User = username;
-              Group = "users";
-              WorkingDirectory = "/home/${username}";
-              ExecStart = "${installRoot}/bin/opencode web --hostname 0.0.0.0 --port 4096";
-              Restart = "always";
-              RestartSec = 5;
-              NoNewPrivileges = true;
-              PrivateTmp = true;
-              ProtectSystem = "strict";
-              ProtectHome = false;
-              ReadWritePaths = [ "/home/${username}" ];
-            };
+      #       serviceConfig = {
+      #         Type = "simple";
+      #         User = username;
+      #         Group = "users";
+      #         WorkingDirectory = "/home/${username}";
+      #         ExecStart = "${installRoot}/bin/opencode web --hostname 0.0.0.0 --port 4096";
+      #         Restart = "always";
+      #         RestartSec = 5;
+      #         NoNewPrivileges = true;
+      #         PrivateTmp = true;
+      #         ProtectSystem = "strict";
+      #         ProtectHome = false;
+      #         ReadWritePaths = [ "/home/${username}" ];
+      #       };
 
-            environment = {
-              HOME = "/home/${username}";
-              USER = username;
-            };
-          };
-        }
-      ))
+      #       environment = {
+      #         HOME = "/home/${username}";
+      #         USER = username;
+      #       };
+      #     };
+      #   }
+      # ))
     ]
   );
 }

@@ -45,6 +45,12 @@ in
             };
           };
         };
+
+        # During a switch, both changed units can otherwise be queued
+        # independently and syncthing-init's Requisite check may run before
+        # syncthing has become active. The NixOS module already supplies the
+        # matching After= ordering.
+        systemd.services.syncthing-init.requires = [ "syncthing.service" ];
       })
 
       (lib.optionalAttrs isDarwin {

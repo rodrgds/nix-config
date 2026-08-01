@@ -69,7 +69,7 @@
   apps.telegram.enable = true;
   apps.teamspeak.enable = true;
   apps.beeper.enable = true;
-  apps.maestro.enable = true;
+  apps.maestro.enable = false;
   apps.surfshark.enable = true;
 
   apps.vesktop.enable = true;

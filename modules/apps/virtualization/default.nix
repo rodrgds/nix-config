@@ -27,6 +27,13 @@ in
       (lib.optionalAttrs isLinux {
         virtualisation.virtualbox.host.enable = true;
         users.users.${username}.extraGroups = [ "vboxusers" ];
+
+        # The address unit is also pulled in by the vboxnet0 device. Make it
+        # wait for the service that recreates that device during a switch.
+        systemd.services.network-addresses-vboxnet0 = {
+          requires = [ "vboxnet0.service" ];
+          after = [ "vboxnet0.service" ];
+        };
       })
 
       # Darwin: UTM + VirtualBox + FUSE (install in order: macfuse first, then sshfs-mac)

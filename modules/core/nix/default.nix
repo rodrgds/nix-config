@@ -25,8 +25,11 @@ in
         # Let the daemon reclaim only unreferenced store paths before a large
         # build can exhaust the filesystem. Generations and GC roots remain
         # protected, and normal operation keeps the cache untouched.
-        min-free = 32 * 1024 * 1024 * 1024;
-        max-free = 64 * 1024 * 1024 * 1024;
+        # Keep emergency GC below the rebuild wizard's separate 64 GiB
+        # preflight. A 32 GiB watermark caused every Nix command to start GC
+        # whenever this machine hovered around 31 GiB free.
+        min-free = 8 * 1024 * 1024 * 1024;
+        max-free = 16 * 1024 * 1024 * 1024;
         trusted-users = [
           "root"
           username

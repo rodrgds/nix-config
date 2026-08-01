@@ -38,6 +38,7 @@ import {
   parseFlakeInputs,
   rebuildCommand,
 } from "./targets";
+import type { SystemdMajorUpgrade } from "./targets";
 import type {
   CommandOptions,
   MenuItem,
@@ -258,6 +259,9 @@ async function runPreparationAndRebuild(
 ): Promise<boolean> {
   if (!(await ensureRebuildDiskSpace(app, target))) return false;
 
+  const preparation = {
+    systemdUpgrade: null as SystemdMajorUpgrade | null,
+  };
   const prepared = await app.logScreen(
     "Preparation log",
     `Target: ${target.name}. Running flake updates, statix, and nixfmt.`,
@@ -298,12 +302,20 @@ async function runPreparationAndRebuild(
         append("nixfmt not found; skipping.");
         append("");
       }
+
+      append("Checking for a systemd major-version upgrade...");
+      preparation.systemdUpgrade = await detectSystemdMajorUpgrade(target);
+      append(
+        preparation.systemdUpgrade
+          ? `systemd ${preparation.systemdUpgrade.currentVersion} -> ${preparation.systemdUpgrade.targetVersion} requires a reboot-safe build.`
+          : "No systemd major-version upgrade detected.",
+      );
     },
   );
 
   if (!prepared) return false;
 
-  const systemdUpgrade = await detectSystemdMajorUpgrade(target);
+  const { systemdUpgrade } = preparation;
   const nixosMode = systemdUpgrade ? "boot" : "switch";
 
   if (systemdUpgrade) {
@@ -330,7 +342,7 @@ async function runPreparationAndRebuild(
     subtitle,
     cmd,
     args,
-    { cwd: REPO_DIR },
+    { cwd: REPO_DIR, retryNixDaemonCrash: true },
   );
 
   if (success) {

@@ -56,7 +56,10 @@ export class App {
 
   private reset(title: string, subtitle?: string): BoxRenderable {
     if (this.screen) {
-      this.renderer.root.remove(this.screen.id);
+      // Removing a renderable only detaches it from the tree. It does not blur
+      // or destroy its focused children, so an old Select/Textarea can keep
+      // receiving keys after the next screen is shown.
+      this.screen.destroyRecursively();
       this.screen = null;
     }
 
@@ -703,8 +706,8 @@ export class App {
       const visible = lines.slice(-height).join("\n");
       const footer = done
         ? success
-          ? "\n\nDone. Press Enter to continue."
-          : "\n\nFailed. Press Enter to continue."
+          ? "\n\nDone."
+          : "\n\nFailed."
         : "\n\nRunning…";
       body.content = `${visible}${footer}`;
       this.renderer.requestRender();
@@ -715,13 +718,6 @@ export class App {
         lines.push(part);
       }
       render();
-    };
-
-    this.keyHandler = (key) => {
-      if (!done) return;
-      if (key.name === "return" || key.name === "linefeed") {
-        this.keyHandler = null;
-      }
     };
 
     render();
@@ -737,12 +733,6 @@ export class App {
       done = true;
       render();
     }
-
-    await new Promise<void>((resolve) => {
-      this.keyHandler = (key) => {
-        if (key.name === "return" || key.name === "linefeed") resolve();
-      };
-    });
 
     return success;
   }
