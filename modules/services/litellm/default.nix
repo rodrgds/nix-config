@@ -179,6 +179,7 @@ in
 
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
+      restartTriggers = [ config.environment.etc."litellm/config.yaml".source ];
 
       serviceConfig = {
         Type = "simple";
