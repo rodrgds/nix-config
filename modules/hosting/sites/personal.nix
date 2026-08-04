@@ -7,6 +7,70 @@
 let
   cfg = config.vps.hosting.sites.personal;
   personalPort = 4321;
+
+  buildPersonalSite = pkgs.writeShellScript "build-personal-site" ''
+    set -euo pipefail
+    exec 9>/run/personal-site-source.lock
+    ${pkgs.util-linux}/bin/flock --exclusive 9
+
+    if [ ! -d /var/lib/personal-site/.git ]; then
+      ${pkgs.git}/bin/git clone --branch main --single-branch https://github.com/rodrgds/personal-website /var/lib/personal-site
+    fi
+    cd /var/lib/personal-site
+    ${pkgs.git}/bin/git fetch --prune origin main
+    ${pkgs.git}/bin/git reset --hard origin/main
+    ${pkgs.git}/bin/git clean -fd
+    ${pkgs.bun}/bin/bun install --frozen-lockfile
+    ${pkgs.bun}/bin/bun run build
+  '';
+
+  syncPersonalData =
+    source:
+    pkgs.writeShellScript "sync-personal-data-${source}" ''
+      set -euo pipefail
+      exec 9>/run/personal-site-source.lock
+      ${pkgs.util-linux}/bin/flock --exclusive 9
+      cd /var/lib/personal-site
+      exec ${pkgs.bun}/bin/bun run personal-data sync --source ${source}
+    '';
+
+  reconcilePersonalData = pkgs.writeShellScript "reconcile-personal-data" ''
+    set -euo pipefail
+    exec 9>/run/personal-site-source.lock
+    ${pkgs.util-linux}/bin/flock --exclusive 9
+    cd /var/lib/personal-site
+    exec ${pkgs.bun}/bin/bun run personal-data sync --source all --full
+  '';
+
+  mkSyncService = source: {
+    description = "Sync ${source} into the personal Directus store";
+    after = [
+      "network-online.target"
+      "personal-site.service"
+      "podman-directus.service"
+    ];
+    wants = [ "network-online.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      EnvironmentFile = config.sops.templates."personal-site-env".path;
+      WorkingDirectory = "/var/lib/personal-site";
+      ExecStart = syncPersonalData source;
+      TimeoutStartSec = "30min";
+      Nice = 5;
+      PrivateTmp = true;
+      NoNewPrivileges = true;
+    };
+  };
+
+  mkSyncTimer = interval: bootDelay: {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = bootDelay;
+      OnUnitActiveSec = interval;
+      Persistent = true;
+      RandomizedDelaySec = "5min";
+    };
+  };
 in
 {
   options.vps.hosting.sites.personal = {
@@ -24,7 +88,9 @@ in
         TRAKT_CLIENT_SECRET=${config.sops.placeholder.website_trakt_client_secret}
         TMDB_API_KEY=${config.sops.placeholder.website_tmdb_api_key}
         DIRECTUS_URL=${config.sops.placeholder.website_directus_url}
+        DIRECTUS_INTERNAL_URL=http://127.0.0.1:8055
         DIRECTUS_ACCESS_TOKEN=${config.sops.placeholder.website_directus_access_token}
+        PERSONAL_DATA_API_KEY=${config.sops.placeholder.website_personal_data_api_key}
         HOST=127.0.0.1
         PORT=${toString personalPort}
         NODE_ENV=production
@@ -51,6 +117,7 @@ in
         pkgs.glib
         pkgs.cairo
         pkgs.pango
+        pkgs.util-linux
       ];
 
       serviceConfig = {
@@ -63,8 +130,35 @@ in
         MemoryHigh = "3G";
         MemoryMax = "4G";
 
-        ExecStart = "${pkgs.bash}/bin/bash -c 'if [ ! -d /var/lib/personal-site/.git ]; then git clone --branch main --single-branch https://github.com/rodrgds/personal-website /var/lib/personal-site; fi && cd /var/lib/personal-site && git fetch --prune origin main && git reset --hard origin/main && git clean -fd && bun install --frozen-lockfile && bun run build'";
+        ExecStart = buildPersonalSite;
         ExecStartPost = "${pkgs.systemd}/bin/systemctl --no-block try-restart personal-site-run.service";
+      };
+    };
+
+    systemd.services.personal-data-sync-lastfm = mkSyncService "lastfm";
+    systemd.services.personal-data-sync-hevy = mkSyncService "hevy";
+    systemd.services.personal-data-sync-github = mkSyncService "github";
+    systemd.services.personal-data-sync-leetcode = mkSyncService "leetcode";
+    systemd.services.personal-data-reconcile = mkSyncService "all" // {
+      description = "Reconcile all personal activity sources";
+      serviceConfig = (mkSyncService "all").serviceConfig // {
+        ExecStart = reconcilePersonalData;
+        TimeoutStartSec = "60min";
+      };
+    };
+
+    systemd.timers = {
+      personal-data-sync-lastfm = mkSyncTimer "15min" "5min";
+      personal-data-sync-hevy = mkSyncTimer "4h" "15min";
+      personal-data-sync-github = mkSyncTimer "6h" "25min";
+      personal-data-sync-leetcode = mkSyncTimer "6h" "35min";
+      personal-data-reconcile = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "Sun *-*-* 04:00:00";
+          Persistent = true;
+          RandomizedDelaySec = "20min";
+        };
       };
     };
 
