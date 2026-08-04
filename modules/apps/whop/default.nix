@@ -13,13 +13,15 @@ in
     enable = lib.mkEnableOption "Enable the Whop CLI";
   };
 
-  config = lib.mkIf (cfg.enable && isDarwin) {
-    homebrew.taps = [
-      {
-        name = "whopio/tap";
-        trusted = true;
-      }
-    ];
-    homebrew.brews = [ "whopio/tap/whop" ];
+  config = lib.optionalAttrs isDarwin {
+    homebrew = lib.mkIf cfg.enable {
+      taps = [
+        {
+          name = "whopio/tap";
+          trusted = true;
+        }
+      ];
+      brews = [ "whopio/tap/whop" ];
+    };
   };
 }
