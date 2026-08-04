@@ -77,6 +77,10 @@
   vps.openpost = {
     enable = true;
     edition = "cloud";
+    # The signed deployment hook pulls and verifies an immutable digest, then
+    # updates the local latest tag. Never let a service restart pull a mutable
+    # tag behind the deployment gate.
+    pullPolicy = "never";
     extraEnvironment = {
       OPENPOST_FEEDBACK_ENABLED = "true";
       OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";

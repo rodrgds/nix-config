@@ -9,6 +9,7 @@ let
   maintenancePath = lib.makeBinPath [
     pkgs.coreutils
     pkgs.curl
+    pkgs.jq
     pkgs.gnugrep
     pkgs.podman
     pkgs.systemd
@@ -57,25 +58,84 @@ let
   openpostDeploy = pkgs.writeShellScript "deploy-openpost" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
+    revision="''${1:-}"
+    release_tag="''${2:-}"
+    digest="''${3:-}"
+    image_name=ghcr.io/rodrgds/openpost
+
+    [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid OpenPost revision" >&2; exit 1; }
+    [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid OpenPost release tag" >&2; exit 1; }
+    [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "invalid OpenPost image digest" >&2; exit 1; }
+
     exec 9>/run/podman-maintenance.lock
     flock --exclusive 9
 
-    podman pull ghcr.io/rodrgds/openpost:latest
-    systemctl restart podman-openpost.service
+    candidate="$image_name@$digest"
+    previous_image="$(podman image inspect "$image_name:latest" --format '{{.Id}}')"
+    podman tag "$previous_image" "$image_name:rollback"
+    podman pull "$candidate"
+
+    image_revision="$(podman image inspect "$candidate" --format '{{index .Labels "org.opencontainers.image.revision"}}')"
+    [ "$image_revision" = "$revision" ] || {
+      echo "candidate image revision $image_revision does not match $revision" >&2
+      exit 1
+    }
+
+    # Validate the candidate against the exact production environment and
+    # mounted *_FILE secrets without opening a port or touching the database.
+    candidate_args=(--rm --network none)
+    while IFS= read -r environment; do
+      candidate_args+=(--env "$environment")
+    done < <(podman inspect openpost | jq -r '.[0].Config.Env[]')
+    while IFS=$'\t' read -r source destination; do
+      candidate_args+=(--volume "$source:$destination:ro")
+    done < <(podman inspect openpost | jq -r '.[0].Mounts[] | select(.Type == "bind") | [.Source, .Destination] | @tsv')
+    podman run "''${candidate_args[@]}" "$candidate" ./openpost check-config
+
+    podman tag "$candidate" "$image_name:latest"
+    if ! systemctl restart podman-openpost.service; then
+      podman tag "$image_name:rollback" "$image_name:latest"
+      systemctl restart podman-openpost.service
+      exit 1
+    fi
 
     for attempt in $(seq 1 60); do
-      if curl -fsS http://127.0.0.1:8090/api/v1/ready >/dev/null; then
+      running_revision="$(curl -fsS http://127.0.0.1:8090/api/v1/version 2>/dev/null | jq -r .revision 2>/dev/null || true)"
+      if [ "$running_revision" = "$revision" ] && curl -fsS http://127.0.0.1:8090/api/v1/ready >/dev/null; then
         break
       fi
       if [ "$attempt" = 60 ]; then
         journalctl -u podman-openpost.service -n 120 --no-pager >&2
+        podman tag "$image_name:rollback" "$image_name:latest"
+        systemctl restart podman-openpost.service
+        for rollback_attempt in $(seq 1 30); do
+          curl -fsS http://127.0.0.1:8090/api/v1/ready >/dev/null && break
+          sleep 2
+        done
         exit 1
       fi
       sleep 2
     done
 
-    curl -fsS https://app.openpost.social/api/v1/ready >/dev/null
+    if ! curl -fsS https://app.openpost.social/api/v1/ready >/dev/null; then
+      podman tag "$image_name:rollback" "$image_name:latest"
+      systemctl restart podman-openpost.service
+      exit 1
+    fi
+    public_revision="$(curl -fsS https://app.openpost.social/api/v1/version | jq -r .revision)"
+    if [ "$public_revision" != "$revision" ]; then
+      podman tag "$image_name:rollback" "$image_name:latest"
+      systemctl restart podman-openpost.service
+      echo "public OpenPost revision $public_revision does not match $revision" >&2
+      exit 1
+    fi
     ${pruneImages}
+    echo "DEPLOY_OK openpost $revision $release_tag"
+  '';
+
+  triggerOpenpostDeploy = pkgs.writeShellScript "trigger-deploy-openpost" ''
+    set -euo pipefail
+    exec ${openpostDeploy} "$@"
   '';
 
   montraDeploy = pkgs.writeShellScript "deploy-montra" ''
@@ -207,17 +267,36 @@ in
           },
           {
             "id": "deploy-openpost",
-            "execute-command": "${triggerDeploy "openpost"}",
+            "execute-command": "${triggerOpenpostDeploy}",
             "include-command-output-in-response": true,
+            "pass-arguments-to-command": [
+              { "source": "payload", "name": "sha" },
+              { "source": "payload", "name": "tag" },
+              { "source": "payload", "name": "digest" }
+            ],
             "trigger-rule": {
-              "match": {
-                "type": "payload-hmac-sha256",
-                "secret": "${config.sops.placeholder.deploy_webhook_secret}",
-                "parameter": {
-                  "source": "header",
-                  "name": "X-Hub-Signature-256"
+              "and": [
+                {
+                  "match": {
+                    "type": "payload-hmac-sha256",
+                    "secret": "${config.sops.placeholder.deploy_webhook_secret}",
+                    "parameter": {
+                      "source": "header",
+                      "name": "X-Hub-Signature-256"
+                    }
+                  }
+                },
+                {
+                  "match": {
+                    "type": "value",
+                    "value": "rodrgds/openpost",
+                    "parameter": {
+                      "source": "payload",
+                      "name": "repository"
+                    }
+                  }
                 }
-              }
+              ]
             }
           },
           {
@@ -288,17 +367,6 @@ in
         Type = "oneshot";
         ExecStart = eduDeploy;
         TimeoutStartSec = "5min";
-      };
-    };
-
-    systemd.services.deploy-openpost = {
-      description = "Deploy OpenPost after a verified release build";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = openpostDeploy;
-        TimeoutStartSec = "15min";
       };
     };
 
