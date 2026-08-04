@@ -71,7 +71,8 @@ in
                 felixkratz/formulae \
                 gromgit/fuse \
                 mobile-dev-inc/tap \
-                nikitabobko/tap
+                nikitabobko/tap \
+                whopio/tap
               do
                 brew trust "$tap" >/dev/null 2>&1 || true
               done
