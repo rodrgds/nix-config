@@ -263,6 +263,7 @@ in
         "--health-interval=30s"
         "--health-timeout=3s"
         "--health-retries=3"
+        "--health-start-period=60s"
       ]
       ++ openpostFileSecretMounts
       ++ cfg.extraOptions;

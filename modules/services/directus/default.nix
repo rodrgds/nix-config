@@ -18,7 +18,13 @@ let
     timestamp="$(${pkgs.coreutils}/bin/date --utc +%Y%m%dT%H%M%SZ)"
     archive="$backup_dir/directus-$timestamp.tar.gz"
     temporary="$(${pkgs.coreutils}/bin/mktemp -d "$backup_dir/.backup-XXXXXXXX")"
-    trap '${pkgs.coreutils}/bin/rm -rf -- "$temporary"' EXIT
+    cleanup() {
+      ${pkgs.coreutils}/bin/rm -rf -- "$temporary"
+      if [ ! -f "$archive.sha256" ]; then
+        ${pkgs.coreutils}/bin/rm --force -- "$archive"
+      fi
+    }
+    trap cleanup EXIT
 
     ${pkgs.sqlite}/bin/sqlite3 -cmd ".timeout 30000" "$database" ".backup '$temporary/database.sqlite'"
     ${pkgs.gnutar}/bin/tar \
@@ -131,6 +137,7 @@ in
     systemd.services.directus-backup = {
       description = "Create a consistent, bounded Directus backup";
       after = [ "podman-directus.service" ];
+      path = [ pkgs.gzip ];
       serviceConfig = {
         Type = "oneshot";
         ExecStart = backupDirectus;
@@ -154,6 +161,7 @@ in
 
     systemd.services.directus-backup-check = {
       description = "Verify the newest Directus backup can be read";
+      path = [ pkgs.gzip ];
       serviceConfig = {
         Type = "oneshot";
         ExecStart = checkDirectusBackup;

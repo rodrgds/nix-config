@@ -42,6 +42,20 @@ let
     exec ${pkgs.bun}/bin/bun run personal-data sync --source all --full
   '';
 
+  waitForDirectus = pkgs.writeShellScript "wait-for-directus" ''
+    set -euo pipefail
+    exec ${pkgs.curl}/bin/curl \
+      --fail \
+      --silent \
+      --show-error \
+      --retry 60 \
+      --retry-all-errors \
+      --retry-delay 2 \
+      --retry-max-time 120 \
+      --max-time 5 \
+      http://127.0.0.1:8055/server/health
+  '';
+
   mkSyncService = source: {
     description = "Sync ${source} into the personal Directus store";
     after = [
@@ -54,6 +68,7 @@ let
       Type = "oneshot";
       EnvironmentFile = config.sops.templates."personal-site-env".path;
       WorkingDirectory = "/var/lib/personal-site";
+      ExecStartPre = waitForDirectus;
       ExecStart = syncPersonalData source;
       TimeoutStartSec = "30min";
       Nice = 5;
