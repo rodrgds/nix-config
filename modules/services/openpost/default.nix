@@ -259,9 +259,9 @@ in
       extraOptions = [
         "--network=podman"
         "--pull=${cfg.pullPolicy}"
-        "--health-cmd=wget --spider http://localhost:${toString openpostContainerPort}/api/v1/ready"
+        "--health-cmd=sh -ec 'attempt=0; until wget --spider http://localhost:${toString openpostContainerPort}/api/v1/ready; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
         "--health-interval=30s"
-        "--health-timeout=3s"
+        "--health-timeout=75s"
         "--health-retries=3"
         "--health-start-period=60s"
       ]
