@@ -37,6 +37,24 @@ let
       value = config.sops.placeholder.openpost_provider_apps;
     }
     {
+      name = "pexels-api-key";
+      env = "OPENPOST_PEXELS_API_KEY_FILE";
+      target = "/run/secrets/openpost_pexels_api_key";
+      value = config.sops.placeholder.openpost_pexels_api_key;
+    }
+    {
+      name = "pixabay-api-key";
+      env = "OPENPOST_PIXABAY_API_KEY_FILE";
+      target = "/run/secrets/openpost_pixabay_api_key";
+      value = config.sops.placeholder.openpost_pixabay_api_key;
+    }
+    {
+      name = "unsplash-access-key";
+      env = "OPENPOST_UNSPLASH_ACCESS_KEY_FILE";
+      target = "/run/secrets/openpost_unsplash_access_key";
+      value = config.sops.placeholder.openpost_unsplash_access_key;
+    }
+    {
       name = "feedback-webhook";
       env = "OPENPOST_FEEDBACK_DESTINATION_URL_FILE";
       target = "/run/secrets/openpost_feedback_webhook";
@@ -221,6 +239,7 @@ in
         OPENPOST_PUBLIC_URL = "https://${cfg.domain}";
         OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain}";
         OPENPOST_DISABLE_REGISTRATIONS = "false";
+        OPENPOST_STOCK_MEDIA_ENABLED = "true";
         LINKEDIN_DISABLE_THREAD_REPLIES = "true";
         X_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/x/callback";
         LINKEDIN_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/linkedin/callback";
