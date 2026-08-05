@@ -121,6 +121,12 @@ let
       sleep 2
     done
 
+    podman exec -i -u postgres unprompted-postgres \
+      psql -U unprompted -d unprompted -v ON_ERROR_STOP=1 <<'SQL'
+    \getenv configured_password POSTGRES_PASSWORD
+    ALTER ROLE unprompted PASSWORD :'configured_password';
+    SQL
+
     bun run build
     bun run db:migrate
   '';
