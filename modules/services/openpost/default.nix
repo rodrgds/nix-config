@@ -37,6 +37,18 @@ let
       value = config.sops.placeholder.openpost_provider_apps;
     }
     {
+      name = "google-auth-client-id";
+      env = "OPENPOST_AUTH_GOOGLE_CLIENT_ID_FILE";
+      target = "/run/secrets/openpost_google_auth_client_id";
+      value = config.sops.placeholder.openpost_google_auth_client_id;
+    }
+    {
+      name = "google-auth-client-secret";
+      env = "OPENPOST_AUTH_GOOGLE_CLIENT_SECRET_FILE";
+      target = "/run/secrets/openpost_google_auth_client_secret";
+      value = config.sops.placeholder.openpost_google_auth_client_secret;
+    }
+    {
       name = "pexels-api-key";
       env = "OPENPOST_PEXELS_API_KEY_FILE";
       target = "/run/secrets/openpost_pexels_api_key";

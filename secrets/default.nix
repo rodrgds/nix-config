@@ -102,6 +102,8 @@ let
     "openpost_jwt_secret"
     "openpost_encryption_key"
     "openpost_provider_apps"
+    "openpost_google_auth_client_id"
+    "openpost_google_auth_client_secret"
     "openpost_pexels_api_key"
     "openpost_pixabay_api_key"
     "openpost_unsplash_access_key"
