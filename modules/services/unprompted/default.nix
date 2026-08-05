@@ -129,6 +129,12 @@ let
     SQL
 
     bun run build
+    mkdir -p apps/web/.next/standalone/apps/web/.next/static
+    cp -a apps/web/.next/static/. apps/web/.next/standalone/apps/web/.next/static/
+    if ! find apps/web/.next/standalone/apps/web/.next/static -type f -name '*.css' -print -quit | grep -q .; then
+      echo "Unprompted standalone runtime is missing its CSS assets." >&2
+      exit 1
+    fi
     bun run db:migrate
 
     rm -rf ${lib.escapeShellArg runtimeDir}
