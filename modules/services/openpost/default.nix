@@ -43,6 +43,12 @@ let
       value = config.sops.placeholder.openpost_feedback_webhook;
     }
     {
+      name = "smtp-password";
+      env = "OPENPOST_SMTP_PASSWORD_FILE";
+      target = "/run/secrets/openpost_smtp_password";
+      value = config.sops.placeholder.openpost_smtp_password;
+    }
+    {
       name = "x-client-id";
       env = "X_CLIENT_ID_FILE";
       target = "/run/secrets/openpost_twitter_client_id";
@@ -314,14 +320,16 @@ in
             OPENPOST_PRIVACY_URL=https://openpost.social/privacy
             OPENPOST_TERMS_VERSION=2026-08-04
             OPENPOST_PRIVACY_VERSION=2026-08-04
-            OPENPOST_SUPPORT_EMAIL=openpost@rgo.pt
+            OPENPOST_SUPPORT_EMAIL=hello@openpost.social
+            OPENPOST_EMAIL_VERIFICATION_REQUIRED=true
             OPENPOST_EMAIL_PROVIDER=smtp
-            OPENPOST_SMTP_HOST=smtp.eu.mailgun.org
+            OPENPOST_EMAIL_FROM=hello@openpost.social
+            OPENPOST_SMTP_HOST=smtp.purelymail.com
             OPENPOST_SMTP_PORT=465
-            OPENPOST_SMTP_USERNAME=${config.sops.placeholder.ghost_mailgun_user}
-            OPENPOST_SMTP_PASSWORD=${config.sops.placeholder.ghost_mailgun_password}
-            OPENPOST_SMTP_FROM=openpost@rgo.pt
+            OPENPOST_SMTP_USERNAME=hello@openpost.social
+            OPENPOST_SMTP_FROM=hello@openpost.social
             OPENPOST_SMTP_TLS_MODE=tls
+            OPENPOST_SMTP_SERVER_NAME=smtp.purelymail.com
             OPENPOST_PADDLE_API_KEY=${config.sops.placeholder.openpost_paddle_api_key}
             OPENPOST_PADDLE_ENVIRONMENT=production
             OPENPOST_PADDLE_CLIENT_TOKEN=${config.sops.placeholder.openpost_paddle_client_token}
