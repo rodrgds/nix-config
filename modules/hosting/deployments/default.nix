@@ -205,6 +205,7 @@ let
     fi
 
     systemctl restart unprompted-build.service
+    systemctl restart unprompted-api.service unprompted-worker.service unprompted-web.service
     deployed_revision="$(git -C /var/lib/unprompted/repo rev-parse HEAD)"
     if [ -n "$revision" ] && [ "$deployed_revision" != "$revision" ]; then
       echo "deployed Unprompted revision $deployed_revision does not match verified revision $revision" >&2
