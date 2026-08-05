@@ -354,7 +354,7 @@ in
         WorkingDirectory = "/var/lib/unprompted";
         EnvironmentFile = runtimeEnvFile;
         ExecStart = buildScript;
-        ExecStartPost = "${pkgs.systemd}/bin/systemctl try-restart unprompted-api.service unprompted-worker.service unprompted-web.service";
+        ExecStartPost = "${pkgs.systemd}/bin/systemctl --no-block try-restart unprompted-api.service unprompted-worker.service unprompted-web.service";
         TimeoutStartSec = "45min";
       };
     };
