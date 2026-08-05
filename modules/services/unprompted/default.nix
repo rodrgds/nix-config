@@ -47,10 +47,13 @@ let
     AI_STT_MAX_DURATION_SECONDS=300
     EAGER_EVALUATION=false
 
-    RESEND_API_KEY=
+    SMTP_HOST=smtp.purelymail.com
+    SMTP_PORT=465
+    SMTP_SECURE=true
+    SMTP_USERNAME=hello@unprompted.to
+    SMTP_PASSWORD=replace-with-mailbox-or-app-password
     EMAIL_FROM="Unprompted <hello@${cfg.domain}>"
     EMAIL_TOKEN_SECRET=replace-with-rotatable-32-plus-character-secret
-    RESEND_WEBHOOK_SECRET=
 
     EXPO_ACCESS_TOKEN=
     S3_ENDPOINT=
@@ -235,7 +238,11 @@ in
         AI_STT_MAX_DURATION_SECONDS=300
         EAGER_EVALUATION=false
 
-        RESEND_API_KEY=${config.sops.placeholder.unprompted_resend_api_key}
+        SMTP_HOST=smtp.purelymail.com
+        SMTP_PORT=465
+        SMTP_SECURE=true
+        SMTP_USERNAME=hello@unprompted.to
+        SMTP_PASSWORD=${config.sops.placeholder.unprompted_smtp_password}
         EMAIL_FROM="Unprompted <hello@unprompted.to>"
         EMAIL_TOKEN_SECRET=${config.sops.placeholder.unprompted_email_token_secret}
 

@@ -137,7 +137,7 @@ let
     "unprompted_email_token_secret"
     "unprompted_operations_token"
     "unprompted_openrouter_api_key"
-    "unprompted_resend_api_key"
+    "unprompted_smtp_password"
     # "openpost_mastodon_servers"
     # LiteLLM
     "litellm_master_key"
