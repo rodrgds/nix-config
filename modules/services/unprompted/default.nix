@@ -10,9 +10,10 @@ let
   cfg = config.vps.unprompted;
 
   repoDir = "/var/lib/unprompted/repo";
+  runtimeDir = "/var/lib/unprompted/runtime";
   runtimeEnvFile = config.sops.templates."unprompted-production-env".path;
   envExample = ''
-    # Copy this to /var/lib/unprompted/production.env and fill real values.
+    # Reference only. Production values come from the root-only SOPS template.
     # Keep this file shell/systemd EnvironmentFile compatible: quote values containing spaces.
     NODE_ENV=production
     PORT=${toString cfg.apiPort}
@@ -129,6 +130,19 @@ let
 
     bun run build
     bun run db:migrate
+
+    rm -rf ${lib.escapeShellArg runtimeDir}
+    rm -rf node_modules apps/*/node_modules packages/*/node_modules
+    bun install --frozen-lockfile --production --filter @unprompted/api
+    node ops/scripts/assemble-bun-runtime.mjs ${lib.escapeShellArg "${runtimeDir}/api"}
+    mkdir -p ${lib.escapeShellArg "${runtimeDir}/api/apps/api"}
+    cp -a apps/api/dist ${lib.escapeShellArg "${runtimeDir}/api/apps/api/dist"}
+
+    rm -rf node_modules apps/*/node_modules packages/*/node_modules
+    bun install --frozen-lockfile --production --filter @unprompted/worker
+    node ops/scripts/assemble-bun-runtime.mjs ${lib.escapeShellArg "${runtimeDir}/worker"}
+    mkdir -p ${lib.escapeShellArg "${runtimeDir}/worker/apps/worker"}
+    cp -a apps/worker/dist ${lib.escapeShellArg "${runtimeDir}/worker/apps/worker/dist"}
   '';
 in
 {
@@ -343,16 +357,16 @@ in
         "podman-unprompted-postgres.service"
       ];
       wantedBy = [ "multi-user.target" ];
-      unitConfig.ConditionPathExists = "${repoDir}/apps/api/dist/server.js";
+      unitConfig.ConditionPathExists = "${runtimeDir}/api/apps/api/dist/server.js";
 
       serviceConfig = {
-        WorkingDirectory = repoDir;
+        WorkingDirectory = "${runtimeDir}/api";
         EnvironmentFile = runtimeEnvFile;
         Environment = [
           "NODE_ENV=production"
           "PORT=${toString cfg.apiPort}"
         ];
-        ExecStart = "${pkgs.nodejs_22}/bin/node apps/api/dist/server.js";
+        ExecStart = "${pkgs.coreutils}/bin/env PORT=${toString cfg.apiPort} ${pkgs.nodejs_22}/bin/node apps/api/dist/server.js";
         Restart = "on-failure";
         RestartSec = "5s";
         NoNewPrivileges = true;
@@ -370,10 +384,10 @@ in
         "podman-unprompted-postgres.service"
       ];
       wantedBy = [ "multi-user.target" ];
-      unitConfig.ConditionPathExists = "${repoDir}/apps/worker/dist/index.js";
+      unitConfig.ConditionPathExists = "${runtimeDir}/worker/apps/worker/dist/index.js";
 
       serviceConfig = {
-        WorkingDirectory = repoDir;
+        WorkingDirectory = "${runtimeDir}/worker";
         EnvironmentFile = runtimeEnvFile;
         Environment = [
           "NODE_ENV=production"
@@ -402,7 +416,7 @@ in
           "HOSTNAME=127.0.0.1"
           "PORT=${toString cfg.webPort}"
         ];
-        ExecStart = "${pkgs.nodejs_22}/bin/node apps/web/server.js";
+        ExecStart = "${pkgs.coreutils}/bin/env PORT=${toString cfg.webPort} ${pkgs.nodejs_22}/bin/node apps/web/server.js";
         Restart = "on-failure";
         RestartSec = "5s";
         NoNewPrivileges = true;
