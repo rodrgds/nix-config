@@ -10,6 +10,7 @@ let
   cfg = config.vps.unprompted;
 
   repoDir = "/var/lib/unprompted/repo";
+  runtimeEnvFile = config.sops.templates."unprompted-production-env".path;
   envExample = ''
     # Copy this to /var/lib/unprompted/production.env and fill real values.
     # Keep this file shell/systemd EnvironmentFile compatible: quote values containing spaces.
@@ -75,7 +76,9 @@ let
     pkgs.gnugrep
     pkgs.nodejs_22
     pkgs.openssh
-    pkgs.pnpm
+    pkgs.bun
+    pkgs.gzip
+    pkgs.podman
     pkgs.postgresql_16
     pkgs.systemd
   ];
@@ -89,8 +92,8 @@ let
     export NEXT_TELEMETRY_DISABLED=1
     export GIT_SSH_COMMAND="ssh -i ${config.sops.secrets.unprompted_deploy_key.path} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/unprompted/github-known-hosts"
 
-    if [ ! -f ${lib.escapeShellArg cfg.environmentFile} ]; then
-      echo "Missing ${cfg.environmentFile}; copy /etc/unprompted/production.env.example and fill production values." >&2
+    if [ ! -f ${lib.escapeShellArg runtimeEnvFile} ]; then
+      echo "Missing rendered Unprompted production environment." >&2
       exit 1
     fi
 
@@ -103,7 +106,10 @@ let
     git fetch origin ${lib.escapeShellArg cfg.branch}
     git reset --hard origin/${lib.escapeShellArg cfg.branch}
 
-    pnpm install --frozen-lockfile
+    node ops/scripts/staging-preflight.mjs -- \
+      --env-file ${lib.escapeShellArg runtimeEnvFile} \
+      --allow-local-database
+    bun install --frozen-lockfile
 
     for attempt in $(seq 1 60); do
       if pg_isready "$DATABASE_URL" >/dev/null 2>&1; then
@@ -115,8 +121,8 @@ let
       sleep 2
     done
 
-    pnpm build
-    pnpm db:migrate
+    bun run build
+    bun run db:migrate
   '';
 in
 {
@@ -147,12 +153,6 @@ in
       description = "Git branch deployed by the source-build service.";
     };
 
-    environmentFile = lib.mkOption {
-      type = lib.types.str;
-      default = "/var/lib/unprompted/production.env";
-      description = "Production EnvironmentFile consumed by Unprompted services.";
-    };
-
     webPort = lib.mkOption {
       type = lib.types.port;
       default = 3210;
@@ -178,10 +178,64 @@ in
       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
     '';
 
+    sops.templates."unprompted-production-env" = {
+      content = ''
+        NODE_ENV=production
+        PORT=${toString cfg.apiPort}
+        API_ORIGIN=http://127.0.0.1:${toString cfg.apiPort}
+        API_URL=https://${cfg.apiDomain}
+        NEXT_PUBLIC_API_URL=https://${cfg.apiDomain}
+        EXPO_PUBLIC_API_URL=https://${cfg.apiDomain}
+
+        POSTGRES_USER=unprompted
+        POSTGRES_DB=unprompted
+        POSTGRES_PASSWORD=${config.sops.placeholder.unprompted_postgres_password}
+        DATABASE_URL=postgres://unprompted:${config.sops.placeholder.unprompted_postgres_password}@127.0.0.1:${toString cfg.postgresPort}/unprompted
+
+        BETTER_AUTH_SECRET=${config.sops.placeholder.unprompted_better_auth_secret}
+        BETTER_AUTH_URL=https://${cfg.apiDomain}
+        WEB_ORIGIN=https://${cfg.domain}
+
+        AI_PROVIDER=openrouter
+        AI_API_KEY=${config.sops.placeholder.unprompted_openrouter_api_key}
+        AI_BASE_URL=https://openrouter.ai/api/v1
+        AI_MODEL=deepseek/deepseek-v4-flash
+        AI_EVALUATION_TIMEOUT_MS=30000
+        AI_EXTRACTION_PROVIDER=openrouter
+        AI_VISION_MODEL=google/gemini-3.5-flash
+        AI_EXTRACTION_TIMEOUT_MS=45000
+        AI_STT_MODEL=openai/whisper-large-v3-turbo
+        AI_STT_TIMEOUT_MS=60000
+        AI_STT_MAX_DURATION_SECONDS=300
+        EAGER_EVALUATION=false
+
+        RESEND_API_KEY=${config.sops.placeholder.unprompted_resend_api_key}
+        EMAIL_FROM="Unprompted <hello@unprompted.to>"
+        EMAIL_TOKEN_SECRET=${config.sops.placeholder.unprompted_email_token_secret}
+
+        DISCUSSIONS_ENABLED=false
+        EXTRACTION_ENABLED=false
+        NOTIFICATIONS_ENABLED=false
+        API_VERSION=1.0.0
+        MIN_WEB_VERSION=0.1.0
+        MIN_NATIVE_VERSION=0.1.0
+        OPERATIONS_TOKEN=${config.sops.placeholder.unprompted_operations_token}
+      '';
+      mode = "0400";
+      restartUnits = [
+        "podman-unprompted-postgres.service"
+        "unprompted-build.service"
+        "unprompted-api.service"
+        "unprompted-worker.service"
+        "unprompted-web.service"
+      ];
+    };
+
     systemd.tmpfiles.rules = [
       "d /var/lib/unprompted 0750 root root -"
       "d /var/lib/unprompted/postgres 0700 70 70 -"
       "d /var/lib/unprompted/repo 0750 root root -"
+      "d /var/backup/unprompted 0750 root root -"
     ];
 
     virtualisation.oci-containers.containers.unprompted-postgres = {
@@ -192,7 +246,7 @@ in
         POSTGRES_DB = "unprompted";
       };
 
-      environmentFiles = [ cfg.environmentFile ];
+      environmentFiles = [ runtimeEnvFile ];
 
       volumes = [
         "/var/lib/unprompted/postgres:/var/lib/postgresql/data"
@@ -211,7 +265,42 @@ in
       ];
     };
 
-    systemd.services.podman-unprompted-postgres.unitConfig.ConditionPathExists = cfg.environmentFile;
+    systemd.services.podman-unprompted-postgres.unitConfig.ConditionPathExists = runtimeEnvFile;
+
+    systemd.services.unprompted-postgres-backup = {
+      description = "Back up the Unprompted PostgreSQL database";
+      after = [ "podman-unprompted-postgres.service" ];
+      requires = [ "podman-unprompted-postgres.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "unprompted-postgres-backup" ''
+          set -euo pipefail
+          export PATH=${runtimePath}:$PATH
+          timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          destination="/var/backup/unprompted/postgres-$timestamp.sql.gz"
+          temporary="$destination.tmp"
+          trap 'rm -f "$temporary"' EXIT
+          podman exec unprompted-postgres \
+            pg_dump --username unprompted --dbname unprompted --no-owner --no-privileges \
+            | gzip --best > "$temporary"
+          gzip --test "$temporary"
+          mv "$temporary" "$destination"
+          trap - EXIT
+          find /var/backup/unprompted -type f -name 'postgres-*.sql.gz' -mtime +14 -delete
+        '';
+      };
+    };
+
+    systemd.timers.unprompted-postgres-backup = {
+      description = "Back up Unprompted PostgreSQL daily";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "*-*-* 04:45:00";
+        Persistent = true;
+        RandomizedDelaySec = "20m";
+        Unit = "unprompted-postgres-backup.service";
+      };
+    };
 
     systemd.services.unprompted-build = {
       description = "Build and migrate Unprompted from source";
@@ -224,13 +313,13 @@ in
         "podman-unprompted-postgres.service"
       ];
       wantedBy = [ "multi-user.target" ];
-      unitConfig.ConditionPathExists = cfg.environmentFile;
+      unitConfig.ConditionPathExists = runtimeEnvFile;
 
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
         WorkingDirectory = "/var/lib/unprompted";
-        EnvironmentFile = cfg.environmentFile;
+        EnvironmentFile = runtimeEnvFile;
         ExecStart = buildScript;
         ExecStartPost = "${pkgs.systemd}/bin/systemctl try-restart unprompted-api.service unprompted-worker.service unprompted-web.service";
         TimeoutStartSec = "45min";
@@ -252,7 +341,7 @@ in
 
       serviceConfig = {
         WorkingDirectory = repoDir;
-        EnvironmentFile = cfg.environmentFile;
+        EnvironmentFile = runtimeEnvFile;
         Environment = [
           "NODE_ENV=production"
           "PORT=${toString cfg.apiPort}"
@@ -279,7 +368,7 @@ in
 
       serviceConfig = {
         WorkingDirectory = repoDir;
-        EnvironmentFile = cfg.environmentFile;
+        EnvironmentFile = runtimeEnvFile;
         Environment = [
           "NODE_ENV=production"
           "API_ORIGIN=http://127.0.0.1:${toString cfg.apiPort}"
@@ -300,7 +389,7 @@ in
 
       serviceConfig = {
         WorkingDirectory = "${repoDir}/apps/web/.next/standalone";
-        EnvironmentFile = cfg.environmentFile;
+        EnvironmentFile = runtimeEnvFile;
         Environment = [
           "NODE_ENV=production"
           "NEXT_TELEMETRY_DISABLED=1"

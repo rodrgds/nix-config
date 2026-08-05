@@ -9,6 +9,7 @@ let
   maintenancePath = lib.makeBinPath [
     pkgs.coreutils
     pkgs.curl
+    pkgs.git
     pkgs.jq
     pkgs.gnugrep
     pkgs.podman
@@ -190,15 +191,24 @@ let
   unpromptedDeploy = pkgs.writeShellScript "deploy-unprompted" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
+    revision="''${1:-}"
+    if [ -n "$revision" ]; then
+      [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid Unprompted revision" >&2; exit 1; }
+    fi
     exec 9>/run/podman-maintenance.lock
     flock --exclusive 9
 
-    if [ ! -f /var/lib/unprompted/production.env ]; then
+    if [ ! -f ${config.sops.templates."unprompted-production-env".path} ]; then
       echo "Unprompted production env is not configured" >&2
       exit 1
     fi
 
     systemctl restart unprompted-build.service
+    deployed_revision="$(git -C /var/lib/unprompted/repo rev-parse HEAD)"
+    if [ -n "$revision" ] && [ "$deployed_revision" != "$revision" ]; then
+      echo "deployed Unprompted revision $deployed_revision does not match verified revision $revision" >&2
+      exit 1
+    fi
     systemctl is-active --quiet unprompted-api.service unprompted-worker.service unprompted-web.service
 
     for attempt in $(seq 1 60); do
@@ -216,6 +226,12 @@ let
     curl -fsS https://api.unprompted.to/ready >/dev/null
     curl -fsS https://unprompted.to/ >/dev/null
     ${pruneImages}
+    echo "DEPLOY_OK unprompted $deployed_revision"
+  '';
+
+  triggerUnpromptedDeploy = pkgs.writeShellScript "trigger-deploy-unprompted" ''
+    set -euo pipefail
+    exec ${unpromptedDeploy} "$@"
   '';
 
   triggerDeploy =
@@ -316,17 +332,34 @@ in
           },
           {
             "id": "deploy-unprompted",
-            "execute-command": "${triggerDeploy "unprompted"}",
+            "execute-command": "${triggerUnpromptedDeploy}",
             "include-command-output-in-response": true,
+            "pass-arguments-to-command": [
+              { "source": "payload", "name": "sha" }
+            ],
             "trigger-rule": {
-              "match": {
-                "type": "payload-hmac-sha256",
-                "secret": "${config.sops.placeholder.deploy_webhook_secret}",
-                "parameter": {
-                  "source": "header",
-                  "name": "X-Hub-Signature-256"
+              "and": [
+                {
+                  "match": {
+                    "type": "payload-hmac-sha256",
+                    "secret": "${config.sops.placeholder.deploy_webhook_secret}",
+                    "parameter": {
+                      "source": "header",
+                      "name": "X-Hub-Signature-256"
+                    }
+                  }
+                },
+                {
+                  "match": {
+                    "type": "value",
+                    "value": "rodrgds/unprompted",
+                    "parameter": {
+                      "source": "payload",
+                      "name": "repository"
+                    }
+                  }
                 }
-              }
+              ]
             }
           }
         ]

@@ -66,7 +66,9 @@ export async function allowedTargetsFor(
     if (!target.allowedFrom.includes(currentHost)) return false;
     if (target.kind === "darwin") return platform === "darwin";
     if (target.kind === "nixos") return nixos;
-    if (target.kind === "nixos-remote") return nixos;
+    if (target.kind === "nixos-remote") {
+      return platform === "darwin" || nixos;
+    }
     return false;
   });
 }
@@ -239,13 +241,16 @@ export function rebuildCommand(
   }
 
   const args = [
-    "switch",
-    "--flake",
-    `${REPO_DIR}#${target.flakeAttr}`,
+    "os",
+    nixosMode,
+    "path:.",
+    "-H",
+    target.flakeAttr,
     "--target-host",
     target.remote.targetHost,
-    "--sudo",
-    "--ask-sudo-password",
+    "--elevation-strategy",
+    "passwordless",
+    "--show-activation-logs",
     ...REBUILD_STORE_SPACE_ARGS,
     ...NIXOS_CACHE_ONLY_ARGS,
   ];
@@ -256,7 +261,9 @@ export function rebuildCommand(
     args.push("--build-host", target.remote.buildHost);
   }
 
-  return withEarlySudo(["nixos-rebuild", args]);
+  args.push("--", "--impure");
+
+  return ["nh", args];
 }
 
 function withEarlySudo(command: [string, string[]]): [string, string[]] {

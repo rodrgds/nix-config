@@ -24,8 +24,8 @@ export const TARGETS: Target[] = [
     name: "rgo-vps",
     flakeAttr: "rgo-vps",
     kind: "nixos-remote",
-    description: "Remote NixOS deployment over Tailscale/SSH",
-    allowedFrom: ["rgo-desktop"],
+    description: "Remote NixOS deployment; build on the VPS over Tailscale/SSH",
+    allowedFrom: ["rgo-laptop", "rgo-desktop"],
     remote: {
       targetHost: "rgo@rgo-vps",
       // local = build on the current NixOS machine, then deploy.

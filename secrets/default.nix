@@ -131,6 +131,12 @@ let
     "montra_r2_secret_access_key"
     # Unprompted
     "unprompted_deploy_key"
+    "unprompted_postgres_password"
+    "unprompted_better_auth_secret"
+    "unprompted_email_token_secret"
+    "unprompted_operations_token"
+    "unprompted_openrouter_api_key"
+    "unprompted_resend_api_key"
     # "openpost_mastodon_servers"
     # LiteLLM
     "litellm_master_key"

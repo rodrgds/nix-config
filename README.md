@@ -93,7 +93,7 @@ Some heavier or experimental services remain disabled until needed.
 
 User-facing application delivery is grouped under `modules/hosting/`, separate from reusable service/runtime declarations. `modules/hosting/sites/` owns static/source-built sites, while `modules/hosting/deployments/default.nix` owns the authenticated webhook receiver, repository allow-listing, systemd deploy units, health checks, and old-image pruning. Runtime/container modules remain under `modules/services/`.
 
-OpenPost and Montra publish verified GHCR images before calling their signed VPS hooks. Personal Website, `edu.rgo.pt`, and Unprompted deploy verified source revisions and build or sync on the VPS. When changing a repository, image name, unit name, domain, health endpoint, or build directory, update both the project workflow/`AGENTS.md` and the matching Nix hosting module. Do not add parallel ad-hoc deploy scripts on the server. After rebuilding `rgo-vps`, verify `webhook.service`, the relevant `deploy-*.service`, its application units, and the public health URL.
+OpenPost and Montra publish verified GHCR images before calling their signed VPS hooks. Personal Website, `edu.rgo.pt`, and Unprompted deploy verified source revisions and build or sync on the VPS. When changing a repository, image name, unit name, domain, health endpoint, or build directory, update both the project workflow/`AGENTS.md` and the matching Nix hosting module. Do not add parallel ad-hoc deploy scripts on the server. After rebuilding `rgo-vps`, verify `webhook-deploy.service`, the relevant deployment hook, its application units, and the public health URL.
 
 ## Platform Differences
 
@@ -236,20 +236,20 @@ Then:
 #### Unprompted production env
 
 `rgo-vps` defines `unprompted.to`, `www.unprompted.to`, and `api.unprompted.to` through Caddy.
-Before starting the app, create the production EnvironmentFile on the VPS:
+Its production EnvironmentFile is rendered by `sops-nix` from the dedicated `unprompted_*`
+entries in `secrets/vps-secrets.yaml`; do not create or edit a plaintext copy on the VPS. After
+updating those encrypted values, rebuild `rgo-vps` and activate the source deployment:
 
 ```bash
-sudo install -d -m 0750 /var/lib/unprompted
-sudo cp /etc/unprompted/production.env.example /var/lib/unprompted/production.env
-sudo $EDITOR /var/lib/unprompted/production.env
-sudo systemctl restart podman-unprompted-postgres unprompted-build unprompted-api unprompted-worker unprompted-web
+rebuild # choose rgo-vps
+ssh rgo@rgo-vps 'sudo systemctl start deploy-unprompted.service'
 ```
 
-Point DNS for `unprompted.to`, `www.unprompted.to`, and `api.unprompted.to` at the VPS. The
-systemd units are guarded with `ConditionPathExists`, so the NixOS switch succeeds before the real
-env file exists, but the app services intentionally stay inactive until it is present.
-The build unit clones `https://github.com/rodrgds/unprompted` by default, so publish that repo or
-override `vps.unprompted.repository` before starting `unprompted-build`.
+Point DNS for `unprompted.to`, `www.unprompted.to`, and `api.unprompted.to` at the VPS. The build
+unit validates the rendered production environment, fetches verified `main`, installs with the
+frozen Bun lockfile, builds, migrates, and restarts the API, worker, and web units. The GitHub
+`PRODUCTION_DEPLOY_ENABLED` repository variable must remain `false` until the first manual
+activation and public endpoint checks pass.
 
 ## Operations
 

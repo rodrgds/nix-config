@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "bun run ./rebuild.ts",
-    "check": "bunx tsc --noEmit"
+    "check": "bunx tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@opentui/core": "latest"
