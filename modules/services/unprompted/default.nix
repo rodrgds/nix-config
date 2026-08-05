@@ -112,11 +112,11 @@ let
     bun install --frozen-lockfile
 
     for attempt in $(seq 1 60); do
-      if pg_isready "$DATABASE_URL" >/dev/null 2>&1; then
+      if pg_isready -d "$DATABASE_URL" >/dev/null 2>&1; then
         break
       fi
       if [ "$attempt" = 60 ]; then
-        pg_isready "$DATABASE_URL"
+        pg_isready -d "$DATABASE_URL"
       fi
       sleep 2
     done
