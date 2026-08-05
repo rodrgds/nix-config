@@ -88,6 +88,7 @@ let
     while IFS= read -r environment; do
       candidate_args+=(--env "$environment")
     done < <(podman inspect openpost | jq -r '.[0].Config.Env[]')
+    candidate_args+=(--env-file ${config.sops.templates.openpost-cloud-env.path})
     while IFS=$'\t' read -r source destination; do
       candidate_args+=(--volume "$source:$destination:ro")
     done < <(podman inspect openpost | jq -r '.[0].Mounts[] | select(.Type == "bind") | [.Source, .Destination] | @tsv')
