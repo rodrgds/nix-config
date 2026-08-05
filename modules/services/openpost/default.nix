@@ -31,6 +31,12 @@ let
       value = config.sops.placeholder.openpost_encryption_key;
     }
     {
+      name = "cloudflare-email-api-token";
+      env = "OPENPOST_CLOUDFLARE_EMAIL_API_TOKEN_FILE";
+      target = "/run/secrets/openpost_cloudflare_email_api_token";
+      value = config.sops.placeholder.openpost_cloudflare_email_api_token;
+    }
+    {
       name = "provider-apps";
       env = "OPENPOST_PROVIDER_APPS_FILE";
       target = "/run/secrets/openpost_provider_apps";
@@ -173,7 +179,7 @@ in
       default = [ ];
       description = ''
         Extra env files passed to the OpenPost container. In cloud mode this
-        should provide OPENPOST_DATABASE_URL, S3 credentials, Whop billing
+        should provide OPENPOST_DATABASE_URL, S3 credentials, Paddle billing
         secrets, or *_FILE pointers unless they are set via extraEnvironment.
       '';
     };
@@ -315,28 +321,24 @@ in
             OPENPOST_TERMS_VERSION=2026-08-04
             OPENPOST_PRIVACY_VERSION=2026-08-04
             OPENPOST_SUPPORT_EMAIL=openpost@rgo.pt
-            OPENPOST_SMTP_HOST=smtp.eu.mailgun.org
-            OPENPOST_SMTP_PORT=465
-            OPENPOST_SMTP_USERNAME=${config.sops.placeholder.ghost_mailgun_user}
-            OPENPOST_SMTP_PASSWORD=${config.sops.placeholder.ghost_mailgun_password}
-            OPENPOST_SMTP_FROM=openpost@rgo.pt
-            OPENPOST_SMTP_TLS_MODE=tls
-            OPENPOST_WHOP_API_KEY=${config.sops.placeholder.openpost_whop_api_key}
-            OPENPOST_WHOP_API_BASE_URL=https://api.whop.com/api/v1
-            OPENPOST_WHOP_WEBHOOK_SECRET=${config.sops.placeholder.openpost_whop_webhook_secret}
-            OPENPOST_WHOP_ACCOUNT_ID=biz_S92iIf3niJx3AX
-            OPENPOST_WHOP_PRODUCT_ID=prod_elW4nwt4JwCoJ
-            OPENPOST_WHOP_CHECKOUT_RETURN_URL=https://${cfg.domain}/checkout?status=success
-            OPENPOST_WHOP_STARTER_MONTHLY_PLAN_ID=plan_NbMrhbCpylDWf
-            OPENPOST_WHOP_STARTER_ANNUAL_PLAN_ID=plan_a7FHQQ9dcoMaM
-            OPENPOST_WHOP_FOUNDER_MONTHLY_PLAN_ID=plan_PZ33VWXSFFTGH
-            OPENPOST_WHOP_FOUNDER_ANNUAL_PLAN_ID=plan_TnJ9JyzviOpIe
-            OPENPOST_WHOP_PRO_MONTHLY_PLAN_ID=plan_8dtDS3Whuk2qp
-            OPENPOST_WHOP_PRO_ANNUAL_PLAN_ID=plan_mF4lP09g9BiZQ
-            OPENPOST_WHOP_TEAM_MONTHLY_PLAN_ID=plan_GHUbRiuiH7ltx
-            OPENPOST_WHOP_TEAM_ANNUAL_PLAN_ID=plan_5SwqQ0PpEjXXv
-            OPENPOST_WHOP_AGENCY_MONTHLY_PLAN_ID=plan_4TifThy1SBiWW
-            OPENPOST_WHOP_AGENCY_ANNUAL_PLAN_ID=plan_UFIyGxVGv6GLO
+            OPENPOST_EMAIL_PROVIDER=cloudflare
+            OPENPOST_EMAIL_FROM="OpenPost <hello@openpost.social>"
+            OPENPOST_CLOUDFLARE_EMAIL_ACCOUNT_ID=1e84f0262ece6e76da6df50801960036
+            OPENPOST_PADDLE_API_KEY=${config.sops.placeholder.openpost_paddle_api_key}
+            OPENPOST_PADDLE_ENVIRONMENT=production
+            OPENPOST_PADDLE_CLIENT_TOKEN=${config.sops.placeholder.openpost_paddle_client_token}
+            OPENPOST_PADDLE_WEBHOOK_SECRET=${config.sops.placeholder.openpost_paddle_webhook_secret}
+            OPENPOST_PADDLE_CHECKOUT_RETURN_URL=https://${cfg.domain}/checkout?status=success
+            OPENPOST_PADDLE_STARTER_MONTHLY_PRICE_ID=pri_01kz8y75epf02dvf9yt0hcbxsr
+            OPENPOST_PADDLE_STARTER_ANNUAL_PRICE_ID=pri_01kz8y75zmdb45ferqj6dq1s68
+            OPENPOST_PADDLE_FOUNDER_MONTHLY_PRICE_ID=pri_01kz8y774fgdve480x8pcd4tzq
+            OPENPOST_PADDLE_FOUNDER_ANNUAL_PRICE_ID=pri_01kz8y77nfx8myhzjbbrnpfn5f
+            OPENPOST_PADDLE_PRO_MONTHLY_PRICE_ID=pri_01kz8y78txwwdhbvte7gsjkpr3
+            OPENPOST_PADDLE_PRO_ANNUAL_PRICE_ID=pri_01kz8y79je6s27tgpgw2s6kpnb
+            OPENPOST_PADDLE_TEAM_MONTHLY_PRICE_ID=pri_01kz8y7argrs3zygh0j73wmf9n
+            OPENPOST_PADDLE_TEAM_ANNUAL_PRICE_ID=pri_01kz8y7b9n73r8v989skf9hbj1
+            OPENPOST_PADDLE_AGENCY_MONTHLY_PRICE_ID=pri_01kz8y7ccz8ve0gp2erm4yvssw
+            OPENPOST_PADDLE_AGENCY_ANNUAL_PRICE_ID=pri_01kz8y7cy4bjsmtdtjwpwns4wf
           '';
           mode = "0444";
         };
