@@ -31,12 +31,6 @@ let
       value = config.sops.placeholder.openpost_encryption_key;
     }
     {
-      name = "cloudflare-email-api-token";
-      env = "OPENPOST_CLOUDFLARE_EMAIL_API_TOKEN_FILE";
-      target = "/run/secrets/openpost_cloudflare_email_api_token";
-      value = config.sops.placeholder.openpost_cloudflare_email_api_token;
-    }
-    {
       name = "provider-apps";
       env = "OPENPOST_PROVIDER_APPS_FILE";
       target = "/run/secrets/openpost_provider_apps";
@@ -321,9 +315,13 @@ in
             OPENPOST_TERMS_VERSION=2026-08-04
             OPENPOST_PRIVACY_VERSION=2026-08-04
             OPENPOST_SUPPORT_EMAIL=openpost@rgo.pt
-            OPENPOST_EMAIL_PROVIDER=cloudflare
-            OPENPOST_EMAIL_FROM="OpenPost <hello@openpost.social>"
-            OPENPOST_CLOUDFLARE_EMAIL_ACCOUNT_ID=1e84f0262ece6e76da6df50801960036
+            OPENPOST_EMAIL_PROVIDER=smtp
+            OPENPOST_SMTP_HOST=smtp.eu.mailgun.org
+            OPENPOST_SMTP_PORT=465
+            OPENPOST_SMTP_USERNAME=${config.sops.placeholder.ghost_mailgun_user}
+            OPENPOST_SMTP_PASSWORD=${config.sops.placeholder.ghost_mailgun_password}
+            OPENPOST_SMTP_FROM=openpost@rgo.pt
+            OPENPOST_SMTP_TLS_MODE=tls
             OPENPOST_PADDLE_API_KEY=${config.sops.placeholder.openpost_paddle_api_key}
             OPENPOST_PADDLE_ENVIRONMENT=production
             OPENPOST_PADDLE_CLIENT_TOKEN=${config.sops.placeholder.openpost_paddle_client_token}

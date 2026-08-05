@@ -101,7 +101,6 @@ let
     # OpenPost
     "openpost_jwt_secret"
     "openpost_encryption_key"
-    "openpost_cloudflare_email_api_token"
     "openpost_provider_apps"
     "openpost_feedback_webhook"
     "openpost_postgres_password"
