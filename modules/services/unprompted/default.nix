@@ -358,10 +358,7 @@ in
         "unprompted-build.service"
         "podman-unprompted-postgres.service"
       ];
-      requires = [
-        "unprompted-build.service"
-        "podman-unprompted-postgres.service"
-      ];
+      requires = [ "podman-unprompted-postgres.service" ];
       wantedBy = [ "multi-user.target" ];
       unitConfig.ConditionPathExists = "${runtimeDir}/api/apps/api/dist/server.js";
 
@@ -385,10 +382,7 @@ in
         "unprompted-build.service"
         "podman-unprompted-postgres.service"
       ];
-      requires = [
-        "unprompted-build.service"
-        "podman-unprompted-postgres.service"
-      ];
+      requires = [ "podman-unprompted-postgres.service" ];
       wantedBy = [ "multi-user.target" ];
       unitConfig.ConditionPathExists = "${runtimeDir}/worker/apps/worker/dist/index.js";
 
@@ -409,7 +403,6 @@ in
     systemd.services.unprompted-web = {
       description = "Unprompted web";
       after = [ "unprompted-build.service" ];
-      requires = [ "unprompted-build.service" ];
       wantedBy = [ "multi-user.target" ];
       unitConfig.ConditionPathExists = "${repoDir}/apps/web/.next/standalone/apps/web/server.js";
 
