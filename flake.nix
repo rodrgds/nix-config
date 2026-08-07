@@ -50,6 +50,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     steam-config-nix = {
       url = "github:different-name/steam-config-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -106,6 +111,7 @@
       nix-homebrew,
       sops-nix,
       disko,
+      deploy-rs,
       steam-config-nix,
       nix-index-database,
       angrr,
@@ -262,6 +268,29 @@
         system = "x86_64-linux";
         hostname = "rgo-vps";
       };
+
+      deploy.nodes.rgo-vps = {
+        hostname = "rgo-vps";
+        sshUser = "rgo";
+        user = "root";
+        remoteBuild = false;
+        autoRollback = true;
+        magicRollback = true;
+        activationTimeout = 1800;
+        confirmTimeout = 60;
+        profiles.system.path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.rgo-vps;
+      };
+
+      apps = {
+        aarch64-darwin.deploy-rs = deploy-rs.apps.aarch64-darwin.deploy-rs // {
+          meta.description = "Deploy the rgo-vps NixOS configuration";
+        };
+        x86_64-linux.deploy-rs = deploy-rs.apps.x86_64-linux.deploy-rs // {
+          meta.description = "Deploy the rgo-vps NixOS configuration";
+        };
+      };
+
+      checks.x86_64-linux = deploy-rs.lib.x86_64-linux.deployChecks self.deploy;
 
       # Darwin configurations
       darwinConfigurations.rgo-laptop = mkDarwinSystem {

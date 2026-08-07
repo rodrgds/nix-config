@@ -13,28 +13,42 @@ describe("remote VPS rebuilds", () => {
     ]);
   });
 
-  test("builds and activates rgo-vps remotely with nh", () => {
+  test("builds rgo-vps on the VPS from the Darwin laptop", () => {
     const target = TARGETS.find(({ name }) => name === "rgo-vps");
     expect(target).toBeDefined();
 
-    const [command, args] = rebuildCommand(target!);
+    const [command, args] = rebuildCommand(target!, "rgo-laptop");
 
-    expect(command).toBe("nh");
-    for (const arg of [
-      "os",
-      "switch",
-      "path:.",
-      "-H",
-      "rgo-vps",
-      "--target-host",
-      "rgo@rgo-vps",
-      "--build-host",
-      "--elevation-strategy",
-      "passwordless",
-      "--show-activation-logs",
+    expect(command).toBe("nix");
+    expect(args).toEqual([
+      "run",
+      "path:.#deploy-rs",
+      "--",
+      "--skip-checks",
+      "--remote-build",
+      "path:.#rgo-vps",
+      "--",
       "--impure",
-    ]) {
-      expect(args).toContain(arg);
-    }
+      "--option",
+      "min-free",
+      String(8 * 1024 * 1024 * 1024),
+      "--option",
+      "max-free",
+      String(16 * 1024 * 1024 * 1024),
+      "--option",
+      "substituters",
+      "https://cache.nixos.org",
+    ]);
+  });
+
+  test("builds rgo-vps locally from the Linux desktop", () => {
+    const target = TARGETS.find(({ name }) => name === "rgo-vps");
+    expect(target).toBeDefined();
+
+    const [command, args] = rebuildCommand(target!, "rgo-desktop");
+
+    expect(command).toBe("nix");
+    expect(args).not.toContain("--remote-build");
+    expect(args).toContain("path:.#rgo-vps");
   });
 });

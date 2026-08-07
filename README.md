@@ -286,6 +286,11 @@ rebuild --laptop
 # Direct fallback commands
 nh os switch ~/.config/home -H rgo-desktop
 nh darwin switch ~/.config/home -H rgo-laptop
+nix flake check ~/.config/home --no-build --all-systems --impure
+# From rgo-desktop: build locally, then copy and activate on the VPS
+nix run ~/.config/home#deploy-rs -- --skip-checks ~/.config/home#rgo-vps -- --impure
+# From rgo-laptop: build on the x86_64-linux VPS
+nix run ~/.config/home#deploy-rs -- --skip-checks --remote-build ~/.config/home#rgo-vps -- --impure
 sudo nixos-rebuild switch --flake "$HOME/.config/home#rgo-desktop"
 darwin-rebuild switch --flake "$HOME/.config/home#rgo-laptop"
 ```
@@ -300,7 +305,14 @@ It runs the Bun-based rebuild wizard in `tools/rebuild-wizard/rebuild.ts` and is
 - optionally update selected flake inputs
 - show git status and diff before rebuilding
 - run `statix` and `nixfmt`
-- run the correct rebuild command for the chosen target
+- deploy `rgo-vps` with target-side builds and deploy-rs magic rollback
+- run the correct local `nh` command for the desktop or laptop
+
+The VPS deploy profile connects to `rgo@rgo-vps`, activates the root NixOS system through
+passwordless sudo, and keeps deploy-rs automatic and magic rollback enabled. The wizard builds the
+VPS closure locally on the x86_64-linux desktop, but automatically selects a target-side build from
+the Apple Silicon laptop. It evaluates all flake and deploy checks first, then skips deploy-rs's
+duplicate local build checks.
 
 ### Secrets management
 

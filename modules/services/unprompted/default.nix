@@ -34,7 +34,7 @@ let
     ALTER ROLE unprompted PASSWORD :'configured_password';
     SQL
     migrate_image_id="$(${pkgs.podman}/bin/podman image inspect ${migrateImage} --format '{{.Id}}')"
-    [[ "$migrate_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+    [[ "$migrate_image_id" =~ ^(sha256:)?[0-9a-f]{64}$ ]] || {
       echo "verified local Unprompted migration image is unavailable" >&2
       exit 1
     }

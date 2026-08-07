@@ -24,13 +24,11 @@ export const TARGETS: Target[] = [
     name: "rgo-vps",
     flakeAttr: "rgo-vps",
     kind: "nixos-remote",
-    description: "Remote NixOS deployment; build on the VPS over Tailscale/SSH",
+    description: "Remote NixOS deployment with deploy-rs magic rollback",
     allowedFrom: ["rgo-laptop", "rgo-desktop"],
     remote: {
-      targetHost: "rgo@rgo-vps",
-      // local = build on the current NixOS machine, then deploy.
-      // target = build on the VPS, equivalent to --build-host rgo@rgo-vps.
-      buildHost: "target",
+      deployNode: "rgo-vps",
+      remoteBuildFrom: ["rgo-laptop"],
     },
   },
 ];

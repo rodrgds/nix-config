@@ -254,6 +254,7 @@ async function ensureRebuildDiskSpace(
 async function runPreparationAndRebuild(
   app: App,
   platform: PlatformKind,
+  currentHost: string,
   target: Target,
   options: RebuildOptions,
 ): Promise<boolean> {
@@ -275,6 +276,24 @@ async function runPreparationAndRebuild(
         );
       } else {
         append("Skipping flake input updates.");
+        append("");
+      }
+
+      if (target.kind === "nixos-remote") {
+        append("Evaluating all flake and deploy-rs checks...");
+        await runLogged(
+          append,
+          "nix",
+          [
+            "flake",
+            "check",
+            "path:.",
+            "--no-build",
+            "--all-systems",
+            "--impure",
+          ],
+          { cwd: REPO_DIR },
+        );
         append("");
       }
 
@@ -332,9 +351,14 @@ async function runPreparationAndRebuild(
     );
   }
 
-  const [cmd, args] = rebuildCommand(target, nixosMode);
+  const [cmd, args] = rebuildCommand(target, currentHost, nixosMode);
+  const buildsRemotely =
+    target.kind === "nixos-remote" &&
+    target.remote?.remoteBuildFrom.includes(currentHost);
   const subtitle = systemdUpgrade
     ? `Target: ${target.name}. Building the boot generation; reboot required.`
+    : target.kind === "nixos-remote"
+      ? `Target: ${target.name}. Building ${buildsRemotely ? "on the VPS" : "locally"} with automatic rollback.`
     : `Target: ${target.name}. Asking for sudo up front and keeping it fresh while building.`;
 
   const success = await app.externalCommandScreen(
@@ -522,6 +546,7 @@ async function rebuildWizard(
   const success = await runPreparationAndRebuild(
     app,
     platform,
+    currentHost,
     target,
     options,
   );

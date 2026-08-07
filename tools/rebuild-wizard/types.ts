@@ -1,6 +1,5 @@
 export type TargetKind = "nixos" | "darwin" | "nixos-remote";
 export type PlatformKind = "darwin" | "linux" | "other";
-export type BuildHostMode = "local" | "target" | string;
 
 export type Target = {
   name: string;
@@ -9,8 +8,8 @@ export type Target = {
   description: string;
   allowedFrom: string[];
   remote?: {
-    targetHost: string;
-    buildHost?: BuildHostMode;
+    deployNode: string;
+    remoteBuildFrom: string[];
   };
 };
 

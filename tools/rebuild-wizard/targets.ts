@@ -210,6 +210,7 @@ export async function detectSystemdMajorUpgrade(
 
 export function rebuildCommand(
   target: Target,
+  currentHost: string,
   nixosMode: "switch" | "boot" = "switch",
 ): [string, string[]] {
   if (target.kind === "darwin") {
@@ -240,30 +241,26 @@ export function rebuildCommand(
     throw new Error(`${target.name} is remote but has no remote config.`);
   }
 
-  const args = [
-    "os",
-    nixosMode,
-    "path:.",
-    "-H",
-    target.flakeAttr,
-    "--target-host",
-    target.remote.targetHost,
-    "--elevation-strategy",
-    "passwordless",
-    "--show-activation-logs",
-    ...REBUILD_STORE_SPACE_ARGS,
-    ...NIXOS_CACHE_ONLY_ARGS,
+  const deployArgs = [
+    "run",
+    "path:.#deploy-rs",
+    "--",
+    "--skip-checks",
   ];
 
-  if (target.remote.buildHost === "target") {
-    args.push("--build-host", target.remote.targetHost);
-  } else if (target.remote.buildHost && target.remote.buildHost !== "local") {
-    args.push("--build-host", target.remote.buildHost);
+  if (target.remote.remoteBuildFrom.includes(currentHost)) {
+    deployArgs.push("--remote-build");
   }
 
-  args.push("--", "--impure");
+  deployArgs.push(
+    `path:.#${target.remote.deployNode}`,
+    "--",
+    "--impure",
+    ...REBUILD_STORE_SPACE_ARGS,
+    ...NIXOS_CACHE_ONLY_ARGS,
+  );
 
-  return ["nh", args];
+  return ["nix", deployArgs];
 }
 
 function withEarlySudo(command: [string, string[]]): [string, string[]] {
