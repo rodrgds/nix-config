@@ -84,6 +84,7 @@
     extraEnvironment = {
       OPENPOST_FEEDBACK_ENABLED = "true";
       OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";
+      # Keep the legacy flag until the always-on Video Editor release reaches production.
       OPENPOST_VIDEO_STUDIO_ENABLED = "true";
     };
   };
