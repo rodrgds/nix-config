@@ -93,7 +93,7 @@ Some heavier or experimental services remain disabled until needed.
 
 User-facing application delivery is grouped under `modules/hosting/`, separate from reusable service/runtime declarations. `modules/hosting/sites/` owns static/source-built sites, while `modules/hosting/deployments/default.nix` owns the authenticated webhook receiver, repository allow-listing, systemd deploy units, health checks, and old-image pruning. Runtime/container modules remain under `modules/services/`.
 
-OpenPost and Montra publish verified GHCR images before calling their signed VPS hooks. Personal Website, `edu.rgo.pt`, and Unprompted deploy verified source revisions and build or sync on the VPS. When changing a repository, image name, unit name, domain, health endpoint, or build directory, update both the project workflow/`AGENTS.md` and the matching Nix hosting module. Do not add parallel ad-hoc deploy scripts on the server. After rebuilding `rgo-vps`, verify `webhook-deploy.service`, the relevant deployment hook, its application units, and the public health URL.
+OpenPost, Montra, and Unprompted publish verified GHCR images before calling their signed VPS hooks. Personal Website and `edu.rgo.pt` deploy verified source revisions. Montra and Unprompted share rootful Podman authentication through `packages_ghcr_token`, a read-only package PAT rendered by `sops-nix`. When changing a repository, image name, unit name, domain, health endpoint, or build directory, update both the project workflow/`AGENTS.md` and the matching Nix hosting module. Do not add parallel ad-hoc deploy scripts on the server. After rebuilding `rgo-vps`, verify `webhook-deploy.service`, the relevant deployment hook, its application units, and the public health URL.
 
 ## Platform Differences
 
@@ -237,19 +237,40 @@ Then:
 
 `rgo-vps` defines `unprompted.to`, `www.unprompted.to`, and `api.unprompted.to` through Caddy.
 Its production EnvironmentFile is rendered by `sops-nix` from the dedicated `unprompted_*`
-entries in `secrets/vps-secrets.yaml`; do not create or edit a plaintext copy on the VPS. After
-updating those encrypted values, rebuild `rgo-vps` and activate the source deployment:
+entries in `secrets/vps-secrets.yaml`; do not create or edit a plaintext copy on the VPS. Private
+Montra and Unprompted images use the shared `packages_ghcr_token` secret, which needs only
+`read:packages`. Unprompted webhook requests use a separate `unprompted_deploy_webhook_secret`, so
+other deployment senders cannot sign an Unprompted release.
 
-```bash
-rebuild # choose rgo-vps
-ssh rgo@rgo-vps 'sudo systemctl start deploy-unprompted.service'
-```
+The host configuration pins one verified Unprompted revision and all four image digests for an empty
+local image-store bootstrap. Rebuilding `rgo-vps` pulls those exact digests only when a local image is
+missing, verifies their common OCI revision label, tags the complete set locally, runs migrations, and
+starts API/worker before web. A reboot with an intact local image set never follows a mutable registry
+tag.
 
-Point DNS for `unprompted.to`, `www.unprompted.to`, and `api.unprompted.to` at the VPS. The build
-unit validates the rendered production environment, fetches verified `main`, installs with the
-frozen Bun lockfile, builds, migrates, and restarts the API, worker, and web units. The GitHub
-`PRODUCTION_DEPLOY_ENABLED` repository variable must remain `false` until the first manual
-activation and public endpoint checks pass.
+Later pushes to Unprompted build and scan each image by digest in CI. After all four scans pass, CI
+creates the `sha-<commit>` registry tags and sends the same four approved digests through the signed
+deployment hook. The VPS pulls by digest, resolves the verified local migration tag to its image ID,
+runs it with registry pulls disabled while the old application keeps serving, then restarts and
+health-checks the new containers. Production never checks
+out or builds Unprompted source. `PRODUCTION_DEPLOY_ENABLED=true` enables these verified automatic
+rollouts; set it to `false` only when deployments need to be paused.
+
+The signed JSON deployment payload must include integer `issued_at` (Unix epoch) and a unique,
+safe `delivery_id` in addition to the repository, exact revision, and all four digests. The receiver
+checks the HMAC over the exact raw body before parsing it, accepts payloads no more than five minutes
+old or 60 seconds in the future, and atomically records delivery IDs under `/var/lib/unprompted` before
+launching a deployment. A failed or ambiguous delivery is retried only by a new CI run attempt with a
+new ID and timestamp. Transient deployment logs stay in the systemd journal; the webhook returns only
+the exact `DEPLOY_OK` success line expected by CI.
+
+Unprompted bootstrap/tagging, boot migration, deployment migration and promotion/restart/rollback,
+and global image cleanup serialize on `/run/podman-maintenance.lock`. The deployment transient unit
+owns the lock while its migration child runs, avoiding a nested lock. Rollback requires a complete
+four-image previous release, restores and verifies the exact recorded image IDs (including the
+migration image), verifies running API/worker/web image IDs, and requires internal and public health
+before reporting success. Automated cleanup prunes dangling images and build cache only; tagged active
+release images are retained even when no persistent container references them.
 
 ## Operations
 

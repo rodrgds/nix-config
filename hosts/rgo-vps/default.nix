@@ -92,6 +92,14 @@
     enable = true;
     domain = "unprompted.to";
     apiDomain = "api.unprompted.to";
+    # First four-image release verified and promoted by CI run 31143879834.
+    bootstrapRevision = "1eff53753993ebafdfaf57f66c841a0f89bb4fcf";
+    bootstrapDigests = {
+      api = "sha256:a100448e53ed9217641248a824b826e3ac3d40d4aabfe905068cf9657cd95d1d";
+      worker = "sha256:8b86621abc25ad5a044fc9ea2511e9434714096ea55d183a5d950ab7850191d9";
+      web = "sha256:1f6d46e995b60b3926efde6f07e766181b77c8938a01547196cbf8ca13e9d0ff";
+      migrate = "sha256:48b42d5615381781eb5643e6094e481e1ca13d696ed400fdc22686dfd1d92fce";
+    };
   };
 
   vps.trndb.enable = false;

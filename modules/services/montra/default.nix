@@ -31,10 +31,6 @@ in
     ];
 
     sops.templates = {
-      "montra-registry-token" = {
-        content = config.sops.placeholder.montra_ghcr_token;
-        mode = "0400";
-      };
       "montra-postgres-env" = {
         content = ''
           POSTGRES_USER=${postgresUser}
@@ -91,54 +87,33 @@ in
       };
     };
 
-    systemd.services.montra-registry-login = {
-      description = "Authenticate Podman to Montra's private GHCR packages";
-      before = [
-        "podman-montra-postgres.service"
-        "podman-montra-embedding.service"
-        "podman-montra-detector.service"
-        "podman-montra-api.service"
-        "podman-montra-worker.service"
-        "podman-montra-integration-worker.service"
-        "podman-montra-web.service"
-      ];
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = pkgs.writeShellScript "montra-registry-login" ''
-          exec ${pkgs.podman}/bin/podman login ghcr.io --username rodrgds --password-stdin < ${config.sops.templates.montra-registry-token.path}
-        '';
-      };
-    };
-
     systemd.services.podman-montra-postgres = {
-      after = [ "montra-registry-login.service" ];
-      requires = [ "montra-registry-login.service" ];
+      after = [ "packages-registry-login.service" ];
+      requires = [ "packages-registry-login.service" ];
     };
     systemd.services.podman-montra-embedding = {
-      after = [ "montra-registry-login.service" ];
-      requires = [ "montra-registry-login.service" ];
+      after = [ "packages-registry-login.service" ];
+      requires = [ "packages-registry-login.service" ];
     };
     systemd.services.podman-montra-detector = {
-      after = [ "montra-registry-login.service" ];
-      requires = [ "montra-registry-login.service" ];
+      after = [ "packages-registry-login.service" ];
+      requires = [ "packages-registry-login.service" ];
     };
     systemd.services.podman-montra-api = {
-      after = [ "montra-registry-login.service" ];
-      requires = [ "montra-registry-login.service" ];
+      after = [ "packages-registry-login.service" ];
+      requires = [ "packages-registry-login.service" ];
     };
     systemd.services.podman-montra-worker = {
-      after = [ "montra-registry-login.service" ];
-      requires = [ "montra-registry-login.service" ];
+      after = [ "packages-registry-login.service" ];
+      requires = [ "packages-registry-login.service" ];
     };
     systemd.services.podman-montra-integration-worker = {
-      after = [ "montra-registry-login.service" ];
-      requires = [ "montra-registry-login.service" ];
+      after = [ "packages-registry-login.service" ];
+      requires = [ "packages-registry-login.service" ];
     };
     systemd.services.podman-montra-web = {
-      after = [ "montra-registry-login.service" ];
-      requires = [ "montra-registry-login.service" ];
+      after = [ "packages-registry-login.service" ];
+      requires = [ "packages-registry-login.service" ];
     };
 
     virtualisation.oci-containers.containers = {
@@ -264,7 +239,7 @@ in
         "podman-montra-postgres.service"
         "podman-montra-meilisearch.service"
         "podman-montra-detector.service"
-        "montra-registry-login.service"
+        "packages-registry-login.service"
       ];
       requires = [ "podman-montra-detector.service" ];
       before = [

@@ -125,8 +125,9 @@ let
     "openpost_linkedin_client_secret"
     "openpost_threads_client_id"
     "openpost_threads_client_secret"
+    # Shared private GHCR packages
+    "packages_ghcr_token"
     # Montra
-    "montra_ghcr_token"
     "montra_postgres_password"
     "montra_better_auth_secret"
     "montra_admin_emails"
@@ -137,7 +138,7 @@ let
     "montra_r2_access_key_id"
     "montra_r2_secret_access_key"
     # Unprompted
-    "unprompted_deploy_key"
+    "unprompted_deploy_webhook_secret"
     "unprompted_postgres_password"
     "unprompted_better_auth_secret"
     "unprompted_email_token_secret"
