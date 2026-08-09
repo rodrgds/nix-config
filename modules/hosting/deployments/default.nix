@@ -44,18 +44,6 @@ let
     curl -fsS https://rgo.pt/ >/dev/null
   '';
 
-  eduDeploy = pkgs.writeShellScript "deploy-edu" ''
-    set -euo pipefail
-    export PATH=${maintenancePath}:$PATH
-    exec 9>/run/podman-maintenance.lock
-    flock --exclusive 9
-
-    systemctl restart edu-site.service
-    curl --fail --silent --show-error \
-      --resolve edu.rgo.pt:443:127.0.0.1 \
-      https://edu.rgo.pt/ >/dev/null
-  '';
-
   openpostDeploy = pkgs.writeShellScript "deploy-openpost" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
@@ -485,21 +473,6 @@ in
             }
           },
           {
-            "id": "deploy-edu",
-            "execute-command": "${triggerDeploy "edu"}",
-            "include-command-output-in-response": true,
-            "trigger-rule": {
-              "match": {
-                "type": "payload-hmac-sha256",
-                "secret": "${config.sops.placeholder.deploy_webhook_secret}",
-                "parameter": {
-                  "source": "header",
-                  "name": "X-Hub-Signature-256"
-                }
-              }
-            }
-          },
-          {
             "id": "deploy-openpost",
             "execute-command": "${triggerOpenpostDeploy}",
             "include-command-output-in-response": true,
@@ -607,17 +580,6 @@ in
         Type = "oneshot";
         ExecStart = personalWebsiteDeploy;
         TimeoutStartSec = "15min";
-      };
-    };
-
-    systemd.services.deploy-edu = {
-      description = "Deploy the verified edu.rgo.pt main branch";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = eduDeploy;
-        TimeoutStartSec = "5min";
       };
     };
 

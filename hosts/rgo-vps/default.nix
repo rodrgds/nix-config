@@ -65,7 +65,6 @@
   };
   vps.hosting.sites = {
     personal.enable = true;
-    edu.enable = true;
   };
   vps.hosting.deployments.enable = true;
   vps.litellm = {
