@@ -1,17 +1,27 @@
-export type TargetKind = "nixos" | "darwin" | "nixos-remote";
 export type PlatformKind = "darwin" | "linux" | "other";
 
-export type Target = {
+type TargetBase = {
   name: string;
+  cliFlag: `--${string}`;
   flakeAttr: string;
-  kind: TargetKind;
   description: string;
   allowedFrom: string[];
-  remote?: {
-    deployNode: string;
-    remoteBuildFrom: string[];
-  };
 };
+
+export type Target = TargetBase &
+  (
+    | {
+        kind: "darwin" | "nixos";
+        remote?: never;
+      }
+    | {
+        kind: "nixos-remote";
+        remote: {
+          deployNode: string;
+          remoteBuildFrom: string[];
+        };
+      }
+  );
 
 export type CommandOptions = {
   cwd?: string;

@@ -11,7 +11,13 @@ import {
   REPO_DIR,
   SECRETS_DIR,
 } from "./config";
-import { commandExists, runCapture, runLogged } from "./command";
+import {
+  commandExists,
+  runCapture,
+  runInteractive,
+  runLogged,
+  visibleCommand,
+} from "./command";
 import {
   basename,
   deleteFile,
@@ -33,6 +39,8 @@ import {
   detectHost,
   detectPlatform,
   detectSystemdMajorUpgrade,
+  directTargetHelp,
+  directTargetFromArgs,
   isNixOS,
   notify,
   parseFlakeInputs,
@@ -359,7 +367,7 @@ async function runPreparationAndRebuild(
     ? `Target: ${target.name}. Building the boot generation; reboot required.`
     : target.kind === "nixos-remote"
       ? `Target: ${target.name}. Building ${buildsRemotely ? "on the VPS" : "locally"} with automatic rollback.`
-    : `Target: ${target.name}. Asking for sudo up front and keeping it fresh while building.`;
+      : `Target: ${target.name}. Asking for sudo up front and keeping it fresh while building.`;
 
   const success = await app.externalCommandScreen(
     "Rebuild",
@@ -812,7 +820,8 @@ const CLEANUP_ACTIONS: CleanupAction[] = [
   {
     label: "Safe cache cleanup (pressure mode)",
     value: "safe-cache-pressure",
-    description: "Clear only reproducible package/build caches; preserve app data.",
+    description:
+      "Clear only reproducible package/build caches; preserve app data.",
     command: ["rgo-cache-cleanup", ["--pressure"]],
     options: { check: false },
   },
@@ -942,24 +951,95 @@ async function mainLoop(app: App): Promise<void> {
   }
 }
 
-const renderer = await createCliRenderer({
-  exitOnCtrlC: false,
-  targetFps: 30,
-  useAlternateScreen: true,
-} as Parameters<typeof createCliRenderer>[0] & { useAlternateScreen: boolean });
+async function directRebuild(targetName: string): Promise<void> {
+  if (!(await pathExists(join(REPO_DIR, "flake.nix")))) {
+    throw new Error(
+      `No flake.nix found at ${REPO_DIR}. Set NIX_CONFIG_DIR to override.`,
+    );
+  }
 
-const app = new App(renderer);
-renderer.start();
+  const platform = await detectPlatform();
+  const currentHost = await detectHost();
+  const allowed = await allowedTargetsFor(currentHost, platform);
+  const target = allowed.find(({ name }) => name === targetName);
+
+  if (!target) {
+    throw new Error(
+      `${targetName} cannot be rebuilt from ${currentHost} on ${platform}. Allowed targets: ${allowed.map(({ name }) => name).join(", ") || "none"}.`,
+    );
+  }
+
+  const systemdUpgrade = await detectSystemdMajorUpgrade(target);
+  const nixosMode = systemdUpgrade ? "boot" : "switch";
+  const [cmd, args] = rebuildCommand(target, currentHost, nixosMode);
+
+  if (systemdUpgrade) {
+    console.log(
+      `systemd ${systemdUpgrade.currentVersion} -> ${systemdUpgrade.targetVersion}: building a boot generation; reboot is required.`,
+    );
+  }
+  console.log(`Rebuilding ${target.name}...`);
+  console.log(visibleCommand(cmd, args));
+  console.log("");
+
+  const code = await runInteractive(cmd, args, {
+    cwd: REPO_DIR,
+    check: false,
+    retryNixDaemonCrash: true,
+  });
+
+  if (code !== 0) {
+    await notify(platform, "Rebuild failed", target.name);
+    throw new Error(`Rebuild failed with exit code ${code}.`);
+  }
+
+  await notify(
+    platform,
+    "Rebuild successful",
+    systemdUpgrade ? `${target.name}: reboot required` : target.name,
+  );
+}
+
+async function tuiMain(): Promise<void> {
+  const renderer = await createCliRenderer({
+    exitOnCtrlC: false,
+    targetFps: 30,
+    useAlternateScreen: true,
+  } as Parameters<typeof createCliRenderer>[0] & {
+    useAlternateScreen: boolean;
+  });
+
+  const app = new App(renderer);
+  renderer.start();
+
+  try {
+    await mainLoop(app);
+  } catch (error) {
+    await app.scrollText(
+      "Unhandled error",
+      "The wizard caught an exception.",
+      error instanceof Error ? (error.stack ?? error.message) : String(error),
+      { allowBack: false },
+    );
+  } finally {
+    app.destroy();
+  }
+}
 
 try {
-  await mainLoop(app);
+  const args = Bun.argv.slice(2);
+  if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
+    console.log(directTargetHelp());
+    process.exit(0);
+  }
+
+  const directTarget = directTargetFromArgs(args);
+  if (directTarget) {
+    await directRebuild(directTarget);
+  } else {
+    await tuiMain();
+  }
 } catch (error) {
-  await app.scrollText(
-    "Unhandled error",
-    "The wizard caught an exception.",
-    error instanceof Error ? (error.stack ?? error.message) : String(error),
-    { allowBack: false },
-  );
-} finally {
-  app.destroy();
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
 }

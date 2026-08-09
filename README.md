@@ -278,10 +278,13 @@ release images are retained even when no persistent container references them.
 
 ```bash
 # Desktop
-rebuild
+rebuild --desktop
 
 # Laptop
 rebuild --laptop
+
+# VPS (deploy-rs; builds locally on desktop or remotely from laptop)
+rebuild --vps
 
 # Direct fallback commands
 nh os switch ~/.config/home -H rgo-desktop
@@ -298,6 +301,14 @@ darwin-rebuild switch --flake "$HOME/.config/home#rgo-laptop"
 ### Rebuild TUI
 
 `rebuild` is not just a shell alias for `nixos-rebuild` or `darwin-rebuild`.
+
+Run plain `rebuild` to open the TUI. `rebuild --desktop`, `rebuild --laptop`,
+and `rebuild --vps` bypass it and immediately start the corresponding rebuild.
+The VPS path retains the deploy-rs build-host selection and magic rollback flow.
+Local rebuilds show activation logs, including long-running Homebrew work on macOS.
+`rebuild --help` lists every configured direct target. The canonical target
+metadata—CLI flag, flake attribute, platform kind, allowed source hosts, and
+remote-build policy—lives together in `tools/rebuild-wizard/config.ts`.
 
 It runs the Bun-based rebuild wizard in `tools/rebuild-wizard/rebuild.ts` and is wired by the `scripts` module. In practice it can:
 

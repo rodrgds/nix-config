@@ -58,6 +58,7 @@
   apps.pi.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;
+  apps.muse.enable = true;
   apps.t3-code.enable = true;
   apps.whop.enable = true;
   apps.dbeaver.enable = true;

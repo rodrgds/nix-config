@@ -1,7 +1,48 @@
 import { describe, expect, test } from "bun:test";
 
 import { TARGETS } from "./config";
-import { allowedTargetsFor, rebuildCommand } from "./targets";
+import {
+  allowedTargetsFor,
+  directTargetHelp,
+  directTargetFromArgs,
+  directTargetUsage,
+  rebuildCommand,
+} from "./targets";
+
+describe("direct rebuild flags", () => {
+  test("keeps the TUI for a plain rebuild", () => {
+    expect(directTargetFromArgs([])).toBeNull();
+  });
+
+  test("maps every configured target flag", () => {
+    for (const target of TARGETS) {
+      expect(directTargetFromArgs([target.cliFlag])).toBe(target.name);
+    }
+  });
+
+  test("rejects unknown or combined arguments", () => {
+    expect(() => directTargetFromArgs(["--unknown"])).toThrow(
+      directTargetUsage(),
+    );
+    expect(() => directTargetFromArgs(["--desktop", "--laptop"])).toThrow(
+      directTargetUsage(),
+    );
+  });
+
+  test("assigns one unique CLI flag to every target", () => {
+    const flags = TARGETS.map(({ cliFlag }) => cliFlag);
+    expect(new Set(flags).size).toBe(TARGETS.length);
+  });
+
+  test("generates help from the configured targets", () => {
+    const help = directTargetHelp();
+    for (const target of TARGETS) {
+      expect(help).toContain(target.cliFlag);
+      expect(help).toContain(target.name);
+      expect(help).toContain(target.description);
+    }
+  });
+});
 
 describe("remote VPS rebuilds", () => {
   test("offers rgo-vps from the Darwin laptop", async () => {
@@ -50,5 +91,23 @@ describe("remote VPS rebuilds", () => {
     expect(command).toBe("nix");
     expect(args).not.toContain("--remote-build");
     expect(args).toContain("path:.#rgo-vps");
+  });
+});
+
+describe("local rebuild visibility", () => {
+  test("shows nix-darwin activation logs", () => {
+    const target = TARGETS.find(({ name }) => name === "rgo-laptop");
+    expect(target).toBeDefined();
+
+    const [, args] = rebuildCommand(target!, "rgo-laptop");
+    expect(args).toContain("--show-activation-logs");
+  });
+
+  test("shows NixOS activation logs", () => {
+    const target = TARGETS.find(({ name }) => name === "rgo-desktop");
+    expect(target).toBeDefined();
+
+    const [, args] = rebuildCommand(target!, "rgo-desktop");
+    expect(args).toContain("--show-activation-logs");
   });
 });

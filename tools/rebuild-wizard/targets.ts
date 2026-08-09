@@ -3,6 +3,42 @@ import { commandExists, runCapture } from "./command";
 import { join, pathExists, readText } from "./fs";
 import type { PlatformKind, Target } from "./types";
 
+export function directTargetUsage(): string {
+  return `Usage: rebuild [${TARGETS.map(({ cliFlag }) => cliFlag).join(" | ")}]`;
+}
+
+export function directTargetHelp(): string {
+  return [
+    directTargetUsage(),
+    "       rebuild",
+    "",
+    "Direct targets:",
+    ...TARGETS.map(
+      ({ cliFlag, name, description, allowedFrom }) =>
+        `  ${cliFlag.padEnd(12)} ${name}: ${description} (from ${allowedFrom.join(", ")})`,
+    ),
+    "",
+    "Run without a target flag to open the TUI.",
+  ].join("\n");
+}
+
+export function directTargetFromArgs(args: string[]): string | null {
+  if (args.length === 0) return null;
+
+  const matches =
+    args.length === 1
+      ? TARGETS.filter(({ cliFlag }) => cliFlag === args[0])
+      : [];
+
+  if (matches.length !== 1) {
+    throw new Error(
+      `Unknown rebuild arguments: ${args.join(" ")}\n${directTargetUsage()}`,
+    );
+  }
+
+  return matches[0]!.name;
+}
+
 const REBUILD_STORE_SPACE_ARGS = [
   "--option",
   "min-free",
@@ -115,9 +151,13 @@ export async function defaultCommitMessage(target: Target): Promise<string> {
 async function readGeneration(target: Target): Promise<string | null> {
   try {
     if (target.kind === "darwin") {
-      const output = await runCapture("darwin-rebuild", ["--list-generations"], {
-        check: false,
-      });
+      const output = await runCapture(
+        "darwin-rebuild",
+        ["--list-generations"],
+        {
+          check: false,
+        },
+      );
       const current = output
         .split("\n")
         .find((line) => /\bcurrent\b/.test(line));
@@ -216,7 +256,16 @@ export function rebuildCommand(
   if (target.kind === "darwin") {
     return withEarlySudo([
       "nh",
-      ["darwin", "switch", "path:.", "-H", target.flakeAttr, "--", "--impure"],
+      [
+        "darwin",
+        "switch",
+        "path:.",
+        "-H",
+        target.flakeAttr,
+        "--show-activation-logs",
+        "--",
+        "--impure",
+      ],
     ]);
   }
 
@@ -229,6 +278,7 @@ export function rebuildCommand(
         "path:.",
         "-H",
         target.flakeAttr,
+        "--show-activation-logs",
         ...REBUILD_STORE_SPACE_ARGS,
         ...DESKTOP_CACHE_ARGS,
         "--",
@@ -241,12 +291,7 @@ export function rebuildCommand(
     throw new Error(`${target.name} is remote but has no remote config.`);
   }
 
-  const deployArgs = [
-    "run",
-    "path:.#deploy-rs",
-    "--",
-    "--skip-checks",
-  ];
+  const deployArgs = ["run", "path:.#deploy-rs", "--", "--skip-checks"];
 
   if (target.remote.remoteBuildFrom.includes(currentHost)) {
     deployArgs.push("--remote-build");
@@ -279,7 +324,7 @@ function withEarlySudo(command: [string, string[]]): [string, string[]] {
         "  done",
         ") &",
         "sudo_keepalive=$!",
-        'trap \'kill "$sudo_keepalive" >/dev/null 2>&1 || true\' EXIT',
+        "trap 'kill \"$sudo_keepalive\" >/dev/null 2>&1 || true' EXIT",
         '"$@"',
       ].join("\n"),
       "rebuild-with-sudo",

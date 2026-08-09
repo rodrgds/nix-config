@@ -8,6 +8,7 @@ export const HOST_ALIASES: Record<string, string> = {
 export const TARGETS: Target[] = [
   {
     name: "rgo-laptop",
+    cliFlag: "--laptop",
     flakeAttr: "rgo-laptop",
     kind: "darwin",
     description: "Local nix-darwin rebuild",
@@ -15,6 +16,7 @@ export const TARGETS: Target[] = [
   },
   {
     name: "rgo-desktop",
+    cliFlag: "--desktop",
     flakeAttr: "rgo-desktop",
     kind: "nixos",
     description: "Local NixOS rebuild",
@@ -22,6 +24,7 @@ export const TARGETS: Target[] = [
   },
   {
     name: "rgo-vps",
+    cliFlag: "--vps",
     flakeAttr: "rgo-vps",
     kind: "nixos-remote",
     description: "Remote NixOS deployment with deploy-rs magic rollback",
