@@ -125,6 +125,7 @@ let
     "openpost_linkedin_client_secret"
     "openpost_threads_client_id"
     "openpost_threads_client_secret"
+    "openpost_openrouter_api_key"
     # Shared private GHCR packages
     "packages_ghcr_token"
     # Montra

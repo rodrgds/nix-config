@@ -120,6 +120,12 @@ let
     #   target = "/run/secrets/openpost_mastodon_servers";
     #   value = config.sops.placeholder.openpost_mastodon_servers;
     # }
+    {
+      name = "openrouter-api-key";
+      env = "OPENROUTER_API_KEY_FILE";
+      target = "/run/secrets/openpost_openrouter_api_key";
+      value = config.sops.placeholder.openpost_openrouter_api_key;
+    }
   ];
 
   openpostFileSecretEnvironment = lib.listToAttrs (
