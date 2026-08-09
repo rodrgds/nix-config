@@ -355,8 +355,8 @@ in
             OPENPOST_LEGAL_ACCEPTANCE_REQUIRED=true
             OPENPOST_TERMS_URL=https://openpost.social/terms
             OPENPOST_PRIVACY_URL=https://openpost.social/privacy
-            OPENPOST_TERMS_VERSION=2026-08-04
-            OPENPOST_PRIVACY_VERSION=2026-08-04
+            OPENPOST_TERMS_VERSION=2026-08-05
+            OPENPOST_PRIVACY_VERSION=2026-08-09
             OPENPOST_SUPPORT_EMAIL=hello@openpost.social
             OPENPOST_EMAIL_VERIFICATION_REQUIRED=true
             OPENPOST_EMAIL_PROVIDER=smtp
