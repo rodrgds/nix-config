@@ -134,7 +134,6 @@ let
     exec 9>/run/podman-maintenance.lock
     flock --exclusive 9
 
-    systemctl restart packages-registry-login.service
     for image in \
       ghcr.io/rodrgds/montra-postgres:latest \
       ghcr.io/rodrgds/montra-embedding:latest \
