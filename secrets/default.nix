@@ -101,6 +101,7 @@ let
     # OpenPost
     "openpost_jwt_secret"
     "openpost_encryption_key"
+    "openpost_posthog_project_token"
     "openpost_provider_apps"
     "openpost_google_auth_client_id"
     "openpost_google_auth_client_secret"
