@@ -74,6 +74,17 @@ let
     # mounted *_FILE secrets without opening a port or touching the database.
     candidate_args=(--rm --network none)
     while IFS= read -r environment; do
+      environment_key="''${environment%%=*}"
+      environment_is_managed=false
+      while IFS='=' read -r configured_key _; do
+        if [ "$configured_key" = "$environment_key" ]; then
+          environment_is_managed=true
+          break
+        fi
+      done < ${config.sops.templates.openpost-cloud-env.path}
+      if $environment_is_managed; then
+        continue
+      fi
       candidate_args+=(--env "$environment")
     done < <(podman inspect openpost | jq -r '.[0].Config.Env[]')
     candidate_args+=(--env-file ${config.sops.templates.openpost-cloud-env.path})
