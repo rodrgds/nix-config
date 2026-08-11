@@ -31,6 +31,12 @@ let
       value = config.sops.placeholder.openpost_encryption_key;
     }
     {
+      name = "posthog-project-token";
+      env = "OPENPOST_POSTHOG_PROJECT_TOKEN_FILE";
+      target = "/run/secrets/openpost_posthog_project_token";
+      value = config.sops.placeholder.openpost_posthog_project_token;
+    }
+    {
       name = "provider-apps";
       env = "OPENPOST_PROVIDER_APPS_FILE";
       target = "/run/secrets/openpost_provider_apps";
@@ -356,7 +362,12 @@ in
             OPENPOST_TERMS_URL=https://openpost.social/terms
             OPENPOST_PRIVACY_URL=https://openpost.social/privacy
             OPENPOST_TERMS_VERSION=2026-08-05
-            OPENPOST_PRIVACY_VERSION=2026-08-09
+            OPENPOST_PRIVACY_VERSION=2026-08-11
+            OPENPOST_TELEMETRY_ENABLED=true
+            OPENPOST_POSTHOG_API_HOST=https://eu.i.posthog.com
+            OPENPOST_POSTHOG_BROWSER_HOST=https://eu.i.posthog.com
+            OPENPOST_POSTHOG_UI_HOST=https://eu.posthog.com
+            OPENPOST_TELEMETRY_ENVIRONMENT=production
             OPENPOST_SUPPORT_EMAIL=hello@openpost.social
             OPENPOST_EMAIL_VERIFICATION_REQUIRED=true
             OPENPOST_EMAIL_PROVIDER=smtp
