@@ -9,8 +9,6 @@ import qs.services
 PanelWindow {
     id: root
 
-    readonly property bool hasTwoMonitors: Quickshell.screens.length > 1
-
     anchors {
         top: true
         left: true
@@ -81,20 +79,6 @@ PanelWindow {
             onTriggered: button => {
                 if (button === Qt.LeftButton)
                     Runtime.runScript("toggle_keyboard_layout.sh");
-            }
-            Layout.alignment: Qt.AlignVCenter
-        }
-
-        ToolButton {
-            label: root.hasTwoMonitors ? "\uf066" : "\uf065"
-            tooltipText: root.hasTwoMonitors ? "Use only the gaming monitor" : "Restore the second monitor"
-            onTriggered: button => {
-                if (button === Qt.LeftButton) {
-                    if (root.hasTwoMonitors)
-                        Runtime.runScript("1monitor.sh");
-                    else
-                        Runtime.runScript("fullres.sh");
-                }
             }
             Layout.alignment: Qt.AlignVCenter
         }

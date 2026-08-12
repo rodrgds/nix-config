@@ -54,7 +54,7 @@ in
           separator =
           modules-left = i3
           modules-center =
-          modules-right = cpu memory disk pulseaudio kb sound res layout tray date power
+          modules-right = cpu memory disk pulseaudio kb sound tray date power
           cursor-click = pointer
           cursor-scroll = ns-resize
           enable-ipc = true
@@ -160,12 +160,6 @@ in
           label-foreground = ''${colors.fg}
           label-font = 1
 
-          [module/layout]
-          type = custom/script
-          exec = echo "󰍹 "
-          interval = 999999
-          click-left = "${constants.scriptDir}/1monitor.sh && sleep 1 && ${constants.homeDir}/.config/polybar/launch.sh"
-
           [module/kb]
           type = custom/script
           exec = echo " "
@@ -177,12 +171,6 @@ in
           exec = echo " "
           interval = 999999
           click-left = ${constants.scriptDir}/toggle_sound_device.sh
-
-          [module/res]
-          type = custom/script
-          exec = echo " "
-          interval = 999999
-          click-left = "${constants.scriptDir}/fullres.sh && sleep 1 && ${constants.homeDir}/.config/polybar/launch.sh"
 
           [module/tray]
           type = internal/tray
