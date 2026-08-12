@@ -54,9 +54,8 @@
     ];
   };
 
-  # OpenPost now uses PostHog across the app, marketing site, docs, and backend.
-  # Keep the existing /var/lib/umami data and /var/backup/umami dumps offline.
-  vps.umami.enable = false;
+  # OpenPost uses PostHog, but Montra still depends on the shared Umami service.
+  vps.umami.enable = true;
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
