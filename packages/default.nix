@@ -21,17 +21,6 @@ affinityOverlay
   bricolage-grotesque = prev.callPackage ./fonts/bricolage-grotesque { };
   climate-crisis = prev.callPackage ./fonts/climate-crisis { };
 
-  # DaVinci Resolve customization
-  davinci-resolve-studio =
-    (import ./davinci-resolve {
-      sourcePkgs = import inputs.nixpkgs-davinci {
-        inherit (prev.stdenv.hostPlatform) system;
-        config.allowUnfree = true;
-      };
-    })
-      final
-      prev;
-
   # Flexoki GTK theme
   flexoki-gtk = prev.callPackage ./flexoki-gtk { };
 

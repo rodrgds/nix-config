@@ -8,10 +8,6 @@
     nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     # Fast-moving packages can explicitly opt into unstable.
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
-    # DaVinci Resolve is intentionally pinned separately so normal flake updates
-    # do not churn this heavyweight package unless you update this input.
-    nixpkgs-davinci.url = "github:nixos/nixpkgs/755f5aa91337890c432639c60b6064bb7fe67769";
-
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -105,7 +101,6 @@
       nixpkgs,
       nixpkgs-darwin,
       nixpkgs-unstable,
-      nixpkgs-davinci,
       nix-darwin,
       home-manager,
       nix-homebrew,

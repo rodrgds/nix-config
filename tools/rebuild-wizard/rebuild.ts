@@ -135,10 +135,7 @@ async function chooseRebuildOptions(app: App): Promise<RebuildOptions | null> {
     inputs.map((input) => ({
       label: input,
       value: input,
-      description:
-        input === "nixpkgs-davinci"
-          ? "Pinned heavyweight input; update manually only."
-          : "Manual update only; default rebuild does not update inputs.",
+      description: "Manual update only; default rebuild does not update inputs.",
     })),
     [],
     {
@@ -187,78 +184,6 @@ async function listPlainSecretFiles(): Promise<string[]> {
   return output.split("\n").filter(Boolean).sort();
 }
 
-const DESKTOP_REBUILD_MIN_FREE_GIB = 64;
-
-async function freeDiskGiB(): Promise<number | null> {
-  const output = await runCapture("df", ["-Pk", REPO_DIR], {
-    cwd: REPO_DIR,
-    check: false,
-  });
-  const fields = output.trim().split("\n").at(-1)?.trim().split(/\s+/);
-  const availableKiB = Number.parseInt(fields?.[3] ?? "", 10);
-  if (!Number.isFinite(availableKiB)) return null;
-  return availableKiB / 1024 / 1024;
-}
-
-async function ensureRebuildDiskSpace(
-  app: App,
-  target: Target,
-): Promise<boolean> {
-  if (target.name !== "rgo-desktop") return true;
-
-  let available = await freeDiskGiB();
-  if (available === null || available >= DESKTOP_REBUILD_MIN_FREE_GIB) {
-    return true;
-  }
-
-  await app.scrollText(
-    "Low disk space",
-    `Free: ${available.toFixed(1)} GiB · recommended: ${DESKTOP_REBUILD_MIN_FREE_GIB} GiB`,
-    [
-      "This desktop closure contains unusually large DaVinci Resolve, Affinity,",
-      "Android Studio, and Rust outputs. Starting with less space risks a late",
-      "unpack failure.",
-      "",
-      "The pressure cleaner only removes reproducible package/build caches.",
-      "It does not touch browser profiles, games, projects, emulator data,",
-      "application databases, Docker images, or Docker volumes.",
-    ].join("\n"),
-    { allowBack: false, enterLabel: "Enter continue" },
-  );
-
-  if (await commandExists("rgo-cache-cleanup")) {
-    const clean = await app.confirm(
-      "Safe cache cleanup",
-      "Run pressure-aware cache cleanup before rebuilding?",
-      true,
-    );
-
-    if (clean) {
-      await app.logScreen(
-        "Safe cache cleanup",
-        "Reclaiming reproducible caches while preserving app and project data.",
-        async (append) => {
-          await runLogged(append, "rgo-cache-cleanup", ["--pressure"], {
-            cwd: REPO_DIR,
-            check: false,
-          });
-        },
-      );
-      available = await freeDiskGiB();
-    }
-  }
-
-  if (available === null || available >= DESKTOP_REBUILD_MIN_FREE_GIB) {
-    return true;
-  }
-
-  return await app.confirm(
-    "Space still low",
-    `Only ${available.toFixed(1)} GiB is free. Continue at risk of another disk-full failure?`,
-    false,
-  );
-}
-
 async function runPreparationAndRebuild(
   app: App,
   platform: PlatformKind,
@@ -266,8 +191,6 @@ async function runPreparationAndRebuild(
   target: Target,
   options: RebuildOptions,
 ): Promise<boolean> {
-  if (!(await ensureRebuildDiskSpace(app, target))) return false;
-
   const preparation = {
     systemdUpgrade: null as SystemdMajorUpgrade | null,
   };
