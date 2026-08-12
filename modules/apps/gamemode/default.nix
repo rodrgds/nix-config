@@ -30,12 +30,6 @@ in
               # to inhibit it only creates a D-Bus error on every launch.
               inhibit_screensaver = 0;
             };
-            gpu = {
-              apply_gpu_optimisations = "accept-responsibility";
-              # The RTX 2070 is /sys/class/drm/card1 on rgo-desktop.
-              gpu_device = 1;
-              nv_powermizer_mode = 1;
-            };
           };
         };
 
@@ -43,7 +37,7 @@ in
 
         # Upstream's helper policy defaults to "no" even for an active local
         # session. Authorize only this configured user and only GameMode's
-        # narrowly scoped CPU/GPU/proc helpers.
+        # narrowly scoped CPU and process helpers.
         security.polkit.extraConfig = ''
           polkit.addRule(function(action, subject) {
             if (subject.user == "${username}" &&

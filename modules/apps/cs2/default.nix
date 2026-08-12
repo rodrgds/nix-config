@@ -72,7 +72,7 @@ in
       programs.steam.config = lib.mkIf isLinux {
         enable = true;
         onSteamRunning = "close";
-        apps.cs2-stretched = {
+        apps.cs2-wayland = {
           id = 730;
           launchOptions = {
             wrappers = [
@@ -82,7 +82,6 @@ in
               "${moduleDir}/apps/cs2/wrapper.sh"
             ];
             args = [
-              "%command%"
               "-novid"
               "-nojoy"
               "-fullscreen"
