@@ -62,8 +62,8 @@ let
     "glog" = "git log --oneline --graph --decorate --all";
     "ll" = "ls -la";
     "rebuild" = "bun ${homeDir}/.config/home/tools/rebuild-wizard/rebuild.ts";
-    # Platform-appropriate clipboard copy
-    "copy" = if isDarwin then "pbcopy" else "xclip -selection clipboard";
+    # Linux uses the Wayland clipboard; Darwin retains the native command.
+    "copy" = if isDarwin then "pbcopy" else "bash ${homeDir}/.config/home/modules/scripts/copy.sh";
   };
 
   # Linux-specific aliases

@@ -68,11 +68,11 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "NVIDIA GPU Stats:"
 nvidia-smi --query-gpu=name,driver_version,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit --format=csv
 echo "- - - - - - - - - - - - - - - -"
-echo "OpenGL Renderer:"
-glxinfo | grep -E "OpenGL vendor|OpenGL renderer|OpenGL version|OpenGL shading"
+echo "EGL Renderer:"
+eglinfo -B 2>/dev/null | grep -m 4 -E "OpenGL core profile vendor|OpenGL core profile renderer|OpenGL core profile version|OpenGL core profile shading"
 echo "- - - - - - - - - - - - - - - -"
-echo "Connected Monitors (xrandr):"
-xrandr --listmonitors
+echo "Connected Monitors (Hyprland):"
+hyprctl monitors
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

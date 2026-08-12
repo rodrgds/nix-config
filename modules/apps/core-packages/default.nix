@@ -29,17 +29,12 @@ in
       pkgs.cmake
 
       # System information and utilities
-      pkgs.scrot
-      pkgs.xdotool
       pkgs.inxi
       pkgs.pciutils
       pkgs.dmidecode
       pkgs.smartmontools
       pkgs.mesa-demos
-      pkgs.xdpyinfo
       pkgs.usbutils
-      pkgs.xclip
-      pkgs.dex
       pkgs.zenity
       pkgs.nfs-utils
 
@@ -54,8 +49,6 @@ in
 
       # Notifications & Desktop utilities
       pkgs.libnotify
-      pkgs.feh
-      pkgs.polkit_gnome
       pkgs.dconf
     ];
   };

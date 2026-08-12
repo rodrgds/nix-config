@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-from PIL import ImageGrab
-import io
 import base64
-import pyperclip
 import requests
 import json
 import os
+import subprocess
 from pathlib import Path
 
 def get_openai_api_key():
@@ -21,12 +19,18 @@ def get_openai_api_key():
     raise FileNotFoundError(f"OpenAI API key not found at {api_key_file}. Make sure sops-nix is configured correctly.")
 
 def get_clipboard_image():
-  img = ImageGrab.grabclipboard()
-  if img is None:
-      return None
-  buffer = io.BytesIO()
-  img.save(buffer, format="PNG")
-  return base64.b64encode(buffer.getvalue()).decode('utf-8')
+  result = subprocess.run(
+    ["wl-paste", "--no-newline", "--type", "image/png"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.DEVNULL,
+    check=False,
+  )
+  if result.returncode != 0 or not result.stdout:
+    return None
+  return base64.b64encode(result.stdout).decode("utf-8")
+
+def copy_text(text):
+  subprocess.run(["wl-copy"], input=text, text=True, check=True)
 
 def get_caption(image_base64):
   api_key = get_openai_api_key()
@@ -201,7 +205,7 @@ def get_caption(image_base64):
 image_base64 = get_clipboard_image()
 if image_base64:
   caption = get_caption(image_base64)
-  pyperclip.copy(caption)
+  copy_text(caption)
   print("Caption generated and copied to clipboard:", caption)
 else:
   print("No image found in clipboard.")

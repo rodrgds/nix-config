@@ -3,7 +3,7 @@
 TEMP_IMAGE=$(mktemp --suffix=.png)
 trap 'rm -f "$TEMP_IMAGE"' EXIT
 
-CONTENT=$(xclip -o -selection clipboard)
+CONTENT=$(wl-paste --no-newline 2>/dev/null || true)
 [[ -z "$CONTENT" ]] && notify-send "Freeze" "Clipboard empty." && exit 1
 
 OPTS=(
@@ -20,14 +20,15 @@ OPTS=(
     --window
 )
 
-freeze "${OPTS[@]}" <<< "$CONTENT" 2
-if [[ $? -ne 0 ]]; then
-    LANG=$(zenity --entry --title="Language?" --text="e.g., python, javascript:")
-    [[ -z "$LANG" ]] && notify-send "Freeze" "Language not specified." && exit 1
-    freeze "${OPTS[@]}" --language "$LANG" <<< "$CONTENT" || {
+if ! freeze "${OPTS[@]}" <<< "$CONTENT" 2; then
+    language=$(zenity --entry --title="Language?" --text="e.g., python, javascript:")
+    [[ -z "$language" ]] && notify-send "Freeze" "Language not specified." && exit 1
+    freeze "${OPTS[@]}" --language "$language" <<< "$CONTENT" || {
         zenity --error --text="Freeze failed"
         exit 1
     }
 fi
 
-[[ -s "$TEMP_IMAGE" ]] && xclip -selection clipboard -t image/png -i "$TEMP_IMAGE"
+if [[ -s "$TEMP_IMAGE" ]]; then
+    wl-copy --type image/png < "$TEMP_IMAGE"
+fi

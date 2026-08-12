@@ -58,20 +58,22 @@ in
   "${mod}+a" = "focus parent";
 
   "${mod}+Return" = "exec ghostty";
-  "${mod}+Shift+s" = "exec --no-startup-id flameshot gui";
+  "${mod}+Shift+s" = "exec --no-startup-id bash ${scriptDir}/screenshot.sh region";
   "${mod}+m" = "exec bash ${scriptDir}/toggle_keyboard_layout.sh";
   "${mod}+Shift+t" = "exec normcap -l por";
-  "${mod}+p" = "exec bash ${scriptDir}/get_ai_answer.sh";
   "${mod}+c" = "exec --no-startup-id bash ${scriptDir}/camtoggle.sh";
   "${mod}+Shift+q" =
-    "exec --no-startup-id flameshot gui && bash ${scriptDir}/twitter_reply.py && notify-send 'Reply copied!'";
+    "exec --no-startup-id bash ${scriptDir}/screenshot.sh region && python3 ${scriptDir}/twitter_reply.py && notify-send 'Reply copied!'";
   "${mod}+Shift+w" =
     "exec --no-startup-id bash ${scriptDir}/code_to_image.sh && notify-send 'Image generated and copied!'";
   "${mod}+w" = "exec microsoft-edge";
   "${mod}+n" = "exec thunar";
   "${mod}+period" = "exec --no-startup-id vicinae 'vicinae://launch/core/search-emojis'";
-  "Print" =
-    "exec scrot ~/%Y-%m-%d-%T-screenshot.png && notify-send 'Screenshot saved to ~/$(date +%Y-%m-%d-%T)-screenshot.png'";
+  "Print" = "exec --no-startup-id bash ${scriptDir}/screenshot.sh full";
   "${mod}+d" = "exec vicinae toggle";
+  "Ctrl+space" = "exec --no-startup-id dunstctl close";
+  "Ctrl+Shift+space" = "exec --no-startup-id dunstctl close-all";
+  "Ctrl+grave" = "exec --no-startup-id dunstctl history-pop";
+  "Ctrl+Shift+period" = "exec --no-startup-id dunstctl context";
   # "${mod}+Shift+h" = "exec handy --toggle-transcription";
 }

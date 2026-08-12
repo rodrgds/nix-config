@@ -80,10 +80,6 @@ in
                   notification = false;
                 }
                 {
-                  command = "dex --autostart --environment i3";
-                  always = false;
-                }
-                {
                   command = "bash /home/${username}/.config/home/modules/scripts/show_random_wall.sh";
                   always = true;
                 }
@@ -93,10 +89,6 @@ in
                 }
                 {
                   command = "xset s 480 dpms 600 600 600";
-                  always = false;
-                }
-                {
-                  command = "flameshot";
                   always = false;
                 }
                 {

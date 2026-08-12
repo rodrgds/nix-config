@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 
-current_layout=$(setxkbmap -query | grep layout | awk '{print $2}')
-
-if [ "$current_layout" == "pt" ]; then
-  setxkbmap us
-  notify-send "Keyboard Layout Changed" "Switched to English (en) keyboard layout."
-else
-  setxkbmap pt
-  notify-send "Keyboard Layout Changed" "Switched to Portuguese (pt) keyboard layout."
+if ! hyprctl switchxkblayout all next >/dev/null; then
+  notify-send "Keyboard Layout Error" "Hyprland could not switch the keyboard layout."
+  exit 1
 fi
+
+active_layout=$(hyprctl devices | awk -F': ' '/active keymap:/ { print $2; exit }')
+notify-send "Keyboard Layout Changed" "Switched to ${active_layout:-the next configured layout}."

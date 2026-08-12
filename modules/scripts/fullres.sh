@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-nvidia-settings -a CurrentMetaMode="DP-0: 1920x1080_144 @1920x1080 +0+0 {ViewPortIn=1920x1080, ViewPortOut=1920x1080+0+0, ForceCompositionPipeline=On, ForceFullCompositionPipeline=On}, HDMI-0: 1920x1080_144 @1920x1080 +1920+0 {ViewPortIn=1920x1080, ViewPortOut=1920x1080+0+0, ForceCompositionPipeline=On, ForceFullCompositionPipeline=On}"
+if ! hyprctl keyword monitor "DP-1,1920x1080@144,0x0,1" \
+  || ! hyprctl keyword monitor "HDMI-A-1,1920x1080@144,1920x0,1"; then
+  notify-send "Display layout failed" "Hyprland could not restore the two-monitor layout."
+  exit 1
+fi
