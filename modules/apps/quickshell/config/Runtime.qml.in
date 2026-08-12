@@ -1,0 +1,25 @@
+pragma Singleton
+
+import Quickshell
+
+Singleton {
+    readonly property string bashPath: "@bashPath@"
+    readonly property string dfPath: "@dfPath@"
+    readonly property string hyprctlPath: "@hyprctlPath@"
+    readonly property string pavucontrolPath: "@pavucontrolPath@"
+    readonly property string psPath: "@psPath@"
+    readonly property string vicinaePath: "@vicinaePath@"
+    readonly property string scriptDir: "@scriptDir@"
+
+    function runScript(fileName: string): void {
+        Quickshell.execDetached([bashPath, scriptDir + "/" + fileName]);
+    }
+
+    function openPavucontrol(): void {
+        Quickshell.execDetached([pavucontrolPath]);
+    }
+
+    function openPowerMenu(): void {
+        Quickshell.execDetached([vicinaePath, "vicinae://launch/power"]);
+    }
+}

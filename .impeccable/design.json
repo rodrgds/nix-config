@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-12T21:22:07+01:00",
+  "title": "Design System: RGO Quickshell Instrument Rail",
+  "extensions": {
+    "colorMeta": {
+      "rail-black": {
+        "role": "neutral",
+        "displayName": "Rail Black",
+        "tonalRamp": [
+          "oklch(15% 0.002 17.3)",
+          "oklch(27% 0.002 17.3)",
+          "oklch(39% 0.002 17.3)",
+          "oklch(51% 0.002 17.3)",
+          "oklch(63% 0.002 17.3)",
+          "oklch(75% 0.002 17.3)",
+          "oklch(87% 0.002 17.3)",
+          "oklch(95% 0.002 17.3)"
+        ]
+      },
+      "raised-black": {
+        "role": "neutral",
+        "displayName": "Raised Black",
+        "tonalRamp": [
+          "oklch(15% 0.002 67.7)",
+          "oklch(27% 0.002 67.7)",
+          "oklch(39% 0.002 67.7)",
+          "oklch(51% 0.002 67.7)",
+          "oklch(63% 0.002 67.7)",
+          "oklch(75% 0.002 67.7)",
+          "oklch(87% 0.002 67.7)",
+          "oklch(95% 0.002 67.7)"
+        ]
+      },
+      "hover-black": {
+        "role": "neutral",
+        "displayName": "Hover Black",
+        "tonalRamp": [
+          "oklch(15% 0.002 67.7)",
+          "oklch(27% 0.002 67.7)",
+          "oklch(39% 0.002 67.7)",
+          "oklch(51% 0.002 67.7)",
+          "oklch(63% 0.002 67.7)",
+          "oklch(75% 0.002 67.7)",
+          "oklch(87% 0.002 67.7)",
+          "oklch(95% 0.002 67.7)"
+        ]
+      },
+      "warm-foreground": {
+        "role": "neutral",
+        "displayName": "Warm Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.014 102.1)",
+          "oklch(27% 0.014 102.1)",
+          "oklch(39% 0.014 102.1)",
+          "oklch(51% 0.014 102.1)",
+          "oklch(63% 0.014 102.1)",
+          "oklch(75% 0.014 102.1)",
+          "oklch(87% 0.014 102.1)",
+          "oklch(95% 0.014 102.1)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.008 88.7)",
+          "oklch(27% 0.008 88.7)",
+          "oklch(39% 0.008 88.7)",
+          "oklch(51% 0.008 88.7)",
+          "oklch(63% 0.008 88.7)",
+          "oklch(75% 0.008 88.7)",
+          "oklch(87% 0.008 88.7)",
+          "oklch(95% 0.008 88.7)"
+        ]
+      },
+      "danger-bright": {
+        "role": "secondary",
+        "displayName": "Urgent Red",
+        "tonalRamp": [
+          "oklch(15% 0.169 28.4)",
+          "oklch(27% 0.169 28.4)",
+          "oklch(39% 0.169 28.4)",
+          "oklch(51% 0.169 28.4)",
+          "oklch(63% 0.169 28.4)",
+          "oklch(75% 0.169 28.4)",
+          "oklch(87% 0.169 28.4)",
+          "oklch(95% 0.169 28.4)"
+        ]
+      },
+      "warning-bright": {
+        "role": "tertiary",
+        "displayName": "Telemetry Yellow",
+        "tonalRamp": [
+          "oklch(15% 0.146 87.5)",
+          "oklch(27% 0.146 87.5)",
+          "oklch(39% 0.146 87.5)",
+          "oklch(51% 0.146 87.5)",
+          "oklch(63% 0.146 87.5)",
+          "oklch(75% 0.146 87.5)",
+          "oklch(87% 0.146 87.5)",
+          "oklch(95% 0.146 87.5)"
+        ]
+      },
+      "telemetry-orange": {
+        "role": "primary",
+        "displayName": "Memory Orange",
+        "tonalRamp": [
+          "oklch(15% 0.152 45.0)",
+          "oklch(27% 0.152 45.0)",
+          "oklch(39% 0.152 45.0)",
+          "oklch(51% 0.152 45.0)",
+          "oklch(63% 0.152 45.0)",
+          "oklch(75% 0.152 45.0)",
+          "oklch(87% 0.152 45.0)",
+          "oklch(95% 0.152 45.0)"
+        ]
+      },
+      "focus-bright": {
+        "role": "primary",
+        "displayName": "Focused Orange",
+        "tonalRamp": [
+          "oklch(15% 0.154 49.3)",
+          "oklch(27% 0.154 49.3)",
+          "oklch(39% 0.154 49.3)",
+          "oklch(51% 0.154 49.3)",
+          "oklch(63% 0.154 49.3)",
+          "oklch(75% 0.154 49.3)",
+          "oklch(87% 0.154 49.3)",
+          "oklch(95% 0.154 49.3)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "label": {
+        "displayName": "Rail Label",
+        "purpose": "Stable-width workspaces, values, controls, audio, and time within the instrument line."
+      },
+      "tooltip": {
+        "displayName": "Tooltip Copy",
+        "purpose": "Short explanatory text shown outside the rail after hover or keyboard focus."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Focused Workspace Button",
+      "kind": "nav",
+      "refersTo": "workspace-button-focused",
+      "description": "The current task location, combining a workspace number and task icon with a bright fill and dark two-pixel state line.",
+      "html": "<button class=\"ds-workspace-button ds-workspace-button--focused\" aria-label=\"Workspace 1, Terminal, focused\"><span class=\"ds-workspace-number\">1</span><svg class=\"ds-workspace-icon\" viewBox=\"0 0 16 16\" width=\"12\" height=\"12\" aria-hidden=\"true\"><rect x=\"1.5\" y=\"2.5\" width=\"13\" height=\"11\" rx=\"1\" fill=\"none\" stroke=\"currentColor\"/><path d=\"M4 6l2 2-2 2M8 10h3\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><span class=\"ds-workspace-state\" aria-hidden=\"true\"></span></button>",
+      "css": ".ds-workspace-button { position: relative; min-width: 26px; height: 24px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #878580; font: 12px 'JetBrainsMono Nerd Font', monospace; cursor: pointer; } .ds-workspace-button--focused { background: #DA702C; color: #100F0F; } .ds-workspace-button:not(.ds-workspace-button--focused):hover { background: #1C1B1A; color: #CECDC3; } .ds-workspace-button:focus-visible { outline: none; border-color: #DA702C; } .ds-workspace-button:not(.ds-workspace-button--focused):active { background: #282726; } .ds-workspace-icon { flex: none; } .ds-workspace-state { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #100F0F; }"
+    },
+    {
+      "name": "Urgent Workspace Button",
+      "kind": "nav",
+      "refersTo": "workspace-button-urgent",
+      "description": "An attention state that combines an explicit red edge with a leading exclamation mark instead of relying on color alone.",
+      "html": "<button class=\"ds-workspace-urgent\" aria-label=\"Workspace 6, Gaming, urgent\"><span class=\"ds-workspace-alert\" aria-hidden=\"true\">!</span><span class=\"ds-workspace-id\">6</span><svg class=\"ds-workspace-game-icon\" viewBox=\"0 0 16 16\" width=\"12\" height=\"12\" aria-hidden=\"true\"><path d=\"M5 5h6c1.7 0 3 1.3 3.5 4.2.3 1.7-.2 2.8-1.2 2.8-.8 0-1.4-.8-2.1-1.8H4.8C4.1 11.2 3.5 12 2.7 12c-1 0-1.5-1.1-1.2-2.8C2 6.3 3.3 5 5 5Z\" fill=\"none\" stroke=\"currentColor\"/><path d=\"M5 7v3M3.5 8.5h3M10.8 7.7h.1M12.3 9h.1\" stroke=\"currentColor\" stroke-linecap=\"round\"/></svg></button>",
+      "css": ".ds-workspace-urgent { min-width: 26px; height: 24px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; border: 1px solid #D14D41; border-radius: 3px; background: #1C1B1A; color: #CECDC3; font: 12px 'JetBrainsMono Nerd Font', monospace; cursor: pointer; } .ds-workspace-urgent:hover { background: #282726; } .ds-workspace-urgent:focus-visible { outline: none; border-color: #DA702C; } .ds-workspace-urgent:active { background: #282726; } .ds-workspace-alert { color: #D14D41; font-weight: 700; } .ds-workspace-game-icon { flex: none; }"
+    },
+    {
+      "name": "Metric Widget",
+      "kind": "custom",
+      "refersTo": "metric-widget",
+      "description": "A compact name-value readout with a two-pixel utilization meter pinned to its lower edge.",
+      "html": "<div class=\"ds-metric\" role=\"status\" aria-label=\"CPU usage 37 percent\"><span class=\"ds-metric-name\">CPU</span><span class=\"ds-metric-value\">37%</span><span class=\"ds-metric-line\" aria-hidden=\"true\"></span></div>",
+      "css": ".ds-metric { position: relative; height: 24px; padding: 0 5px; display: inline-flex; align-items: center; gap: 4px; background: transparent; color: #CECDC3; font: 12px 'JetBrainsMono Nerd Font', monospace; } .ds-metric-name { color: #878580; } .ds-metric-value { color: #CECDC3; } .ds-metric-line { position: absolute; left: 0; bottom: 0; width: 37%; height: 2px; background: #DA702C; }"
+    },
+    {
+      "name": "Tool Button",
+      "kind": "button",
+      "refersTo": "tool-button",
+      "description": "A square-edged utility action that stays transparent at rest and reveals hover, press, and keyboard-focus states.",
+      "html": "<button class=\"ds-tool-button\" aria-label=\"Toggle keyboard layout\"><svg class=\"ds-tool-icon\" viewBox=\"0 0 16 16\" width=\"15\" height=\"15\" aria-hidden=\"true\"><rect x=\"1.5\" y=\"3\" width=\"13\" height=\"9.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\"/><path d=\"M4 6h1M7 6h1M10 6h1M4 8.5h1M7 8.5h1M10 8.5h2M4 11h8\" stroke=\"currentColor\" stroke-linecap=\"round\"/></svg></button>",
+      "css": ".ds-tool-button { min-width: 26px; height: 24px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #CECDC3; font: 12px 'JetBrainsMono Nerd Font', monospace; cursor: pointer; } .ds-tool-button:hover { background: #282726; } .ds-tool-button:focus-visible { outline: none; border-color: #DA702C; } .ds-tool-button:active { background: #DA702C; color: #100F0F; } .ds-tool-icon { flex: none; }"
+    },
+    {
+      "name": "Power Button",
+      "kind": "button",
+      "refersTo": "tool-button-danger-hover",
+      "description": "The destructive Tool Button variant, distinguished by a red edge over a neutral surface instead of a low-contrast red fill.",
+      "html": "<button class=\"ds-power-button\" aria-label=\"Open power menu\"><svg class=\"ds-power-icon\" viewBox=\"0 0 16 16\" width=\"15\" height=\"15\" aria-hidden=\"true\"><path d=\"M8 1.5v6M4 3.5a6 6 0 1 0 8 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg></button>",
+      "css": ".ds-power-button { min-width: 26px; height: 24px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #CECDC3; cursor: pointer; } .ds-power-button:focus-visible { outline: none; border-color: #DA702C; } .ds-power-button:hover { background: #1C1B1A; border-color: #D14D41; } .ds-power-button:active { background: #282726; border-color: #D14D41; } .ds-power-icon { flex: none; }"
+    },
+    {
+      "name": "Attention Tray Item",
+      "kind": "button",
+      "refersTo": "tray-item",
+      "description": "A fixed tray slot with explicit needs-attention semantics and a persistent red marker that survives the orange keyboard-focus border.",
+      "html": "<button class=\"ds-tray-item ds-tray-item--attention\" aria-label=\"Messages, needs attention\" aria-describedby=\"ds-tray-attention-description\"><svg class=\"ds-tray-icon\" viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"M2 3.5h12v8H8l-3.5 2v-2H2Z\" fill=\"none\" stroke=\"currentColor\" stroke-linejoin=\"round\"/><path d=\"M5 6.5h6M5 9h4\" stroke=\"currentColor\" stroke-linecap=\"round\"/></svg><span class=\"ds-tray-attention-marker\" aria-hidden=\"true\"></span><span id=\"ds-tray-attention-description\" class=\"ds-sr-only\">Needs attention. System tray item.</span></button>",
+      "css": ".ds-tray-item { position: relative; width: 26px; height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #CECDC3; cursor: pointer; } .ds-tray-item--attention { border-color: #D14D41; } .ds-tray-item:hover { background: #1C1B1A; } .ds-tray-item:focus-visible { outline: none; border-color: #DA702C; } .ds-tray-item:active { background: #282726; } .ds-tray-icon { flex: none; } .ds-tray-attention-marker { position: absolute; right: 0; bottom: 0; width: 6px; height: 2px; background: #D14D41; } .ds-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }"
+    },
+    {
+      "name": "Audio Control",
+      "kind": "button",
+      "refersTo": "audio-control",
+      "description": "A Tool Button variant combining a volume-dependent speaker glyph with the live percentage.",
+      "html": "<button class=\"ds-audio-control\" aria-label=\"Volume 72 percent\"><svg class=\"ds-audio-icon\" viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M2 6h3l3-3v10l-3-3H2Z\" fill=\"currentColor\"/><path d=\"M10 5.2c1.4 1.5 1.4 4.1 0 5.6M12 3.5c2.4 2.4 2.4 6.6 0 9\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\"/></svg><span class=\"ds-audio-value\">72%</span></button>",
+      "css": ".ds-audio-control { min-width: 26px; height: 24px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #CECDC3; font: 12px 'JetBrainsMono Nerd Font', monospace; cursor: pointer; } .ds-audio-control:hover { background: #282726; } .ds-audio-control:focus-visible { outline: none; border-color: #DA702C; } .ds-audio-control:active { background: #DA702C; color: #100F0F; } .ds-audio-icon { flex: none; }"
+    },
+    {
+      "name": "Clock Widget",
+      "kind": "custom",
+      "refersTo": "clock-widget",
+      "description": "A one-line mono timestamp whose expanded date is delegated to its tooltip.",
+      "html": "<time class=\"ds-clock\" datetime=\"2026-08-12T21:22:00+01:00\" aria-label=\"Wednesday, 12 August 2026 — 21:22\">21:22&nbsp;&nbsp;Wed 12 Aug</time>",
+      "css": ".ds-clock { height: 24px; padding: 0 5px; display: inline-flex; align-items: center; background: transparent; color: #CECDC3; font: 12px 'JetBrainsMono Nerd Font', monospace; white-space: nowrap; }"
+    },
+    {
+      "name": "Bar Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip",
+      "description": "A detached explanatory surface shown after a short delay beneath a hovered or keyboard-focused control.",
+      "html": "<div class=\"ds-bar-tooltip\" role=\"tooltip\">Toggle keyboard layout</div>",
+      "css": ".ds-bar-tooltip { display: inline-block; padding: 5px 6px; border: 1px solid #282726; border-radius: 4px; background: #1C1B1A; color: #CECDC3; font: 11px 'Bricolage Grotesque', sans-serif; white-space: nowrap; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operational Instrument Rail",
+    "overview": "The rail behaves like a narrow hardware readout rather than an application surface: continuously available, information-dense, and quiet until state demands attention. Its opaque Flexoki dark field preserves focus on windows beneath it, while warm mono data and rare orange signals make the active workspace and system pressure immediately legible.\n\nIts visual hierarchy follows the workstation task: orient on the left, scan health on the right, then act through compact controls without leaving the rail. Ornament, atmospheric effects, and decorative movement are intentionally absent; every visible mark identifies state, reports a value, or offers an action.",
+    "keyCharacteristics": [
+      "A 28 px opaque rail on every monitor",
+      "Task-oriented workspaces anchored left",
+      "Flexible quiet space through the center",
+      "Dense telemetry, controls, tray, clock, and power anchored right",
+      "Restrained Flexoki dark neutrals with rare orange, red, and yellow signals",
+      "Compact mono labels, hairline meters, and accessible state beyond color"
+    ],
+    "rules": [
+      {
+        "name": "The Signal Rarity Rule",
+        "body": "Orange identifies focus and live measurement, red identifies urgency or danger, and yellow identifies disk pressure; accents never become general decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Monospace Telemetry Rule",
+        "body": "Any value or label that participates in the rail's scanning rhythm uses the mono label role; prose exists only inside tooltips.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat at Rest Rule",
+        "body": "Every component is flush with the rail until hover, press, focus, attention, or explanatory context warrants a tonal step or border.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Almost-Square Rule",
+        "body": "Keep rail controls at a 3 px radius and reserve the 4 px radius for detached tooltip surfaces.",
+        "section": "shapes"
+      },
+      {
+        "name": "The State Beyond Color Rule",
+        "body": "Pair focused orange with a dark underline, pair urgent workspaces with an exclamation mark or explicit edge, underline every visible workspace, and pair tray attention with a persistent marker plus explicit accessible text.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do preserve the 28 px rail, 24 px control row, 2 px gaps, and left-orient/right-operate information order.",
+      "Do use Warm Foreground for live data and Muted Foreground for supporting labels and inactive state.",
+      "Do keep orange focused states paired with dark text and a dark two-pixel underline, and urgent states paired with a border or ! marker.",
+      "Do keep each clickable control keyboard-focusable and give it a specific tooltip or clear text label.",
+      "Do let the flexible center remain visually empty so operational groups stay distinct."
+    ],
+    "donts": [
+      "Don't add shadows, blur, transparency, gradients, ornamental animation, or floating-card treatment to the rail.",
+      "Don't turn compact controls into pills or increase their corner radius beyond the established near-square language.",
+      "Don't use accent colors as decoration or rely on color alone to communicate focus, visibility, urgency, or danger.",
+      "Don't insert prose, headings, or stacked content into the 28 px instrument line.",
+      "Don't reorder workspaces, telemetry, controls, tray, clock, and power without a corresponding workflow reason."
+    ]
+  }
+}

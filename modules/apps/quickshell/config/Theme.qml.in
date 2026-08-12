@@ -1,0 +1,39 @@
+pragma Singleton
+
+import QtQuick
+import Quickshell
+
+Singleton {
+    readonly property color bg0: "@bg0@"
+    readonly property color bg1: "@bg1@"
+    readonly property color bg2: "@bg2@"
+    readonly property color fg0: "@fg0@"
+    readonly property color fgMuted: "#878580"
+    readonly property color red: "@red@"
+    readonly property color redBright: "@redBright@"
+    readonly property color greenBright: "@greenBright@"
+    readonly property color yellowBright: "@yellowBright@"
+    readonly property color orange: "@orange@"
+    readonly property color orangeBright: "@orangeBright@"
+
+    readonly property string primaryFont: "@primaryFont@"
+    readonly property string uiFont: "@uiFont@"
+    readonly property int textSize: 12
+    readonly property int iconSize: 15
+    readonly property int barHeight: 28
+    readonly property int controlHeight: 24
+    readonly property int controlMinWidth: 26
+
+    readonly property var workspaceSpecs: [
+        { "id": 1, "icon": "\uf120", "name": "Terminal" },
+        { "id": 2, "icon": "\uf0ac", "name": "Web" },
+        { "id": 3, "icon": "\uf07c", "name": "Files" },
+        { "id": 4, "icon": "\uf2bb", "name": "Personal" },
+        { "id": 5, "icon": "\uf075", "name": "Chat" },
+        { "id": 6, "icon": "\uf11b", "name": "Gaming" },
+        { "id": 7, "icon": "", "name": "Workspace 7" },
+        { "id": 8, "icon": "", "name": "Workspace 8" },
+        { "id": 9, "icon": "", "name": "Workspace 9" },
+        { "id": 10, "icon": "\uf001", "name": "Music" }
+    ]
+}
