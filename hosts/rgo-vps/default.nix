@@ -54,7 +54,9 @@
     ];
   };
 
-  vps.umami.enable = true;
+  # OpenPost now uses PostHog across the app, marketing site, docs, and backend.
+  # Keep the existing /var/lib/umami data and /var/backup/umami dumps offline.
+  vps.umami.enable = false;
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
