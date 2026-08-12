@@ -25,21 +25,6 @@ let
       '';
     };
 
-    # Umami - analytics
-    "analytics.rgo.pt" = {
-      extraConfig = ''
-        reverse_proxy localhost:${toString (cfg.internalPorts.umami or 3000)}
-
-        header {
-          Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-          X-Content-Type-Options "nosniff"
-          X-Frame-Options "SAMEORIGIN"
-          X-XSS-Protection "1; mode=block"
-          Referrer-Policy "strict-origin-when-cross-origin"
-        }
-      '';
-    };
-
     # Ghost - blog
     "cs.rgo.pt" = {
       extraConfig = ''
@@ -185,6 +170,22 @@ let
     "shlink-admin.rgo.pt" = {
       extraConfig = ''
         reverse_proxy localhost:${toString (cfg.internalPorts."shlink-admin.rgo.pt" or 8088)}
+
+        header {
+          Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+          X-Content-Type-Options "nosniff"
+          X-Frame-Options "SAMEORIGIN"
+          X-XSS-Protection "1; mode=block"
+          Referrer-Policy "strict-origin-when-cross-origin"
+        }
+      '';
+    };
+  }
+  // lib.optionalAttrs config.vps.umami.enable {
+    # Umami - analytics
+    "analytics.rgo.pt" = {
+      extraConfig = ''
+        reverse_proxy localhost:${toString (cfg.internalPorts.umami or 3000)}
 
         header {
           Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
