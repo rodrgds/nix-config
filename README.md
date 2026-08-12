@@ -21,14 +21,14 @@ It uses shared modules, Home Manager, `nh`, `sops-nix`, and a Bun-based rebuild 
 - `sops-nix` for both personal and server secrets
 - TUI rebuild flow with target selection, diff view, formatting, and optional flake input updates
 - Development setup for web, mobile, systems, and AI tooling
-- Linux desktop stack with i3 and gaming tools
+- Hyprland/Wayland desktop with Quickshell and gaming tools
 - VPS stack with reverse proxy, Podman services, and Tailscale
 
 ### Hosts
 
 | Host | Platform | Notes |
 | --- | --- | --- |
-| `rgo-desktop` | NixOS | Main desktop, i3, gaming, Linux-only apps |
+| `rgo-desktop` | NixOS | Main desktop, Hyprland, Quickshell, gaming |
 | `rgo-laptop` | macOS | nix-darwin, Aerospace, Homebrew integration |
 | `rgo-vps` | NixOS | Remote services and containers |
 
@@ -58,9 +58,9 @@ It uses shared modules, Home Manager, `nh`, `sops-nix`, and a Bun-based rebuild 
 
 ### NixOS desktop
 
-- i3, bumblebee-status, dunst, redshift
+- Hyprland, Quickshell, Hyprlock, Hypridle, Dunst; dormant i3/Polybar modules remain available
 - Steam, CS2, Prism Launcher, Lunar Client, Wine, Winetricks, MangoHud, GameMode
-- OBS, Darktable, GIMP, DaVinci Resolve, Flameshot, NormCap, Charm Freeze
+- OBS, Darktable, GIMP, NormCap, and Charm Freeze
 - Solaar, Synology Drive, ngrok, Vicinae, Grayjay, Rescrobbled
 
 ### macOS laptop
@@ -99,7 +99,7 @@ OpenPost, Montra, and Unprompted publish verified GHCR images before calling the
 
 | Area | `rgo-desktop` | `rgo-laptop` |
 | --- | --- | --- |
-| Window manager | i3 | Aerospace |
+| Window manager | Hyprland | Aerospace |
 | Service manager | systemd | launchd |
 | Package source | nixpkgs | nixpkgs + Homebrew |
 | Flatpak | yes | no |
@@ -212,6 +212,29 @@ Fallback direct rebuild:
 ```bash
 sudo nixos-rebuild switch --flake "$HOME/.config/home#rgo-desktop"
 ```
+
+The desktop login defaults to the UWSM-managed Hyprland session. The old i3,
+Polybar, and Redshift modules remain in the repository but are disabled on this
+host, so they no longer add an X11 desktop session or background services.
+
+#### Hyprland migration notes
+
+- The familiar Super-based workspace, focus, move, fullscreen, launcher, screenshot,
+  display, and application bindings are mirrored in Hyprland.
+- `Super+G` creates a tabbed Hyprland group, `Super+E` toggles the split, and
+  `Super+H`/`Super+V` choose the next split direction.
+- Quickshell renders a 28 px bar on each connected monitor. It keeps workspaces on
+  the left and CPU, RAM, disk, audio, controls, tray, clock, and power on the right.
+- Choose `Hyprland (UWSM-managed)` at login. UWSM owns the systemd session,
+  imports the Wayland environment, starts graphical user services, and tears them
+  down cleanly; the plain Hyprland entry starts the compositor directly.
+- CS2 launches directly through SDL3's native Wayland backend at 1280x960 and
+  disables the second monitor until the game exits. Gamescope is intentionally
+  not used because its Wayland Vulkan backend aborts on this NVIDIA setup.
+- VRR, tearing, and direct scanout are intentionally off for the first baseline.
+  Measure the stable configuration before enabling those experimental paths.
+- Grim/Slurp handle Hyprland screenshots, and OBS screen capture uses the
+  Hyprland desktop portal.
 
 ### VPS
 

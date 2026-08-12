@@ -31,9 +31,9 @@ in
                 monitor = 0;
                 follow = "mouse";
                 width = 300;
-                height = 300;
+                height = "(0, 300)";
                 origin = "top-right";
-                offset = "8x56";
+                offset = "(8, 56)";
                 scale = 0;
                 notification_limit = 20;
                 progress_bar = true;
@@ -108,12 +108,6 @@ in
                 frame_color = "#AF3029";
               };
 
-              shortcuts = {
-                close = "ctrl+space";
-                close_all = "ctrl+shift+space";
-                history = "ctrl+grave";
-                context = "ctrl+shift+period";
-              };
             };
           };
         };

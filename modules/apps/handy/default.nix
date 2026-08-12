@@ -17,7 +17,11 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.handy ];
+        # Handy delegates text insertion to wtype in native Wayland sessions.
+        environment.systemPackages = [
+          pkgs.handy
+          pkgs.wtype
+        ];
         environment.sessionVariables = {
           WEBKIT_DISABLE_DMABUF_RENDERER = "1";
         };

@@ -43,7 +43,7 @@
   services.smartd = {
     enable = true;
     notifications.wall.enable = false;
-    notifications.x11.enable = true;
+    notifications.systembus-notify.enable = true;
   };
   core.audio.enable = true;
   core.fonts.enable = true;
@@ -102,11 +102,15 @@
   apps.laravel.enable = false;
   apps.affinity.enable = false;
 
-  apps.i3.enable = true;
-  apps.polybar.enable = true;
+  apps.hyprland.enable = true;
+  apps.quickshell.enable = true;
+  # The i3 and Polybar modules remain in the repository, but this host now
+  # exposes only the Hyprland desktop session.
+  apps.i3.enable = false;
+  apps.polybar.enable = false;
   apps.bumblebee-status.enable = false;
   apps.dunst.enable = true;
-  apps.redshift.enable = true;
+  apps.redshift.enable = false;
   apps.solaar.enable = true;
   apps.xdg-portals.enable = true;
   apps.gtk-theme.enable = true;
@@ -117,10 +121,9 @@
   apps.mpv.enable = true;
   apps.darktable.enable = false;
   apps.gimp.enable = false;
-  apps.davinci-resolve.enable = false;
   apps.auto-editor.enable = true;
   apps.losslesscut.enable = true;
-  apps.flameshot.enable = true;
+  apps.flameshot.enable = false;
   apps.normcap.enable = true;
   apps.charm-freeze.enable = true;
   apps.stremio.enable = true;

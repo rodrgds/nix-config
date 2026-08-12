@@ -33,7 +33,12 @@ in
             };
             Service = {
               ExecStart = "${pkgs.solaar}/bin/solaar --window=hide";
-              Restart = "always";
+              # A second invocation asks the existing tray process to expose
+              # its window and then exits. Restarting on every clean/explicit
+              # exit therefore creates an endless reopen loop. Preserve crash
+              # recovery without undoing an intentional close.
+              Restart = "on-abnormal";
+              RestartSec = "3s";
             };
           };
 

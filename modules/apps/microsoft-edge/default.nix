@@ -10,6 +10,12 @@
 let
   cfg = config.apps.microsoft-edge;
   inherit (constants) isDarwin isLinux;
+  edgeLinux = pkgs.microsoft-edge.override {
+    # Hyprland does not provide server-side titlebars, so native Ozone/Wayland
+    # gives Edge a second client-side header above its tab strip. Keep this one
+    # application on XWayland for the compact single-header layout it had in i3.
+    commandLineArgs = "--ozone-platform=x11";
+  };
 in
 {
   options.apps.microsoft-edge = {
@@ -20,12 +26,12 @@ in
     lib.mkMerge [
       # Linux: Install via nixpkgs (only if on Linux)
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = with pkgs; [
-          microsoft-edge
+        environment.systemPackages = [
+          edgeLinux
           # for PWAs to work
-          (runCommand "microsoft-edge-stable-alias" { } ''
+          (pkgs.runCommand "microsoft-edge-stable-alias" { } ''
             mkdir -p $out/bin
-            ln -s ${microsoft-edge}/bin/microsoft-edge $out/bin/microsoft-edge-stable
+            ln -s ${edgeLinux}/bin/microsoft-edge $out/bin/microsoft-edge-stable
           '')
         ];
       })

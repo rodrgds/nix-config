@@ -12,9 +12,10 @@ in
 
     hardware.nvidia = {
       modesetting.enable = true;
-      powerManagement.enable = false;
+      powerManagement.enable = true;
       powerManagement.finegrained = false;
-      open = false;
+      # The RTX 2070 (Turing) is supported by NVIDIA's open kernel modules.
+      open = true;
       nvidiaSettings = true;
       package = config.boot.kernelPackages.nvidiaPackages.stable;
     };

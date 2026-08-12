@@ -15,11 +15,5 @@ in
       videoDrivers = [ "nvidia" ];
       desktopManager.xterm.enable = false;
     };
-
-    services.displayManager.defaultSession = "none+i3";
-
-    environment.sessionVariables = {
-      XDG_CURRENT_DESKTOP = "i3";
-    };
   };
 }

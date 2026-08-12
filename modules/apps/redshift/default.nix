@@ -25,6 +25,8 @@ in
             After = [ "sops-nix.service" ];
             Requires = [ "sops-nix.service" ];
             PartOf = [ "graphical-session.target" ];
+            # Hyprland uses hyprsunset; Redshift remains for the i3 fallback.
+            ConditionEnvironment = "!WAYLAND_DISPLAY";
           };
           Install = {
             WantedBy = [ "graphical-session.target" ];
