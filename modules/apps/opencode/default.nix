@@ -89,8 +89,9 @@ in
                 exa = {
                   type = "remote";
                   url = "https://mcp.exa.ai/mcp";
+                  oauth = false;
                   headers = {
-                    EXA_API_KEY = config.sops.placeholder.exa_api_key;
+                    "x-api-key" = config.sops.placeholder.exa_api_key;
                   };
                 };
               };
