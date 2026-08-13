@@ -89,7 +89,34 @@
       OPENPOST_VIDEO_STUDIO_ENABLED = "true";
     };
   };
-  vps.montra.enable = true;
+  vps.montra = {
+    enable = true;
+    # Seed an empty local image store from the exact images currently verified
+    # in production. Later webhook deploys promote only scanned immutable
+    # digests and retain these values solely as disaster-recovery bootstrap.
+    bootstrapImages = {
+      api = {
+        digest = "sha256:70733c9e4fbc8abacd544a08a10790ab525db4b381c7cc4c816b08bd739b034e";
+        revision = "ad3e6c2b0689466b645ac0fbe22d3d2c3a209cc8";
+      };
+      web = {
+        digest = "sha256:467b86c830b437fbf37684b13b0857ef061f29adefbb596b0f9980ca9e172602";
+        revision = "ad3e6c2b0689466b645ac0fbe22d3d2c3a209cc8";
+      };
+      embedding = {
+        digest = "sha256:270e36f83ebb568df9897374e8562b2401aad801a7056f8e78a8dc6f552762e1";
+        revision = "8bdd89d5da25228e9dd246dd75d12203edcdfabe";
+      };
+      detector = {
+        digest = "sha256:7cb8849af875af47086d57900494697b73e3e495ab39ff1b3f1bbce0526f4086";
+        revision = "25e28eb6eeb9b41ce98e8ed7abc03b89c2b0fe64";
+      };
+      postgres = {
+        digest = "sha256:084ef441551b6cc1c90657d4d1cb06468205971907adb204751191221c71ad7a";
+        revision = "27e5541bdd078df48249fdec7781bc4e3fc4e331";
+      };
+    };
+  };
   vps.unprompted = {
     enable = true;
     domain = "unprompted.to";

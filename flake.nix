@@ -285,7 +285,17 @@
         };
       };
 
-      checks.x86_64-linux = deploy-rs.lib.x86_64-linux.deployChecks self.deploy;
+      checks.x86_64-linux = deploy-rs.lib.x86_64-linux.deployChecks self.deploy // {
+        montra-deploy-payloads =
+          nixpkgs.legacyPackages.x86_64-linux.runCommand "check-montra-deploy-payloads"
+            {
+              nativeBuildInputs = [ nixpkgs.legacyPackages.x86_64-linux.jq ];
+            }
+            ''
+              ${./modules/hosting/deployments/check-montra-payloads.sh}
+              touch "$out"
+            '';
+      };
 
       # Darwin configurations
       darwinConfigurations.rgo-laptop = mkDarwinSystem {

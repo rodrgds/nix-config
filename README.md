@@ -295,6 +295,39 @@ migration image), verifies running API/worker/web image IDs, and requires intern
 before reporting success. Automated cleanup prunes dangling images and build cache only; tagged active
 release images are retained even when no persistent container references them.
 
+#### Montra production images
+
+Montra publishes only runtime surfaces affected by each commit. Every matrix job records the scanned
+manifest digest for its `api`, `web`, `embedding`, `detector`, or `postgres` image. The final job sends
+a signed payload containing the exact commit, timestamp, unique run-attempt delivery ID, and a nonempty
+component-to-digest map. The receiver rejects unknown fields/components, malformed digests, stale or
+future timestamps, repository mismatches, and replayed delivery IDs before launching a transient deploy
+unit. Unlisted components remain untouched, so a path-filtered release does not require unrelated
+images to carry the new commit label.
+
+The VPS pulls listed candidates by digest, verifies each OCI revision label against the requested
+commit, records complete local rollback image IDs, then promotes only those local `latest` tags. Montra
+containers use `--pull=never`; after each selected restart the deploy verifies the running container
+image ID. API promotion includes both workers and pre-restart migration/configuration. Model-service
+promotion requires its model-loading readiness endpoint, and the final gate covers every internal
+service plus the public site. On failure, selected tags and services are restored and rechecked; database
+migrations are forward-only and are not reversed.
+
+The host pins one independently verified bootstrap digest and revision per Montra image for recovery
+when a local tag is absent. It does not force all current images to one revision because path-filtered
+releases intentionally leave unchanged surfaces on their last verified revisions. Deployments and
+catalog mutations serialize on `/run/montra-catalog-maintenance.lock`, followed by the global Podman
+maintenance lock. Production admin jobs acquire the shared lock before claiming work. Run manual
+catalog operations through `montra-catalog-maintenance <command> [args...]` so deploys cannot restart
+workers during a mutation.
+
+Production appearance processing rewrites only URLs under the configured
+`VISUAL_APPEARANCE_PUBLIC_IMAGE_BASE_URL` prefix to the matching
+`VISUAL_APPEARANCE_INTERNAL_IMAGE_BASE_URL` prefix before the embedding service fetches them. The
+deployed mapping is `http://127.0.0.1:9000/fashion-radar` to `https://media.montra.style`. The service
+allowlists that exact HTTPS origin; unrelated retailer URLs keep the normal public-host validation and
+fallback behavior.
+
 ## Operations
 
 ### Rebuilds

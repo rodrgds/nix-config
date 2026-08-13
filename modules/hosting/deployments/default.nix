@@ -142,49 +142,299 @@ let
   montraDeploy = pkgs.writeShellScript "deploy-montra" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
+    [ "$#" -eq 2 ] || { echo "expected Montra revision and component digest map" >&2; exit 1; }
+    revision="$1"
+    components_json="$2"
+    [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid Montra revision" >&2; exit 1; }
+    jq -e -f ${./montra-payload-components.jq} <<< "$components_json" >/dev/null || {
+      echo "invalid Montra component digest map" >&2
+      exit 1
+    }
+
+    # The admin worker and manual maintenance wrapper hold this first lock for
+    # the full catalog mutation. Consistent ordering prevents deploy/job races.
+    exec 8>/run/montra-catalog-maintenance.lock
+    flock --exclusive 8
     exec 9>/run/podman-maintenance.lock
     flock --exclusive 9
 
-    for image in \
-      ghcr.io/rodrgds/montra-postgres:latest \
-      ghcr.io/rodrgds/montra-embedding:latest \
-      ghcr.io/rodrgds/montra-detector:latest \
-      ghcr.io/rodrgds/montra-api:latest \
-      ghcr.io/rodrgds/montra-web:latest; do
-      podman pull "$image"
-    done
+    all_components=(postgres embedding detector api web)
+    selected_components=()
+    declare -A candidate_images=()
+    declare -A digests=()
+    declare -A previous_images=()
 
-    systemctl stop podman-montra-web.service podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service
-    systemctl restart podman-montra-postgres.service podman-montra-embedding.service podman-montra-detector.service
-    systemctl restart montra-initialize.service
-    systemctl start podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service
+    component_selected() {
+      jq -e --arg component "$1" 'has($component)' <<< "$components_json" >/dev/null
+    }
 
-    for attempt in $(seq 1 90); do
-      if curl -fsS http://127.0.0.1:8788/health/ready >/dev/null; then
-        break
+    image_name() {
+      printf 'ghcr.io/rodrgds/montra-%s' "$1"
+    }
+
+    for component in "''${all_components[@]}"; do
+      if ! component_selected "$component"; then
+        continue
       fi
-      if [ "$attempt" = 90 ]; then
-        journalctl -u podman-montra-api.service -n 160 --no-pager >&2
+      selected_components+=("$component")
+      image="$(image_name "$component")"
+      digest="$(jq -er --arg component "$component" '.[$component]' <<< "$components_json")"
+      previous_image="$(podman image inspect "$image:latest" --format '{{.Id}}')" || {
+        echo "missing previous Montra $component image; refusing promotion without rollback" >&2
         exit 1
-      fi
-      sleep 2
-    done
-
-    systemctl start podman-montra-web.service
-    for attempt in $(seq 1 60); do
-      if curl -fsS http://127.0.0.1:8091/ >/dev/null; then
-        break
-      fi
-      if [ "$attempt" = 60 ]; then
-        journalctl -u podman-montra-web.service -n 120 --no-pager >&2
+      }
+      [[ "$previous_image" =~ ^(sha256:)?[0-9a-f]{64}$ ]] || {
+        echo "previous Montra $component image has an invalid ID" >&2
         exit 1
-      fi
-      sleep 2
+      }
+      previous_images[$component]="$previous_image"
+      previous_revision="$(podman image inspect "$previous_image" --format '{{index .Labels "org.opencontainers.image.revision"}}')" || {
+        echo "previous Montra $component image has no inspectable revision" >&2
+        exit 1
+      }
+      [[ "$previous_revision" =~ ^[0-9a-f]{40}$ ]] || {
+        echo "previous Montra $component image has an invalid revision label" >&2
+        exit 1
+      }
+      running_containers=()
+      case "$component" in
+        api) running_containers=(montra-api montra-worker montra-integration-worker) ;;
+        *) running_containers=("montra-$component") ;;
+      esac
+      for container in "''${running_containers[@]}"; do
+        running_image="$(podman inspect "$container" --format '{{.Image}}')" || {
+          echo "cannot inspect running Montra container $container" >&2
+          exit 1
+        }
+        [ "$running_image" = "$previous_image" ] || {
+          echo "$container runs $running_image, but $image:latest is $previous_image; refusing an unverifiable rollback" >&2
+          exit 1
+        }
+      done
+      digests[$component]="$digest"
     done
 
-    systemctl is-active --quiet podman-montra-detector.service podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service podman-montra-web.service
-    curl -fsS https://montra.style/ >/dev/null
+    systemctl restart packages-registry-login.service
+    for component in "''${selected_components[@]}"; do
+      image="$(image_name "$component")"
+      candidate="$image@''${digests[$component]}"
+      podman pull "$candidate"
+      image_revision="$(podman image inspect "$candidate" --format '{{index .Labels "org.opencontainers.image.revision"}}')"
+      [ "$image_revision" = "$revision" ] || {
+        echo "$component candidate revision $image_revision does not match $revision" >&2
+        exit 1
+      }
+      candidate_image="$(podman image inspect "$candidate" --format '{{.Id}}')"
+      [[ "$candidate_image" =~ ^(sha256:)?[0-9a-f]{64}$ ]] || {
+        echo "$component candidate image has an invalid ID" >&2
+        exit 1
+      }
+      candidate_images[$component]="$candidate_image"
+      podman tag "''${previous_images[$component]}" "$image:rollback"
+    done
+
+    restore_previous_tags() {
+      for component in "''${selected_components[@]}"; do
+        image="$(image_name "$component")"
+        podman tag "''${previous_images[$component]}" "$image:latest" || return 1
+        restored_image="$(podman image inspect "$image:latest" --format '{{.Id}}')" || return 1
+        [ "$restored_image" = "''${previous_images[$component]}" ] || return 1
+      done
+    }
+
+    promote_candidates() {
+      for component in "''${selected_components[@]}"; do
+        image="$(image_name "$component")"
+        podman tag "$image@''${digests[$component]}" "$image:latest" || return 1
+        promoted_image="$(podman image inspect "$image:latest" --format '{{.Id}}')" || return 1
+        [ "$promoted_image" = "''${candidate_images[$component]}" ] || return 1
+      done
+    }
+
+    activate_selected() {
+      postgres_changed=false
+      api_changed=false
+      web_changed=false
+      app_stopped=false
+      component_selected postgres && postgres_changed=true
+      component_selected api && api_changed=true
+      component_selected web && web_changed=true
+
+      if $postgres_changed; then
+        systemctl stop podman-montra-web.service podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service || return 1
+        app_stopped=true
+        systemctl restart podman-montra-postgres.service || return 1
+      fi
+      if component_selected embedding; then
+        systemctl restart podman-montra-embedding.service || return 1
+      fi
+      if component_selected detector; then
+        systemctl restart podman-montra-detector.service || return 1
+      fi
+      if $api_changed || $postgres_changed; then
+        systemctl start montra-deploy-initialize.service || return 1
+        systemctl restart podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service || return 1
+        app_stopped=false
+      fi
+      if $web_changed || $postgres_changed; then
+        systemctl restart podman-montra-web.service || return 1
+      fi
+    }
+
+    restore_application_services() {
+      if $app_stopped; then
+        systemctl restart podman-montra-api.service podman-montra-worker.service podman-montra-integration-worker.service || return 1
+        systemctl restart podman-montra-web.service || return 1
+        app_stopped=false
+      fi
+    }
+
+    runtime_healthy() {
+      systemctl is-active --quiet \
+        podman-montra-postgres.service \
+        podman-montra-meilisearch.service \
+        podman-montra-embedding.service \
+        podman-montra-detector.service \
+        podman-montra-api.service \
+        podman-montra-worker.service \
+        podman-montra-integration-worker.service \
+        podman-montra-web.service \
+        && podman exec montra-postgres pg_isready -U montra -d montra >/dev/null \
+        && podman exec montra-embedding python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8811/health')" \
+        && podman exec montra-detector python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8812/health/ready')" \
+        && curl -fsS http://127.0.0.1:8788/health/ready >/dev/null \
+        && curl -fsS http://127.0.0.1:8091/ >/dev/null
+    }
+
+    candidate_dependencies_ready() {
+      if component_selected embedding; then
+        podman exec montra-embedding python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8811/health/ready')" || return 1
+      fi
+      if component_selected detector; then
+        podman exec montra-detector python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8812/health/ready')" || return 1
+      fi
+    }
+
+    wait_for_runtime() {
+      for _attempt in $(seq 1 120); do
+        runtime_healthy && return 0
+        sleep 2
+      done
+      journalctl \
+        -u podman-montra-postgres.service \
+        -u podman-montra-embedding.service \
+        -u podman-montra-detector.service \
+        -u podman-montra-api.service \
+        -u podman-montra-worker.service \
+        -u podman-montra-integration-worker.service \
+        -u podman-montra-web.service \
+        -n 200 --no-pager >&2
+      return 1
+    }
+
+    verify_changed_containers() {
+      state="$1"
+      for component in "''${selected_components[@]}"; do
+        if [ "$state" = candidate ]; then
+          expected_image="''${candidate_images[$component]}"
+        else
+          expected_image="''${previous_images[$component]}"
+        fi
+        case "$component" in
+          api) containers=(montra-api montra-worker montra-integration-worker) ;;
+          *) containers=("montra-$component") ;;
+        esac
+        for container in "''${containers[@]}"; do
+          running_image="$(podman inspect "$container" --format '{{.Image}}')" || return 1
+          [ "$running_image" = "$expected_image" ] || {
+            echo "$container runs $running_image, expected $expected_image" >&2
+            return 1
+          }
+        done
+      done
+    }
+
+    rollback_application() {
+      echo "Montra rollout failed; restoring selected previous images. Database migrations are not reversed." >&2
+      restore_previous_tags || return 1
+      activate_selected || {
+        restore_application_services || true
+        return 1
+      }
+      restore_application_services || return 1
+      wait_for_runtime || return 1
+      verify_changed_containers previous || return 1
+      curl -fsS https://montra.style/ >/dev/null || return 1
+      echo "ROLLBACK_OK montra" >&2
+    }
+
+    fail_with_rollback() {
+      reason="$1"
+      echo "$reason" >&2
+      if rollback_application; then
+        echo "Deployment failed; verified Montra rollback completed." >&2
+      else
+        echo "FATAL: Montra deployment and rollback verification both failed." >&2
+      fi
+      return 1
+    }
+
+    if ! promote_candidates; then
+      if restore_previous_tags; then
+        echo "Montra candidate promotion failed before service replacement; previous tags were restored" >&2
+      else
+        echo "FATAL: Montra candidate promotion and previous-tag restoration both failed" >&2
+      fi
+      exit 1
+    fi
+    if ! activate_selected; then
+      restore_application_services || true
+      fail_with_rollback "Montra candidate activation failed"
+      exit 1
+    fi
+    if ! wait_for_runtime; then
+      fail_with_rollback "Montra candidate runtime did not become ready"
+      exit 1
+    fi
+    if ! candidate_dependencies_ready; then
+      fail_with_rollback "Montra candidate model service did not become ready"
+      exit 1
+    fi
+    if ! verify_changed_containers candidate; then
+      fail_with_rollback "Montra running image verification failed"
+      exit 1
+    fi
+    if ! curl -fsS https://montra.style/ >/dev/null; then
+      fail_with_rollback "Montra public health check failed"
+      exit 1
+    fi
+
     ${pruneImages}
+    printf 'DEPLOY_OK montra %s components=%s\n' "$revision" "$(IFS=,; echo "''${selected_components[*]}")"
+  '';
+
+  triggerMontraDeploy = pkgs.writeShellScript "trigger-deploy-montra" ''
+    set -euo pipefail
+    export PATH=${maintenancePath}:$PATH
+    [ "$#" -eq 1 ] || { echo "expected the exact signed Montra JSON payload" >&2; exit 1; }
+    payload="$1"
+    now="$(date +%s)"
+    ${pkgs.bash}/bin/bash ${./validate-montra-delivery.sh} \
+      "$payload" "$now" /var/lib/montra/deploy-deliveries ${./montra-payload.jq}
+    revision="$(jq -er .sha <<< "$payload")"
+    delivery_id="$(jq -er .delivery_id <<< "$payload")"
+    components="$(jq -ec .components <<< "$payload")"
+
+    ${pkgs.systemd}/bin/systemd-run \
+      --quiet \
+      --wait \
+      --collect \
+      --pipe \
+      --service-type=oneshot \
+      --unit="deploy-montra-$delivery_id" \
+      --property=TimeoutStartSec=60min \
+      ${montraDeploy} "$revision" "$components"
+    printf 'DEPLOY_OK montra %s\n' "$revision"
   '';
 
   unpromptedDeploy = pkgs.writeShellScript "deploy-unprompted" ''
@@ -518,17 +768,34 @@ in
           },
           {
             "id": "deploy-montra",
-            "execute-command": "${triggerDeploy "montra"}",
+            "execute-command": "${triggerMontraDeploy}",
             "include-command-output-in-response": true,
+            "pass-arguments-to-command": [
+              { "source": "entire-payload" }
+            ],
             "trigger-rule": {
-              "match": {
-                "type": "payload-hmac-sha256",
-                "secret": "${config.sops.placeholder.deploy_webhook_secret}",
-                "parameter": {
-                  "source": "header",
-                  "name": "X-Hub-Signature-256"
+              "and": [
+                {
+                  "match": {
+                    "type": "payload-hmac-sha256",
+                    "secret": "${config.sops.placeholder.deploy_webhook_secret}",
+                    "parameter": {
+                      "source": "header",
+                      "name": "X-Hub-Signature-256"
+                    }
+                  }
+                },
+                {
+                  "match": {
+                    "type": "value",
+                    "value": "rodrgds/montra",
+                    "parameter": {
+                      "source": "payload",
+                      "name": "repository"
+                    }
+                  }
                 }
-              }
+              ]
             }
           },
           {
@@ -590,21 +857,6 @@ in
         Type = "oneshot";
         ExecStart = personalWebsiteDeploy;
         TimeoutStartSec = "15min";
-      };
-    };
-
-    systemd.services.deploy-montra = {
-      description = "Deploy verified Montra production images";
-      after = [
-        "network-online.target"
-        "packages-registry-login.service"
-      ];
-      requires = [ "packages-registry-login.service" ];
-      wants = [ "network-online.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = montraDeploy;
-        TimeoutStartSec = "30min";
       };
     };
 
