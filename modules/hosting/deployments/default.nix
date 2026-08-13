@@ -50,7 +50,7 @@ let
     revision="''${1:-}"
     release_tag="''${2:-}"
     digest="''${3:-}"
-    image_name=ghcr.io/rodrgds/openpost
+    image_name=ghcr.io/getopenpost/openpost
 
     [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid OpenPost revision" >&2; exit 1; }
     [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid OpenPost release tag" >&2; exit 1; }
@@ -761,7 +761,7 @@ in
                 {
                   "match": {
                     "type": "value",
-                    "value": "rodrgds/openpost",
+                    "value": "getopenpost/openpost",
                     "parameter": {
                       "source": "payload",
                       "name": "repository"
