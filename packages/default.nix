@@ -24,6 +24,9 @@ affinityOverlay
   # Flexoki GTK theme
   flexoki-gtk = prev.callPackage ./flexoki-gtk { };
 
+  # Matching Hyprcursor and XCursor variants for the desktop.
+  future-cyan-cursors = prev.callPackage ./future-cyan-cursors { };
+
   # Polybar with i3 support (not enabled by default in nixpkgs)
   polybar = prev.polybar.override { i3Support = true; };
 

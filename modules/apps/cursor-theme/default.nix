@@ -7,6 +7,8 @@
 }:
 let
   cfg = config.apps.cursor-theme;
+  cursorName = "Future-Cyan";
+  cursorSize = 20;
 in
 {
   options.apps.cursor-theme = {
@@ -17,22 +19,23 @@ in
     home-manager.users.${username} = _: {
       home.pointerCursor = {
         enable = true;
-        package = pkgs.bibata-cursors;
-        name = "Bibata-Modern-Amber";
-        size = 28;
+        package = pkgs.future-cyan-cursors;
+        name = cursorName;
+        size = cursorSize;
         gtk.enable = true;
+        hyprcursor.enable = true;
         x11.enable = true;
       };
+    };
 
-      # Hyprland's native cursor format avoids the fallback/default cursor in
-      # compositor-owned surfaces. GTK and XWayland keep the matching amber
-      # Bibata theme above.
-      home.packages = [ pkgs.rose-pine-hyprcursor ];
-      home.sessionVariables = {
-        HYPRCURSOR_THEME = "rose-pine-hyprcursor";
-        HYPRCURSOR_SIZE = 28;
-        XCURSOR_THEME = "Bibata-Modern-Amber";
-        XCURSOR_SIZE = 28;
+    # Flatpak sandboxes cannot see Home Manager's XDG icon links by default.
+    # Expose only the icon directory and keep their cursor environment aligned
+    # with native Wayland, GTK, Qt, and XWayland applications.
+    apps.flatpak.overrides.global = {
+      Context.filesystems = [ "xdg-data/icons:ro" ];
+      Environment = {
+        XCURSOR_THEME = cursorName;
+        XCURSOR_SIZE = toString cursorSize;
       };
     };
   };

@@ -23,9 +23,6 @@ hl.monitor({
   scale = 1,
 })
 
-hl.env("XCURSOR_SIZE", "28")
-hl.env("HYPRCURSOR_SIZE", "28")
-
 hl.config({
   general = {
     gaps_in = 0,
