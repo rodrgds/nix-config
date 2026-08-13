@@ -240,7 +240,7 @@ end
 hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
-hl.bind("SHIFT + Caps_Lock", hl.dsp.workspace.toggle_special("music"))
+hl.bind(mod .. " + Caps_Lock", hl.dsp.workspace.toggle_special("music"))
 hl.bind(mod .. " + L", hl.dsp.exec_cmd("bash -c 'bash " .. scriptDir .. "/show_random_wall.sh || true; exec hyprlock'"))
 hl.bind(mod .. " + SHIFT + C", hl.dsp.exec_cmd("@hyprpicker@ -a -f hex -r"))
 hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload && systemctl --user try-restart quickshell.service"))

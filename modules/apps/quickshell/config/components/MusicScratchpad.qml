@@ -120,6 +120,6 @@ Rectangle {
     BarTooltip {
         anchorItem: root
         show: root.hovered || root.activeFocus
-        text: (root.openHere ? "Hide" : "Show") + " music scratchpad · Shift+Caps Lock" + (Media.available ? "\n" + Media.nowPlaying + "\nRight: " + (Media.playing ? "pause" : "play") : "")
+        text: (root.openHere ? "Hide" : "Show") + " music scratchpad · Win+Caps Lock" + (Media.available ? "\n" + Media.nowPlaying + "\nRight: " + (Media.playing ? "pause" : "play") : "")
     }
 }

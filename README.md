@@ -226,7 +226,7 @@ host, so they no longer add an X11 desktop session or background services.
 - Quickshell renders a 28 px bar on each connected monitor. It keeps workspaces on
   the left, followed by the music scratchpad and current track; CPU, RAM, disk,
   audio, controls, tray, clock, and power remain on the right.
-- `Shift+Caps Lock` toggles the music scratchpad on the focused monitor. Spotify and the
+- `Win+Caps Lock` toggles the music scratchpad on the focused monitor. Spotify and the
   YouTube Music app open there automatically instead of using workspace 10.
 - Choose `Hyprland (UWSM-managed)` at login. UWSM owns the systemd session,
   imports the Wayland environment, starts graphical user services, and tears them
