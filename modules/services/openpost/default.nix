@@ -187,7 +187,7 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "ghcr.io/getopenpost/openpost:latest";
+      default = "ghcr.io/getopenpost/openpost@sha256:35711c007a36cc94dc15da966419dcd656feb38cc97146a2dc124d8f684cdedb";
       description = ''
         OpenPost container image. Pin this to a release tag or digest for
         reproducible production deploys.
