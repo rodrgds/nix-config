@@ -48,11 +48,6 @@ let
       rm -f /var/lib/montra/bootstrap/.needs-search-index
     fi
   '';
-  bootInitializeScript = pkgs.writeShellScript "montra-boot-initialize" ''
-    set -euo pipefail
-    exec ${pkgs.util-linux}/bin/flock --exclusive /run/podman-maintenance.lock \
-      ${initializeScript}
-  '';
   montraComponents = [
     "api"
     "web"
@@ -410,7 +405,10 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         TimeoutStartSec = "infinity";
-        ExecStart = bootInitializeScript;
+        # Deploys already hold the shared catalog and Podman locks while this
+        # required boot initializer is started as an API dependency. Taking
+        # the Podman lock again here would deadlock the same deployment.
+        ExecStart = initializeScript;
       };
     };
 
