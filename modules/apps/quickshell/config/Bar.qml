@@ -28,9 +28,9 @@ PanelWindow {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 4
-        anchors.rightMargin: 4
-        spacing: 2
+        anchors.leftMargin: Theme.outerGutter
+        anchors.rightMargin: Theme.outerGutter
+        spacing: Theme.itemGap
 
         WorkspaceStrip {
             barScreen: root.screen

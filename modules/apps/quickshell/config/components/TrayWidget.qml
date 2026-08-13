@@ -12,7 +12,7 @@ Item {
     Row {
         id: trayItems
         anchors.fill: parent
-        spacing: 2
+        spacing: Theme.itemGap
 
         Repeater {
             model: SystemTray.items
