@@ -202,7 +202,7 @@ let
         *) running_containers=("montra-$component") ;;
       esac
       for container in "''${running_containers[@]}"; do
-        running_image="$(podman inspect "$container" --format '{{.Image}}')" || {
+        running_image="$(podman inspect "$container" --format '{{.ImageName}}')" || {
           echo "cannot inspect running Montra container $container" >&2
           exit 1
         }
@@ -345,7 +345,7 @@ let
           *) containers=("montra-$component") ;;
         esac
         for container in "''${containers[@]}"; do
-          running_image="$(podman inspect "$container" --format '{{.Image}}')" || return 1
+          running_image="$(podman inspect "$container" --format '{{.ImageName}}')" || return 1
           [ "$running_image" = "$expected_image" ] || {
             echo "$container runs $running_image, expected $expected_image" >&2
             return 1
