@@ -37,6 +37,11 @@ PanelWindow {
             Layout.alignment: Qt.AlignVCenter
         }
 
+        MusicScratchpad {
+            barScreen: root.screen
+            Layout.alignment: Qt.AlignVCenter
+        }
+
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true

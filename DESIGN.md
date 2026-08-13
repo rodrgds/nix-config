@@ -166,7 +166,7 @@ The palette is a warm-black Flexoki field with stone text and a deliberately sma
 
 ## Layout
 
-Each connected screen receives its own full-width 28 px top rail and reserves the same amount of compositor space. A 4 px outer gutter contains a single 24 px control row with 2 px gaps. Workspaces remain left-aligned, an elastic empty region absorbs all surplus width, and CPU, RAM, disk, audio, tools, tray, clock, and power terminate against the right edge in that order.
+Each connected screen receives its own full-width 28 px top rail and reserves the same amount of compositor space. A 4 px outer gutter contains a single 24 px control row with 2 px gaps. Workspaces and the music scratchpad remain left-aligned, an elastic empty region absorbs all surplus width, and CPU, RAM, disk, audio, tools, tray, clock, and power terminate against the right edge in that order.
 
 Controls grow only enough to hold their content while preserving a 26 px minimum action target. There are no responsive breakpoints: per-monitor replication and the elastic center provide the adaptation model. Metric width follows its label and value, with a 2 px progress line pinned to the bottom edge.
 
@@ -187,6 +187,10 @@ The form language is nearly square: the rail itself has no radius, interactive c
 ### Workspace Button
 
 Compact task markers show the task icon when one exists and fall back to the workspace number otherwise. Every visible workspace gains a two-pixel underline; the focused workspace becomes bright orange with dark text and a Rail Black underline, while other visible workspaces use orange or muted underlines according to monitor location. Occupied workspaces retain a persistent corner marker. Urgency uses a red border plus a leading `!`, ensuring the state is not color-only. Hover, pointer press, keyboard focus, and activation are all explicit.
+
+### Music Scratchpad
+
+The music scratchpad replaces workspace 10 immediately after the numbered workspace strip. Its music glyph is always present so the overlay remains discoverable; an occupied corner marker shows that a music window is waiting, and an orange underline shows that the scratchpad is open. When an MPRIS player exposes metadata, the control expands up to 360 px to show `artist — title` with middle elision. Primary activation toggles the scratchpad, secondary activation toggles playback, and the tooltip states both actions explicitly.
 
 ### Metric Widget
 

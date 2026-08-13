@@ -127,7 +127,6 @@ hl.workspace_rule({ workspace = "2", monitor = "HDMI-A-1", default = true, persi
 hl.workspace_rule({ workspace = "3", monitor = "DP-1", persistent = true })
 hl.workspace_rule({ workspace = "5", monitor = "HDMI-A-1", persistent = true })
 hl.workspace_rule({ workspace = "6", monitor = "DP-1", persistent = true })
-hl.workspace_rule({ workspace = "10", monitor = "HDMI-A-1", persistent = true })
 
 local function routeClass(name, class, workspace)
   hl.window_rule({
@@ -167,11 +166,15 @@ routeClass("chat-vesktop", "vesktop", 5)
 routeClass("chat-beeper", "beeper", 5)
 
 routeClass("gaming-steam", "steam", 6)
-routeClass("music-spotify", "spotify", 10)
+hl.window_rule({
+  name = "music-spotify",
+  match = { class = "(?i).*spotify.*" },
+  workspace = "special:music silent",
+})
 hl.window_rule({
   name = "music-youtube",
   match = { title = "(?i).*YouTube Music.*" },
-  workspace = "10 silent",
+  workspace = "special:music silent",
 })
 
 hl.window_rule({
@@ -203,9 +206,9 @@ hl.window_rule({
   content = "game",
   no_anim = true,
 })
--- Workspace navigation stays identical to i3: Super+1..0 and Shift to move.
-for i = 1, 10 do
-  local key = i % 10
+-- Workspace 10's music role is now owned by the music scratchpad.
+for i = 1, 9 do
+  local key = i
   hl.bind(mod .. " + " .. key, hl.dsp.focus({ workspace = i }))
   hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i, follow = false }))
 end
@@ -237,6 +240,7 @@ end
 hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
+hl.bind("SHIFT + Caps_Lock", hl.dsp.workspace.toggle_special("music"))
 hl.bind(mod .. " + L", hl.dsp.exec_cmd("bash -c 'bash " .. scriptDir .. "/show_random_wall.sh || true; exec hyprlock'"))
 hl.bind(mod .. " + SHIFT + C", hl.dsp.exec_cmd("@hyprpicker@ -a -f hex -r"))
 hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload && systemctl --user try-restart quickshell.service"))

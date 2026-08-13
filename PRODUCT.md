@@ -17,7 +17,7 @@ The repository makes one rebuild produce a complete, repeatable desktop environm
 ## Operating Context
 
 - NixOS desktop with an NVIDIA RTX 2070, Ryzen 7 5700X, and two 1920×1080 144 Hz displays.
-- Keyboard-driven tiling with ten task-oriented workspaces, a compact system bar, a launcher, notifications, screenshots, clipboard workflows, and desktop controls.
+- Keyboard-driven tiling with nine task-oriented workspaces, a music scratchpad, a compact system bar, a launcher, notifications, screenshots, clipboard workflows, and desktop controls.
 - Steam and Counter-Strike 2 are first-class workloads; low latency and a reliable fallback matter more than ornamental effects.
 - The same repository also configures macOS and VPS hosts, so Linux desktop choices must remain platform-gated.
 
