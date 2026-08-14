@@ -154,9 +154,11 @@ in
                 systemd.user.services.vicinae = {
                   Unit.After = [ "graphical-session.target" ];
                   Service = {
+                    # Inherit the complete UWSM-imported XDG_DATA_DIRS so
+                    # Home Manager themes and icons remain visible to Vicinae
+                    # and to applications it launches.
                     Environment = [
                       "PATH=${vicinaePackage}/libexec/vicinae:/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin"
-                      "XDG_DATA_DIRS=/run/current-system/sw/share:/var/lib/flatpak/exports/share:/home/${username}/.local/share/flatpak/exports/share:/home/${username}/.local/share"
                     ];
                     KillMode = lib.mkForce "control-group";
                   };

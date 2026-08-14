@@ -7,8 +7,8 @@
 }:
 let
   cfg = config.apps.cursor-theme;
-  cursorName = "Future-Cyan";
-  cursorSize = 20;
+  cursorName = "breeze_cursors";
+  cursorSize = 24;
 in
 {
   options.apps.cursor-theme = {
@@ -19,11 +19,10 @@ in
     home-manager.users.${username} = _: {
       home.pointerCursor = {
         enable = true;
-        package = pkgs.future-cyan-cursors;
+        package = pkgs.kde-breeze-cursors;
         name = cursorName;
         size = cursorSize;
         gtk.enable = true;
-        hyprcursor.enable = true;
         x11.enable = true;
       };
     };

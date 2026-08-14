@@ -18,15 +18,15 @@ in
     home-manager.users.${username} =
       { config, ... }:
       {
-        # flexoki's default gtk.css is the light palette. Force its packaged
-        # dark variant for applications and native context menus that do not
-        # honor the freedesktop color-scheme preference on their own.
-        home.sessionVariables.GTK_THEME = "flexoki:dark";
+        # Use a standalone dark theme identity instead of GTK's optional
+        # `:dark` variant. Some GTK3/GTK4 consumers otherwise load flexoki's
+        # light default stylesheet despite the dark color-scheme preference.
+        home.sessionVariables.GTK_THEME = "flexoki-dark";
 
         dconf.settings = {
           "org/gnome/desktop/interface" = {
             color-scheme = "prefer-dark";
-            gtk-theme = "flexoki";
+            gtk-theme = "flexoki-dark";
           };
         };
 
@@ -38,7 +38,7 @@ in
           };
           theme = {
             package = pkgs.flexoki-gtk;
-            name = "flexoki";
+            name = "flexoki-dark";
           };
           gtk4.theme = config.gtk.theme;
           gtk3.extraConfig = {
