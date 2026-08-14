@@ -11,6 +11,7 @@
 
   darwin.core.system.enable = true;
   darwin.core.networking.enable = true;
+  darwin.core.networking.nas.enable = true;
   darwin.core.fonts.enable = true;
   darwin.core.homebrew.enable = true;
   darwin.core.karabiner.enable = true;
@@ -19,11 +20,13 @@
   secrets.enable = true;
   scripts.enable = true;
   apps.nix-tools.enable = true;
+  apps.vicinae.enable = true;
 
   nixpkgs.config.allowUnfree = true;
 
   darwin.apps.aerospace.enable = true;
   darwin.apps.jankyborders.enable = true;
+  darwin.apps.sketchybar.enable = true;
 
   networking.hostName = "rgo-laptop";
 

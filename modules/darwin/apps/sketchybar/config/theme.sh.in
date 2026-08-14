@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# Generated from modules/desktop-bar.nix.
+export BAR_HEIGHT="@barHeight@"
+export CONTROL_HEIGHT="@controlHeight@"
+export CONTROL_MIN_WIDTH="@controlMinWidth@"
+export OUTER_GUTTER="@outerGutter@"
+export ITEM_GAP="@itemGap@"
+export CORNER_RADIUS="@cornerRadius@"
+
+export PRIMARY_FONT="@primaryFont@"
+
+export TRANSPARENT="0x00000000"
+export BG0="@bg0@"
+export BG1="@bg1@"
+export BG2="@bg2@"
+export FG0="@fg0@"
+export FG_MUTED="@fgMuted@"
+export RED_BRIGHT="@redBright@"
+export YELLOW_BRIGHT="@yellowBright@"
+export ORANGE="@orange@"
+export ORANGE_BRIGHT="@orangeBright@"

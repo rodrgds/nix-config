@@ -32,7 +32,7 @@ Item {
         color: pointer.pressed ? Theme.bg2 : pointer.containsMouse ? Theme.bg1 : "transparent"
         border.color: root.activeFocus ? Theme.orangeBright : root.needsAttention ? Theme.redBright : "transparent"
         border.width: 1
-        radius: 3
+        radius: Theme.cornerRadius
     }
 
     Image {

@@ -92,8 +92,12 @@ in
   options.apps.hyprland = {
     enable = lib.mkEnableOption "Enable Hyprland and its Wayland session services";
   };
+}
+// lib.optionalAttrs isLinux {
 
-  config = lib.mkIf (cfg.enable && isLinux) {
+  # Omit Linux-only option paths entirely on Darwin. A false mkIf still leaves
+  # those paths visible to the module checker, where their options do not exist.
+  config = lib.mkIf cfg.enable {
     programs.hyprland = {
       enable = true;
       withUWSM = true;

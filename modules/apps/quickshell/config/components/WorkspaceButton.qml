@@ -46,7 +46,7 @@ Rectangle {
     }
     border.color: urgent ? Theme.redBright : activeFocus ? Theme.orangeBright : "transparent"
     border.width: 1
-    radius: 3
+    radius: Theme.cornerRadius
     activeFocusOnTab: true
 
     Accessible.role: Accessible.Button

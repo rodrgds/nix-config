@@ -12,7 +12,7 @@ Item {
     Row {
         id: workspaces
         anchors.fill: parent
-        spacing: 2
+        spacing: Theme.itemGap
 
         Repeater {
             model: Theme.workspaceSpecs

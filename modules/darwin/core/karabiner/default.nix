@@ -42,6 +42,25 @@ let
                 }
               ];
             }
+            {
+              description = "Use Command+Space for Vicinae instead of Spotlight";
+              manipulators = [
+                {
+                  type = "basic";
+                  from = {
+                    key_code = "spacebar";
+                    modifiers = {
+                      mandatory = [ "command" ];
+                    };
+                  };
+                  to = [
+                    {
+                      shell_command = "/opt/homebrew/bin/vicinae toggle";
+                    }
+                  ];
+                }
+              ];
+            }
           ];
         };
         virtual_hid_keyboard = {

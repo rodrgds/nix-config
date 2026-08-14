@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+set -u
+
+PLUGIN_DIR="$CONFIG_DIR/plugins"
+ITEM_DIR="$CONFIG_DIR/items"
+
+export PLUGIN_DIR
+
+# shellcheck source=/dev/null
+source "$CONFIG_DIR/theme.sh"
+
+sketchybar --hotload true
+
+sketchybar --bar \
+  position=top \
+  height="$BAR_HEIGHT" \
+  color="$BG0" \
+  shadow=off \
+  blur_radius=0 \
+  margin=0 \
+  y_offset=0 \
+  padding_left="$OUTER_GUTTER" \
+  padding_right="$OUTER_GUTTER" \
+  display=all \
+  topmost=window \
+  sticky=on
+
+sketchybar --default \
+  updates=when_shown \
+  drawing=on \
+  icon.font="$PRIMARY_FONT:Regular:12.0" \
+  icon.color="$FG0" \
+  icon.padding_left=5 \
+  icon.padding_right=5 \
+  label.font="$PRIMARY_FONT:Regular:12.0" \
+  label.color="$FG0" \
+  label.padding_left=0 \
+  label.padding_right=5 \
+  background.height="$CONTROL_HEIGHT" \
+  background.corner_radius="$CORNER_RADIUS" \
+  background.color="$TRANSPARENT" \
+  background.drawing=on \
+  padding_left="$ITEM_GAP" \
+  padding_right=0
+
+sketchybar --add event aerospace_workspace_change
+
+# SketchyBar prepends right-positioned items, so source these in reverse of
+# their desired visual order: CPU, RAM, DISK, audio, keyboard, tray, clock,
+# power.
+for item in \
+  workspaces \
+  media \
+  power \
+  clock \
+  tray \
+  keyboard \
+  audio \
+  metrics
+do
+  # shellcheck source=/dev/null
+  source "$ITEM_DIR/$item.sh"
+done
+
+sketchybar --update

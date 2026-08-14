@@ -65,7 +65,7 @@ It uses shared modules, Home Manager, `nh`, `sops-nix`, and a Bun-based rebuild 
 
 ### macOS laptop
 
-- Aerospace and JankyBorders
+- Aerospace, SketchyBar, JankyBorders, and Vicinae
 - Homebrew-managed GUI apps where needed
 - Edge, Ghostty, Telegram, TeamSpeak, Beeper, Surfshark
 - UTM/QEMU, CLion, Affinity, Cap, Stremio
@@ -111,6 +111,10 @@ Notes:
 - Linux-only modules still exist in the shared tree, so option gating matters
 - Flatpak is Linux-only in this repo
 - `apps.ollama` on macOS currently installs via Homebrew, not `pkgs.ollama`
+
+### Desktop bars and launcher
+
+Quickshell on NixOS and SketchyBar on macOS render the same compact Flexoki rail: workspaces and music on the left, system status and controls on the right. Shared dimensions, colors, fonts, and workspace metadata live in `modules/desktop-bar.nix`; each renderer keeps small native feature modules for platform behavior. SketchyBar mirrors the configured macOS menu extras from `darwin.apps.sketchybar.trayAliases`; grant it Screen & System Audio Recording access so those aliases can render. Vicinae is the launcher on both hosts, with one shared extension set, behavior config, favorites, font, and Flexoki theme in `modules/apps/vicinae/default.nix`. `Super+D` / `Option+D` opens it and `Super+.` / `Option+.` opens emoji search; the laptop also uses `Command+Space` instead of Spotlight.
 
 ## Secrets
 
@@ -192,7 +196,7 @@ Open these apps once after install so macOS permission prompts appear:
 
 - Aerospace
 - Karabiner
-- Raycast
+- Vicinae
 - Syncthing
 - JankyBorders
 

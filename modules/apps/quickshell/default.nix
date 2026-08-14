@@ -9,6 +9,7 @@
 }:
 let
   cfg = config.apps.quickshell;
+  desktopBar = import ../../desktop-bar.nix { inherit constants; };
 
   themeQml = pkgs.replaceVars ./config/Theme.qml.in {
     inherit (constants.colors)
@@ -25,6 +26,16 @@ let
       ;
     primaryFont = constants.fonts.primary;
     uiFont = constants.fonts.ui;
+    inherit (desktopBar) foregroundMuted;
+    workspaceSpecs = builtins.toJSON desktopBar.workspaces;
+    inherit (desktopBar.geometry)
+      barHeight
+      cornerRadius
+      controlHeight
+      controlMinWidth
+      itemGap
+      outerGutter
+      ;
   };
 
   vicinaePackage = inputs.vicinae.packages.${pkgs.stdenv.hostPlatform.system}.default;
