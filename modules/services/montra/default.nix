@@ -112,6 +112,8 @@ in
           GOOGLE_CLIENT_SECRET=${config.sops.placeholder.montra_google_client_secret}
           AI_PROVIDER=openrouter
           OPENROUTER_API_KEY=${config.sops.placeholder.montra_openrouter_api_key}
+          OPENROUTER_QUERY_MODEL=google/gemini-2.5-flash-lite
+          OPENROUTER_VISION_MODEL=google/gemini-2.5-flash-lite
           SEARCH_PROVIDER=meilisearch
           CATALOG_PREWARM=1
           ADMIN_EMBEDDED_JOB_WORKER=0
