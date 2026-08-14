@@ -114,6 +114,7 @@
   apps.solaar.enable = true;
   apps.xdg-portals.enable = true;
   apps.gtk-theme.enable = true;
+  apps.qt-theme.enable = true;
   apps.cursor-theme.enable = true;
   apps.rofi.enable = false;
 

@@ -1,0 +1,41 @@
+@import url("gtk-base.css");
+
+/*
+ * Flexoki's generated button colors resolve close to the foreground color on
+ * current GTK, producing bright controls inside an otherwise dark window.
+ * Keep ordinary raised controls within the established Flexoki surface ramp.
+ */
+button {
+  color: @window_fg_color;
+  background-color: @shade_color;
+  background-image: none;
+}
+
+button:hover {
+  background-color: @view_bg_color;
+}
+
+button:active,
+button:checked {
+  background-color: @headerbar_border_color;
+}
+
+button:disabled {
+  color: @window_fg_color;
+  background-color: @window_bg_color;
+}
+
+button.flat,
+button.sidebar-button {
+  background-color: transparent;
+}
+
+button.suggested-action {
+  color: @accent_fg_color;
+  background-color: @accent_bg_color;
+}
+
+button.destructive-action {
+  color: @destructive_fg_color;
+  background-color: @destructive_bg_color;
+}
