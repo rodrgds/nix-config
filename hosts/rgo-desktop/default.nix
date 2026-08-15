@@ -37,6 +37,17 @@
     MaxRetentionSec=14day
   '';
 
+  # Keep recent crash data for debugging without allowing a few large desktop
+  # or game crashes to consume multiple gigabytes indefinitely.
+  systemd.coredump.settings.Coredump = {
+    MaxUse = "1G";
+    KeepFree = "20G";
+    ExternalSizeMax = "512M";
+  };
+  systemd.tmpfiles.rules = [
+    "d /var/lib/systemd/coredump 0755 root root 3d"
+  ];
+
   # The root NVMe has historical media/data-integrity errors and is beyond its
   # published TBW rating. Monitor both local drives so any further degradation
   # is recorded and surfaced in the desktop session.
