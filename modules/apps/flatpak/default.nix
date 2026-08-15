@@ -105,7 +105,7 @@ in
 
     uninstallUnused = lib.mkOption {
       type = lib.types.bool;
-      default = false;
+      default = true;
       description = "Run `flatpak uninstall --unused` after reconciliation.";
     };
 
