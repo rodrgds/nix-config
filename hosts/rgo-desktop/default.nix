@@ -141,6 +141,7 @@
   apps.charm-freeze.enable = true;
   apps.stremio.enable = true;
   apps.grayjay.enable = true;
+  apps.flatpak.installFlatseal = false;
   apps.rescrobbled.enable = true;
 
   apps.steam.enable = true;
@@ -164,7 +165,7 @@
   apps.thunderbird.enable = true;
   apps.anydesk.enable = true;
   apps.maestro.enable = false;
-  apps.surfshark.enable = true;
+  apps.surfshark.enable = false;
 
   apps.obsidian.enable = true;
   apps.qbittorrent.enable = true;
