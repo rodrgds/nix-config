@@ -42,7 +42,8 @@ in
           ANDROID_HOME = "${homeDir}/Android/Sdk";
           ANDROID_SDK_ROOT = "${homeDir}/Android/Sdk";
           CAPACITOR_ANDROID_STUDIO_PATH = "${pkgs.android-studio}/bin/android-studio";
-          VK_ICD_FILENAMES = "/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json";
+          # Let Vulkan discover the active NixOS driver. Pinning an ICD filename
+          # here breaks desktop apps when the generated driver filename changes.
           ANDROID_EMULATOR_USE_SYSTEM_LIBS = "1";
           LD_LIBRARY_PATH = "${pkgs.libglvnd}/lib:/run/opengl-driver/lib:/run/opengl-driver-32/lib";
           __GL_THREADED_OPTIMIZATIONS = "0"; # emulator was unusable, not its pretty good
