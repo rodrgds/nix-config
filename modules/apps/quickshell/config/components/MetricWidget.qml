@@ -42,7 +42,7 @@ Item {
         anchors.left: parent.left
         anchors.bottom: parent.bottom
         width: parent.width * Math.max(0, Math.min(1, root.progress))
-        height: 2
+        height: Theme.indicatorHeight
         color: root.accent
     }
 
