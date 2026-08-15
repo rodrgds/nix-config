@@ -60,7 +60,7 @@ It uses shared modules, Home Manager, `nh`, `sops-nix`, and a Bun-based rebuild 
 
 - Hyprland, Quickshell, Hyprlock, Hypridle, Dunst; dormant i3/Polybar modules remain available
 - Steam, CS2, Prism Launcher, Lunar Client, Wine, Winetricks, MangoHud, GameMode
-- OBS, Darktable, GIMP, NormCap, and Charm Freeze
+- OBS, Cap, Darktable, GIMP, NormCap, and Charm Freeze
 - Solaar, Synology Drive, ngrok, Vicinae, Grayjay, Rescrobbled
 
 ### macOS laptop
