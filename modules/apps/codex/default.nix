@@ -33,6 +33,8 @@ in
       {
         home.sessionPath = [ "$HOME/${installDir}/bin" ];
 
+        home.file.".codex/AGENTS.md".source = ../_data/global-agents.md;
+
         home.activation.installCodexCli = lib.hm.dag.entryAfter [ "writeBoundary" ] (
           if isLinux then
             ''
