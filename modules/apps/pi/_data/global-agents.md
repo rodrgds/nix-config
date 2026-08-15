@@ -1,22 +1,33 @@
-# Global Agent Context
+# Global agent instructions
+
+- Never use the em dash "—". Use plain dash "-" instead
+- When making technical decisions, do not give much weight to development cost.
+  Instead, prefer quality, simplicity, robustness, scalability, and long term maintainability.
+- For one-off or infrequent operational work, start with the simplest direct end-to-end path. Do not build wrappers, control planes, policy layers, custom verifiers, or automation unless the direct path exposes a concrete blocker or repeated need that justifies the added machinery.
+- When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible.
+  This makes sure you find the real problem so your fix will actually solve it.
+- When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection.
+  If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed along the way.
+- Apply that same high standard to engineering excellence: lint, test failures, and test flakiness.
+  If you see one, even if it is not caused by what you are working on right now, still get it fixed, unless it's another agent that's working in the same codebase.
 
 ## Managed machines
 
-This flake is the source of truth for Rodrigo's machines:
+`~/.config/home` is the source of truth for Rodrigo's machines:
 
-- `rgo-desktop`: x86_64 NixOS workstation with Hyprland, Quickshell, gaming, media, and local development tools.
-- `rgo-laptop`: aarch64 macOS laptop managed by nix-darwin, Home Manager, Homebrew, Aerospace, SketchyBar, and JankyBorders.
-- `rgo-vps`: x86_64 NixOS server for Caddy, Tailscale, Podman services, authenticated deployment hooks, and hosted apps.
+- `rgo-desktop`: x86_64 NixOS workstation.
+- `rgo-laptop`: aarch64 macOS laptop managed by nix-darwin, Home Manager, Homebrew.
+- `rgo-vps`: x86_64 NixOS server for  authenticated deployment hooks, and hosted apps.
 
-Prefer changing this repo and rebuilding over making ad-hoc machine changes. Local rebuilds use `rebuild --desktop` or `rebuild --laptop`; VPS changes use `rebuild --vps` unless a direct fallback command is explicitly needed.
+All of them are configured through Tailscale. Prefer changing this repo and rebuilding over making ad-hoc machine changes or installs. Local rebuilds use `rebuild --desktop` or `rebuild --laptop`; VPS changes use `rebuild --vps` unless a direct fallback command is explicitly needed. If this project needs something in of itself, Devenv is the most likely solution I would reach for - it most likely is already configured.
 
 ## Pi coding agent setup
 
-Pi is configured declaratively in this repo through `modules/apps/pi/default.nix` and enabled per host with `apps.pi.enable = true`.
+Pi is configured **declaratively** in this machine through `modules/apps/pi/default.nix` and enabled per host with `apps.pi.enable = true`.
 
 Nix/Home Manager owns Pi's static configuration:
 
-- Pi CLI bootstrap/update wrapper: `modules/apps/pi/default.nix`
+- Pi CLI bootstrap/update wrapper: `~/.config/home/modules/apps/pi/default.nix`
 - Generated global settings: `~/.pi/agent/settings.json`
 - Generated global models: `~/.pi/agent/models.json`
 - Generated keybindings: `~/.pi/agent/keybindings.json`
@@ -25,12 +36,6 @@ Nix/Home Manager owns Pi's static configuration:
 - LiteLLM model catalog shared with OpenCode: `modules/shared/litellm.nix`
 
 Do not persist Pi configuration by editing generated files or by relying on `pi install`, `pi remove`, `pi config`, or `/settings`. Change the Nix module, model catalog, theme, resources, or host options, then rebuild.
-
-Pi's mutable runtime state stays writable under `~/.pi/agent`: auth, trust decisions, sessions, package caches, logs, and provider token refreshes. OAuth/subscription auth should still be done interactively with `/login`.
-
-Pi uses the LiteLLM provider by default. The provider endpoint and model aliases come from the Pi module plus `modules/shared/litellm.nix`; the LiteLLM master key is resolved at request time from the `sops-nix` secret and must not be copied into Nix strings.
-
-Pi also discovers global skills from `~/.agents/skills` when they are installed manually or by another agent harness.
 
 ## One-off tools
 
