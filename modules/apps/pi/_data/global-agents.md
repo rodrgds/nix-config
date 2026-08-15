@@ -27,6 +27,8 @@ Pi is configured **declaratively** in this machine through `~/.config/home/modul
 
 Do not persist Pi configuration by editing generated files or by relying on `pi install`, `pi remove`, `pi config`, or `/settings`. Change the Nix module, model catalog, theme, resources, or host options, then rebuild.
 
+Global Agent Skills are configured separately in `modules/apps/agent-skills/default.nix`. The `skills` CLI installs approved skills into `~/.agents/skills`; Pi discovers those global skills automatically.
+
 ## One-off tools
 
 When a task needs a one-off program that is not installed, use Nix instead of permanently adding packages just to complete the task.

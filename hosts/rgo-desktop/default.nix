@@ -178,6 +178,7 @@
   apps.ngrok.enable = true;
 
   apps.opencode.enable = true;
+  apps.agent-skills.enable = true;
   apps.pi.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;
