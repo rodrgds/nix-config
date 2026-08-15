@@ -6,6 +6,6 @@ sketchybar --add item keyboard right \
     width="$CONTROL_MIN_WIDTH" \
     label="PT" \
     script="$PLUGIN_DIR/keyboard.sh" \
-    update_freq=2 \
+    update_freq=10 \
     click_script="$PLUGIN_DIR/keyboard_click.sh" \
-  --subscribe keyboard mouse.entered mouse.exited
+  --subscribe keyboard keyboard_layout_change system_woke mouse.entered mouse.exited

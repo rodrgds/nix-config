@@ -3,10 +3,10 @@
 # shellcheck source=/dev/null
 source "$CONFIG_DIR/theme.sh"
 
-layout="$(defaults read com.apple.HIToolbox AppleSelectedInputSources 2>/dev/null | awk -F'= ' '/KeyboardLayout Name/ { gsub(/[";]/, "", $2); value=$2 } END { print value }')"
+layout="$(macism 2>/dev/null)"
 
 case "$layout" in
-  *Portuguese*)
+  com.apple.keylayout.Portuguese)
     next_label="EN"
     ;;
   *)

@@ -10,6 +10,29 @@ let
   cfg = config.darwin.apps.sketchybar;
   desktopBar = import ../../../desktop-bar.nix { inherit constants; };
 
+  sketchybarPackage = pkgs.sketchybar.overrideAttrs (_: {
+    version = "2.24.0";
+    src = pkgs.fetchFromGitHub {
+      owner = "FelixKratz";
+      repo = "SketchyBar";
+      rev = "v2.24.0";
+      hash = "sha256-5tyc/yYzdV/3JTtujuj7le/14XkC7TlN/nZg7tOZsNg=";
+    };
+  });
+
+  keyboardToggle = pkgs.writeShellScriptBin "toggle-keyboard-layout" ''
+    current="$(${lib.getExe pkgs.macism})"
+    case "$current" in
+      com.apple.keylayout.Portuguese)
+        ${lib.getExe pkgs.macism} com.apple.keylayout.US
+        ;;
+      *)
+        ${lib.getExe pkgs.macism} com.apple.keylayout.Portuguese
+        ;;
+    esac
+    ${lib.getExe sketchybarPackage} --trigger keyboard_layout_change
+  '';
+
   toSketchyColor = hex: "0xff${lib.removePrefix "#" hex}";
 
   theme = pkgs.replaceVars ./config/theme.sh.in {
@@ -17,6 +40,7 @@ let
       barHeight
       controlHeight
       controlMinWidth
+      indicatorHeight
       outerGutter
       itemGap
       cornerRadius
@@ -37,24 +61,36 @@ let
     sketchybar --add item "space.${toString workspace.id}" left \
       --set "space.${toString workspace.id}" \
         icon="${if workspace.icon == "" then toString workspace.id else workspace.icon}" \
-        label="" \
+        label="●" \
+        label.drawing=off \
+        label.font="$PRIMARY_FONT:Regular:6.0" \
+        label.y_offset=7 \
+        label.width=6 \
+        label.padding_left=-6 \
+        label.padding_right=0 \
+        icon.background.height="$INDICATOR_HEIGHT" \
+        icon.background.corner_radius=0 \
+        icon.background.y_offset=-9 \
         width="$CONTROL_MIN_WIDTH" \
         click_script="aerospace workspace ${toString workspace.id}" \
         script="$PLUGIN_DIR/workspace.sh ${toString workspace.id}" \
         update_freq=5 \
       --subscribe "space.${toString workspace.id}" \
-        aerospace_workspace_change front_app_switched mouse.entered mouse.exited
+        aerospace_workspace_change space_windows_change system_woke \
+        front_app_switched mouse.entered mouse.exited
   '') desktopBar.workspaces;
 
   # Alias creation is reversed because SketchyBar prepends right-side items.
-  traySetup = lib.concatMapStringsSep "\n" (application: ''
+  traySetup = lib.concatMapStringsSep "\n" (alias: ''
     if sketchybar --query default_menu_items 2>/dev/null \
-      | /usr/bin/grep -Fq ${lib.escapeShellArg "\"${application}\""}; then
-      sketchybar --add alias ${lib.escapeShellArg application} right \
-        --set ${lib.escapeShellArg application} \
+      | /usr/bin/grep -Fq ${lib.escapeShellArg "\"${alias.name}"}; then
+      sketchybar --add alias ${lib.escapeShellArg alias.name} right \
+        --set ${lib.escapeShellArg alias.name} \
           padding_left="$ITEM_GAP" \
           padding_right=0 \
-          background.drawing=off
+          background.drawing=off \
+          click_script=${lib.escapeShellArg alias.clickCommand}
+      TRAY_ITEMS+=(${lib.escapeShellArg alias.name})
     fi
   '') (lib.reverseList cfg.trayAliases);
 
@@ -67,6 +103,8 @@ let
       pkgs.replaceVars ./config/workspaces.sh.in { inherit workspaceSetup; }
     } "$out/items/workspaces.sh"
     cp ${pkgs.replaceVars ./config/tray.sh.in { inherit traySetup; }} "$out/items/tray.sh"
+    substituteInPlace "$out/items/power.sh" \
+      --replace-fail '@vicinaeLauncher@' '/Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher'
     chmod +x "$out/sketchybarrc" "$out/plugins/"*.sh
   '';
 in
@@ -74,14 +112,39 @@ in
   options.darwin.apps.sketchybar = {
     enable = lib.mkEnableOption "the rgo SketchyBar instrument rail";
     trayAliases = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Menu-extra alias reported by SketchyBar";
+            };
+            clickCommand = lib.mkOption {
+              type = lib.types.str;
+              description = "Stable native action for the mirrored icon";
+            };
+          };
+        }
+      );
       default = [
-        "Tailscale"
-        "Syncthing"
-        "Control Center,WiFi"
-        "Control Center,Battery"
+        {
+          name = "Tailscale";
+          clickCommand = "/usr/bin/open -a Tailscale";
+        }
+        {
+          name = "Syncthing";
+          clickCommand = "/usr/bin/open -a Syncthing";
+        }
+        {
+          name = "Control Center,WiFi";
+          clickCommand = "/usr/bin/open 'x-apple.systempreferences:com.apple.wifi-settings-extension'";
+        }
+        {
+          name = "Control Center,Battery";
+          clickCommand = "/usr/bin/open 'x-apple.systempreferences:com.apple.Battery-Settings.extension'";
+        }
       ];
-      description = "macOS menu-bar applications mirrored into SketchyBar";
+      description = "macOS menu-bar applications mirrored into SketchyBar with explicit click actions";
     };
   };
 
@@ -97,13 +160,21 @@ in
     # edge when its native status items are needed.
     system.defaults.NSGlobalDomain._HIHideMenuBar = true;
 
-    home-manager.users.${username}.programs.sketchybar = {
-      enable = true;
-      config = {
-        source = generatedConfig;
-        recursive = true;
+    home-manager.users.${username} = {
+      programs.sketchybar = {
+        enable = true;
+        package = sketchybarPackage;
+        config = {
+          source = generatedConfig;
+          recursive = true;
+        };
+        extraPackages = [
+          pkgs.nowplaying-cli
+          pkgs.macism
+        ];
       };
-      extraPackages = [ pkgs.nowplaying-cli ];
+
+      home.packages = [ keyboardToggle ];
     };
   };
 }

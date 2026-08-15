@@ -55,7 +55,7 @@ let
                   };
                   to = [
                     {
-                      shell_command = "/opt/homebrew/bin/vicinae toggle";
+                      shell_command = "/Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle";
                     }
                   ];
                 }
