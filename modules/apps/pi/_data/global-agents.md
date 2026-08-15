@@ -29,6 +29,16 @@ Do not persist Pi configuration by editing generated files or by relying on `pi 
 
 Global Agent Skills are configured separately in `modules/apps/agent-skills/default.nix`. The `skills` CLI installs approved skills into `~/.agents/skills`; Pi discovers those global skills automatically.
 
+## Worktrees
+
+Use Worktrunk (`wt`) as the canonical worktree manager. Load the `worktrunk` skill before creating, switching, merging, or removing worktrees. Do not use raw `git worktree` unless Worktrunk cannot perform the required operation.
+
+When already operating inside an isolated task worktree, continue working there rather than creating another nested worktree unless explicitly required. Never rely on `wt switch` changing Pi's parent cwd; use machine-readable Worktrunk output, obtain the worktree path, then execute subsequent commands explicitly in that path.
+
+## Autonomous coding loops
+
+For long autonomous multi-iteration coding work, use `/gnhf <objective>` when the user explicitly asks for it. GNHF workers run inside their assigned Worktrunk worktree and must not manage the worktree lifecycle.
+
 ## One-off tools
 
 When a task needs a one-off program that is not installed, use Nix instead of permanently adding packages just to complete the task.

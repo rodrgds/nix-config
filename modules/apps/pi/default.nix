@@ -17,6 +17,31 @@ let
 
   litellmCatalog = import ../../shared/litellm.nix;
 
+  managedGlobalNpmPackages = [
+    "${packageName}@latest"
+    "gnhf@latest"
+  ];
+
+  managedPackages = [
+    "npm:pi-web-access"
+    "npm:pi-subagents"
+    "npm:pi-commandcode-provider"
+    "npm:pi-powerline-footer"
+  ];
+
+  gnhfConfig = ''
+    agent: pi
+
+    agentPathOverride:
+      pi: ${installRoot}/bin/pi
+
+    commitMessage:
+      preset: conventional
+
+    maxConsecutiveFailures: 3
+    preventSleep: true
+  '';
+
   updateScript = pkgs.writeShellApplication {
     name = "update-pi-cli";
 
@@ -43,7 +68,7 @@ let
         --ignore-scripts \
         --no-audit \
         --no-fund \
-        ${packageName}@latest
+        ${lib.concatStringsSep " " managedGlobalNpmPackages}
 
       # Update declaratively configured, unpinned Pi packages without changing
       # Home Manager-owned settings.json.
@@ -101,6 +126,7 @@ in
       }:
       let
         litellmMasterKeyPath = config.sops.secrets.litellm_master_key.path;
+        exaApiKeyPath = config.sops.secrets.exa_api_key.path;
 
         piSettings = lib.recursiveUpdate {
           npmCommand = [
@@ -111,10 +137,14 @@ in
 
           shellPath = "${pkgs.bash}/bin/bash";
 
-          defaultProvider = "litellm";
-          defaultModel = "flash";
+          defaultProvider = "commandcode";
+          defaultModel = "deepseek/deepseek-v4-pro";
           defaultThinkingLevel = "high";
-          enabledModels = (map (model: "litellm/${model.alias}") litellmCatalog.models) ++ [
+          enabledModels = [
+            "commandcode/deepseek/deepseek-v4-pro"
+          ]
+          ++ (map (model: "litellm/${model.alias}") litellmCatalog.models)
+          ++ [
             "openai-codex/gpt-5.6-luna"
             "openai-codex/gpt-5.6-sol"
           ];
@@ -128,6 +158,24 @@ in
           extensions = [ "extensions" ];
           prompts = [ "prompts" ];
 
+          powerline = {
+            preset = "default";
+            placement = "above";
+            welcome = true;
+            path.mode = "basename";
+            model.display = "name";
+            git.hostIcon = true;
+            customItems = [
+              {
+                id = "gnhf";
+                statusKey = "gnhf";
+                position = "right";
+                prefix = "gnhf";
+                color = "accent";
+              }
+            ];
+          };
+
           retry = {
             enabled = true;
             maxRetries = 3;
@@ -138,7 +186,7 @@ in
             };
           };
 
-          packages = cfg.packages;
+          packages = managedPackages ++ cfg.packages;
         } cfg.settings;
 
         piModels = {
@@ -167,10 +215,11 @@ in
 
           home.sessionPath = [ "$HOME/${installDir}/bin" ];
 
-          # Bootstrap only when absent or when migrating package names; routine
-          # updates happen through the scheduled updater.
+          # Bootstrap only when Pi or GNHF is absent, or when migrating package
+          # names; routine updates happen through the scheduled updater.
           home.activation.installPiCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             if [ ! -x "$HOME/${installDir}/bin/pi" ] || \
+               [ ! -x "$HOME/${installDir}/bin/gnhf" ] || \
                [ ! -f ${lib.escapeShellArg packagePath} ]; then
               ${updateScript}/bin/update-pi-cli
             fi
@@ -181,8 +230,17 @@ in
             ".pi/agent/models.json".text = builtins.toJSON piModels;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
             ".pi/agent/AGENTS.md".source = ./_data/global-agents.md;
+            ".pi/web-search.json".text = builtins.toJSON {
+              exaApiKey = "!${pkgs.coreutils}/bin/cat ${exaApiKeyPath}";
+            };
+            ".gnhf/config.yml".text = gnhfConfig;
             ".pi/agent/themes/flexoki.json".text = builtins.toJSON (
               import ./_data/flexoki-theme.nix {
+                inherit (constants) colors;
+              }
+            );
+            ".pi/agent/extensions/powerline-footer/theme.json".text = builtins.toJSON (
+              import ./_data/powerline-theme.nix {
                 inherit (constants) colors;
               }
             );
@@ -199,7 +257,7 @@ in
 
         (lib.optionalAttrs isLinux {
           systemd.user.services.update-pi-cli = {
-            Unit.Description = "Update Pi from npm";
+            Unit.Description = "Update Pi and GNHF from npm";
             Service = {
               Type = "oneshot";
               ExecStart = "${updateScript}/bin/update-pi-cli";
@@ -209,7 +267,7 @@ in
           };
 
           systemd.user.timers.update-pi-cli = {
-            Unit.Description = "Periodically update Pi";
+            Unit.Description = "Periodically update Pi and GNHF";
             Timer = {
               OnBootSec = "15m";
               OnUnitActiveSec = "1d";
