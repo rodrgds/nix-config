@@ -19,21 +19,11 @@
 - `rgo-laptop`: aarch64 macOS laptop managed by nix-darwin, Home Manager, Homebrew.
 - `rgo-vps`: x86_64 NixOS server for  authenticated deployment hooks, and hosted apps.
 
-All of them are configured through Tailscale. Prefer changing this repo and rebuilding over making ad-hoc machine changes or installs. Local rebuilds use `rebuild --desktop` or `rebuild --laptop`; VPS changes use `rebuild --vps` unless a direct fallback command is explicitly needed. If this project needs something in of itself, Devenv is the most likely solution I would reach for - it most likely is already configured.
+All of them are configured with Tailscale. Prefer changing this repo and rebuilding over making ad-hoc machine changes or installs. Local rebuilds use `rebuild --desktop` or `rebuild --laptop`; VPS changes use `rebuild --vps` unless a direct fallback command is explicitly needed. If this project needs something in of itself, Devenv is the most likely solution I would reach for - it most likely is already configured.
 
 ## Pi coding agent setup
 
-Pi is configured **declaratively** in this machine through `modules/apps/pi/default.nix` and enabled per host with `apps.pi.enable = true`.
-
-Nix/Home Manager owns Pi's static configuration:
-
-- Pi CLI bootstrap/update wrapper: `~/.config/home/modules/apps/pi/default.nix`
-- Generated global settings: `~/.pi/agent/settings.json`
-- Generated global models: `~/.pi/agent/models.json`
-- Generated keybindings: `~/.pi/agent/keybindings.json`
-- Generated Flexoki theme: `~/.pi/agent/themes/flexoki.json`
-- Local Pi extension/prompt directories: `modules/apps/pi/resources/`
-- LiteLLM model catalog shared with OpenCode: `modules/shared/litellm.nix`
+Pi is configured **declaratively** in this machine through `~/.config/home/modules/apps/pi/default.nix`.
 
 Do not persist Pi configuration by editing generated files or by relying on `pi install`, `pi remove`, `pi config`, or `/settings`. Change the Nix module, model catalog, theme, resources, or host options, then rebuild.
 
