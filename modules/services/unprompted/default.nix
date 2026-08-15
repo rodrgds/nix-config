@@ -379,29 +379,38 @@ in
     };
 
     services.caddy.virtualHosts = {
-      "${cfg.domain}".extraConfig = ''
-        reverse_proxy 127.0.0.1:${toString cfg.webPort}
+      "${cfg.domain}" = {
+        logFormat = config.vps.caddy.accessLogFor cfg.domain;
+        extraConfig = ''
+          reverse_proxy 127.0.0.1:${toString cfg.webPort}
 
-        header {
-          Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-          X-Content-Type-Options "nosniff"
-          X-Frame-Options "SAMEORIGIN"
-          Referrer-Policy "strict-origin-when-cross-origin"
-        }
-      '';
-      "www.${cfg.domain}".extraConfig = ''
-        redir https://${cfg.domain}{uri} permanent
-      '';
-      "${cfg.apiDomain}".extraConfig = ''
-        reverse_proxy 127.0.0.1:${toString cfg.apiPort}
+          header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "SAMEORIGIN"
+            Referrer-Policy "strict-origin-when-cross-origin"
+          }
+        '';
+      };
+      "www.${cfg.domain}" = {
+        logFormat = config.vps.caddy.accessLogFor "www.${cfg.domain}";
+        extraConfig = ''
+          redir https://${cfg.domain}{uri} permanent
+        '';
+      };
+      "${cfg.apiDomain}" = {
+        logFormat = config.vps.caddy.accessLogFor cfg.apiDomain;
+        extraConfig = ''
+          reverse_proxy 127.0.0.1:${toString cfg.apiPort}
 
-        header {
-          Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-          X-Content-Type-Options "nosniff"
-          X-Frame-Options "DENY"
-          Referrer-Policy "strict-origin-when-cross-origin"
-        }
-      '';
+          header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            Referrer-Policy "strict-origin-when-cross-origin"
+          }
+        '';
+      };
     };
   };
 }

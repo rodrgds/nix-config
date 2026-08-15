@@ -40,6 +40,7 @@ in
     vps.caddy.internalPorts.immich-public-proxy = immichPort;
 
     services.caddy.virtualHosts."photos.rgo.pt" = {
+      logFormat = config.vps.caddy.accessLogFor "photos.rgo.pt";
       extraConfig = ''
         reverse_proxy 127.0.0.1:${toString immichPort}
       '';

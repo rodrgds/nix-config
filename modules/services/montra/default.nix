@@ -474,24 +474,27 @@ in
       };
     };
 
-    services.caddy.virtualHosts.${cfg.domain}.extraConfig = ''
-      encode zstd gzip
-      header {
-        -Server
-        Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://analytics.rgo.pt; connect-src 'self' https://analytics.rgo.pt; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-      }
-      handle /api/* {
-        reverse_proxy 127.0.0.1:${toString apiPort}
-      }
-      handle /health/* {
-        reverse_proxy 127.0.0.1:${toString apiPort}
-      }
-      handle {
-        reverse_proxy 127.0.0.1:${toString webPort}
-      }
-    '';
+    services.caddy.virtualHosts.${cfg.domain} = {
+      logFormat = config.vps.caddy.accessLogFor cfg.domain;
+      extraConfig = ''
+        encode zstd gzip
+        header {
+          -Server
+          Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://analytics.rgo.pt; connect-src 'self' https://analytics.rgo.pt; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:"
+          Strict-Transport-Security "max-age=31536000; includeSubDomains"
+          X-Content-Type-Options "nosniff"
+          Referrer-Policy "strict-origin-when-cross-origin"
+        }
+        handle /api/* {
+          reverse_proxy 127.0.0.1:${toString apiPort}
+        }
+        handle /health/* {
+          reverse_proxy 127.0.0.1:${toString apiPort}
+        }
+        handle {
+          reverse_proxy 127.0.0.1:${toString webPort}
+        }
+      '';
+    };
   };
 }

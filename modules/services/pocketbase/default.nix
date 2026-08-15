@@ -52,6 +52,7 @@ in
     services.caddy.virtualHosts = lib.mapAttrs' (
       name: port:
       lib.nameValuePair "${name}.rgo.pt" {
+        logFormat = config.vps.caddy.accessLogFor "${name}.rgo.pt";
         extraConfig = ''
           reverse_proxy 127.0.0.1:${toString port}
         '';

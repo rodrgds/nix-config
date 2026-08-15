@@ -299,8 +299,9 @@ and global image cleanup serialize on `/run/podman-maintenance.lock`. The deploy
 owns the lock while its migration child runs, avoiding a nested lock. Rollback requires a complete
 four-image previous release, restores and verifies the exact recorded image IDs (including the
 migration image), verifies running API/worker/web image IDs, and requires internal and public health
-before reporting success. Automated cleanup prunes dangling images and build cache only; tagged active
-release images are retained even when no persistent container references them.
+before reporting success. Automated cleanup preserves images referenced by any container plus every
+`latest` or `rollback` tag (including unreferenced migration helpers), removes other images after
+successful deployments, and removes abandoned unprotected candidates older than 24 hours daily.
 
 #### Montra production images
 

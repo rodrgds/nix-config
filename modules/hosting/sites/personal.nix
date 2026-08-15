@@ -202,6 +202,7 @@ in
     };
 
     services.caddy.virtualHosts."rgo.pt" = {
+      logFormat = config.vps.caddy.accessLogFor "rgo.pt";
       extraConfig = ''
         handle /_astro/* {
           root * /var/lib/personal-site/dist/client

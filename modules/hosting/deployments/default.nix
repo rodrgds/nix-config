@@ -17,8 +17,9 @@ let
     pkgs.util-linux
   ];
 
-  pruneImages = ''
-    podman image prune --force --build-cache
+  cleanupImages = ''
+    # The deployment owns /run/podman-maintenance.lock for its full transaction.
+    /run/current-system/sw/bin/podman-image-cleanup --immediate --lock-held
   '';
 
   personalWebsiteDeploy = pkgs.writeShellScript "deploy-personal-website" ''
@@ -130,7 +131,7 @@ let
       echo "public OpenPost revision $public_revision does not match $revision" >&2
       exit 1
     fi
-    ${pruneImages}
+    ${cleanupImages}
     echo "DEPLOY_OK openpost $revision $release_tag"
   '';
 
@@ -414,7 +415,7 @@ let
       exit 1
     fi
 
-    ${pruneImages}
+    ${cleanupImages}
     printf 'DEPLOY_OK montra %s components=%s\n' "$revision" "$(IFS=,; echo "''${selected_components[*]}")"
   '';
 
@@ -650,7 +651,7 @@ let
       fail_with_rollback "candidate public health checks failed"
       exit 1
     fi
-    podman image prune --force
+    ${cleanupImages}
     echo "DEPLOY_OK unprompted $revision"
   '';
 

@@ -213,6 +213,24 @@ let
           name: _: (builtins.match ".*\\..*" name) != null && !(builtins.hasAttr name staticVirtualHosts)
         ) cfg.internalPorts
       );
+
+  # Keep per-site logs bounded. With 19 generated hosts, a 6 MiB active file
+  # plus one retained roll caps aggregate access logs near 228 MiB.
+  mkAccessLog =
+    domain:
+    let
+      logName = builtins.replaceStrings [ "/" "*" ":" ] [ "_" "_" "_" ] domain;
+    in
+    ''
+      output file /var/log/caddy/access-${logName}.log {
+        roll_size 6MiB
+        roll_keep 1
+        roll_keep_for 168h
+      }
+      format json
+    '';
+
+  withAccessLog = domain: virtualHost: virtualHost // { logFormat = cfg.accessLogFor domain; };
 in
 {
   options.vps.caddy = {
@@ -223,13 +241,20 @@ in
       default = { };
       description = "Map of service names to internal ports";
     };
+
+    accessLogFor = lib.mkOption {
+      type = lib.types.functionTo lib.types.lines;
+      default = mkAccessLog;
+      internal = true;
+      description = "Build the shared bounded access-log policy for a Caddy virtual host";
+    };
   };
 
   config = lib.mkIf cfg.enable {
     services.caddy = {
       enable = true;
 
-      virtualHosts = staticVirtualHosts // dynamicVirtualHosts;
+      virtualHosts = lib.mapAttrs withAccessLog (staticVirtualHosts // dynamicVirtualHosts);
     };
   };
 }
