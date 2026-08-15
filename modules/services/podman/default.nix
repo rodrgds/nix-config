@@ -70,21 +70,12 @@ let
             end'
       }
 
-      # Container Image fields are immutable full IDs. Inspect regular, stopped,
-      # created, and external Buildah containers rather than relying on names.
-      container_ids_file="$work_dir/container-ids"
-      podman container list --all --external --quiet --no-trunc > "$container_ids_file"
-      mapfile -t container_ids < "$container_ids_file"
-      for container_id in "''${container_ids[@]}"; do
-        if container_image="$(podman container inspect "$container_id" --format '{{.Image}}' 2>/dev/null)"; then
-          printf '%s\n' "$container_image" | normalize_image_ids >> "$protected"
-        elif podman container exists --external "$container_id"; then
-          echo "podman-image-cleanup: cannot inspect existing container $container_id" >&2
-          exit 1
-        else
-          echo "podman-image-cleanup: skipping container removed during inventory $container_id"
-        fi
-      done
+      # Snapshot immutable full image IDs directly. This covers regular,
+      # stopped, created, and external Buildah containers without a racy second
+      # inspect after short-lived containers have disappeared.
+      podman container list --all --external --no-trunc --format '{{.ImageID}}' \
+        | normalize_image_ids \
+        >> "$protected"
 
       # Preserve deployment aliases even for helpers such as migration images
       # which intentionally have no persistent container.
