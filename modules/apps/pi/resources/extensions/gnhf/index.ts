@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { readFile, readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const STOP_WHEN =
@@ -6,7 +8,7 @@ const STOP_WHEN =
 
 const STATUS_KEY = "gnhf";
 const WIDGET_KEY = "gnhf";
-const MAX_LOG_LINES = 20;
+const POLL_INTERVAL_MS = 1500;
 
 interface WorktreeEntry {
   branch?: string;
@@ -69,11 +71,90 @@ export default function (pi: ExtensionAPI) {
     }
   }
 
+  async function latestRunDir(worktreePath: string): Promise<string | null> {
+    const runsRoot = join(worktreePath, ".gnhf", "runs");
+    let entries;
+    try {
+      entries = await readdir(runsRoot, { withFileTypes: true });
+    } catch {
+      return null;
+    }
+
+    let latest: string | null = null;
+    let latestMtime = -1;
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const candidate = join(runsRoot, entry.name);
+      try {
+        const info = await stat(candidate);
+        if (info.mtimeMs > latestMtime) {
+          latestMtime = info.mtimeMs;
+          latest = candidate;
+        }
+      } catch {
+        // Run directory may disappear mid-poll; ignore.
+      }
+    }
+
+    return latest;
+  }
+
+  async function readProgress(
+    worktreePath: string,
+  ): Promise<{ iteration: number; commits: number; summary: string } | null> {
+    const runDir = await latestRunDir(worktreePath);
+    if (!runDir) return null;
+
+    let iteration = 0;
+    let summary = "";
+
+    try {
+      const notes = await readFile(join(runDir, "notes.md"), "utf-8");
+      const summaries = notes.match(/^\*\*Summary:\*\* (.+)$/gm);
+      if (summaries?.length) {
+        summary = summaries[summaries.length - 1].replace(
+          /^\*\*Summary:\*\* /,
+          "",
+        );
+      }
+    } catch {
+      // Notes may not exist yet.
+    }
+
+    try {
+      const runEntries = await readdir(runDir, { withFileTypes: true });
+      const numbers = runEntries
+        .map((entry) => entry.name.match(/^iteration-(\d+)\.jsonl$/))
+        .filter((match): match is RegExpMatchArray => match !== null)
+        .map((match) => Number.parseInt(match[1], 10));
+      iteration = numbers.length > 0 ? Math.max(...numbers) : 0;
+    } catch {
+      // Run directory may disappear mid-poll; ignore.
+    }
+
+    let commits = 0;
+    try {
+      const baseCommit = (
+        await readFile(join(runDir, "base-commit"), "utf-8")
+      ).trim();
+      const result = await pi.exec(
+        "git",
+        ["rev-list", "--count", `${baseCommit}..HEAD`],
+        { cwd: worktreePath },
+      );
+      commits = Number.parseInt(result.stdout.trim(), 10) || 0;
+    } catch {
+      // Base commit or git may be briefly unavailable during reset.
+    }
+
+    return { iteration, commits, summary };
+  }
+
   function spawnGnhf(
     worktreePath: string,
     objective: string,
-    onLine: (line: string) => void,
-  ): Promise<{ code: number | null }> {
+  ): Promise<{ code: number | null; errorTail: string }> {
     return new Promise((resolve) => {
       const child = spawn(
         "gnhf",
@@ -88,40 +169,25 @@ export default function (pi: ExtensionAPI) {
         {
           cwd: worktreePath,
           detached: process.platform !== "win32",
-          stdio: ["ignore", "pipe", "pipe"],
+          stdio: ["ignore", "ignore", "pipe"],
         },
       );
 
       state.child = child;
 
-      let buffer = "";
-      const handleChunk = (chunk: Buffer) => {
-        buffer += chunk.toString();
-        const parts = buffer.split(/\r?\n/);
-        buffer = parts.pop() ?? "";
-        for (const part of parts) {
-          const cleaned = stripAnsi(part).trimEnd();
-          if (cleaned.trim().length > 0) {
-            onLine(cleaned);
-          }
-        }
-      };
-
-      child.stdout?.on("data", handleChunk);
-      child.stderr?.on("data", handleChunk);
+      let errorTail = "";
+      child.stderr?.on("data", (chunk: Buffer) => {
+        errorTail = (errorTail + chunk.toString()).slice(-4000);
+      });
 
       child.on("close", (code) => {
-        const tail = stripAnsi(buffer).trimEnd();
-        if (tail.trim().length > 0) {
-          onLine(tail);
-        }
         state.child = null;
-        resolve({ code });
+        resolve({ code, errorTail: stripAnsi(errorTail).trim() });
       });
 
       child.on("error", () => {
         state.child = null;
-        resolve({ code: null });
+        resolve({ code: null, errorTail: stripAnsi(errorTail).trim() });
       });
     });
   }
@@ -226,23 +292,35 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      let logLines: string[] = [];
+      ctx.ui.setStatus(STATUS_KEY, `GNHF · ${branch} · working`);
 
-      const renderWidget = () => {
-        const header = `GNHF · ${branch}`;
-        const lines =
-          logLines.length > 0
-            ? [header, ...logLines.slice(-MAX_LOG_LINES)]
-            : [header, "starting autonomous loop..."];
+      const renderProgress = async () => {
+        const progress = await readProgress(worktreePath);
+        const lines = [`GNHF · ${branch}`];
+        if (progress) {
+          lines.push(
+            `iteration ${progress.iteration} · ${progress.commits} commits · working`,
+          );
+          if (progress.summary) {
+            lines.push(`last: ${progress.summary.slice(0, 120)}`);
+          }
+        } else {
+          lines.push("starting autonomous loop...");
+        }
         ctx.ui.setWidget(WIDGET_KEY, lines, { placement: "aboveEditor" });
       };
 
-      renderWidget();
+      await renderProgress();
 
-      const result = await spawnGnhf(worktreePath, objective, (line) => {
-        logLines.push(line);
-        renderWidget();
-      });
+      const pollTimer = setInterval(() => {
+        void renderProgress();
+      }, POLL_INTERVAL_MS);
+      pollTimer.unref?.();
+
+      const result = await spawnGnhf(worktreePath, objective);
+
+      clearInterval(pollTimer);
+      await renderProgress();
 
       ctx.ui.setStatus(STATUS_KEY, undefined);
       ctx.ui.setWidget(WIDGET_KEY, undefined);
@@ -250,8 +328,9 @@ export default function (pi: ExtensionAPI) {
       if (result.code === 0) {
         ctx.ui.notify(`GNHF finished: ${branch}`, "info");
       } else {
+        const detail = result.errorTail ? `: ${result.errorTail.slice(0, 300)}` : "";
         ctx.ui.notify(
-          `GNHF stopped on ${branch} (exit ${result.code ?? "unknown"}).`,
+          `GNHF stopped on ${branch} (exit ${result.code ?? "unknown"})${detail}`,
           "warning",
         );
       }
