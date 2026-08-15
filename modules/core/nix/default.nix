@@ -47,7 +47,7 @@ in
         options = "--delete-older-than 15d";
       }
       // lib.optionalAttrs isLinux {
-        dates = "weekly";
+        dates = "daily";
       }
       // lib.optionalAttrs isDarwin {
         interval = {
