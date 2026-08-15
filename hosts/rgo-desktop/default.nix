@@ -119,6 +119,7 @@
   apps.rofi.enable = false;
 
   apps.obs.enable = true;
+  apps.cap.enable = true;
   apps.mpv.enable = true;
   apps.darktable.enable = false;
   apps.gimp.enable = false;

@@ -27,6 +27,9 @@ affinityOverlay
   # KDE Breeze cursor without the full Plasma styling closure.
   kde-breeze-cursors = prev.callPackage ./kde-breeze-cursors { };
 
+  # Cap screen recorder (official Linux release).
+  cap = prev.callPackage ./cap { };
+
   # Polybar with i3 support (not enabled by default in nixpkgs)
   polybar = prev.polybar.override { i3Support = true; };
 
