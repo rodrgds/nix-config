@@ -10,6 +10,8 @@ export PLUGIN_DIR
 # shellcheck source=/dev/null
 source "$CONFIG_DIR/theme.sh"
 
+# Home Manager swaps the immutable configuration generation atomically; hotload
+# makes that change visible without restarting the Mac or the launch agent.
 sketchybar --hotload true
 
 sketchybar --bar \
@@ -23,7 +25,7 @@ sketchybar --bar \
   padding_left="$OUTER_GUTTER" \
   padding_right="$OUTER_GUTTER" \
   display=all \
-  topmost=window \
+  topmost=on \
   sticky=on
 
 sketchybar --default \
@@ -45,6 +47,9 @@ sketchybar --default \
   padding_right=0
 
 sketchybar --add event aerospace_workspace_change
+sketchybar --add event keyboard_layout_change
+
+TRAY_ITEMS=()
 
 # SketchyBar prepends right-positioned items, so source these in reverse of
 # their desired visual order: CPU, RAM, DISK, audio, keyboard, tray, clock,
@@ -62,5 +67,11 @@ do
   # shellcheck source=/dev/null
   source "$ITEM_DIR/$item.sh"
 done
+
+# --reorder lists right-positioned items from the edge inward. Each zero-space
+# meter precedes the metric it overlays; keeping the full order explicit also
+# prevents aliases from jumping ahead of the system modules.
+sketchybar --reorder power clock "${TRAY_ITEMS[@]}" keyboard audio \
+  disk.meter disk memory.meter memory cpu.meter cpu
 
 sketchybar --update

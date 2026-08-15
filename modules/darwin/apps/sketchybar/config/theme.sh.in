@@ -6,6 +6,7 @@ export CONTROL_HEIGHT="@controlHeight@"
 export CONTROL_MIN_WIDTH="@controlMinWidth@"
 export OUTER_GUTTER="@outerGutter@"
 export ITEM_GAP="@itemGap@"
+export INDICATOR_HEIGHT="@indicatorHeight@"
 export CORNER_RADIUS="@cornerRadius@"
 
 export PRIMARY_FONT="@primaryFont@"

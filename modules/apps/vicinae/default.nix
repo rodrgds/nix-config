@@ -14,6 +14,31 @@ let
   jsonFormat = pkgs.formats.json { };
   tomlFormat = pkgs.formats.toml { };
 
+  # GUI launchers have a restricted PATH and can race the login service. Keep
+  # every binding on one entry point that starts the launchd-owned server when
+  # needed, waits briefly for its socket, then performs the requested action.
+  darwinLauncher = pkgs.writeShellScriptBin "vicinae-launcher" ''
+    set -u
+
+    vicinae=/opt/homebrew/bin/vicinae
+    if ! "$vicinae" ping >/dev/null 2>&1; then
+      /bin/launchctl kickstart "gui/$(/usr/bin/id -u)/com.user.vicinae" >/dev/null 2>&1 || true
+      attempt=0
+      while ! "$vicinae" ping >/dev/null 2>&1 && [ "$attempt" -lt 30 ]; do
+        /bin/sleep 0.1
+        attempt=$((attempt + 1))
+      done
+    fi
+
+    if [ "$#" -eq 0 ]; then
+      set -- toggle
+    elif [ "''${1#vicinae://}" != "$1" ]; then
+      set -- deeplink "$1"
+    fi
+
+    exec "$vicinae" "$@"
+  '';
+
   sharedExtensions = with inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system}; [
     nix
     vscode-recents
@@ -166,6 +191,25 @@ in
               })
 
               (lib.optionalAttrs isDarwin {
+                home.packages = [ darwinLauncher ];
+
+                launchd.agents.vicinae = {
+                  enable = true;
+                  config = {
+                    Label = "com.user.vicinae";
+                    ProgramArguments = [
+                      "/opt/homebrew/bin/vicinae"
+                      "server"
+                      "--replace"
+                    ];
+                    KeepAlive = true;
+                    RunAtLoad = true;
+                    ProcessType = "Interactive";
+                    StandardOutPath = "/tmp/vicinae.log";
+                    StandardErrorPath = "/tmp/vicinae.error.log";
+                  };
+                };
+
                 xdg.configFile."vicinae/settings.json" = {
                   source = jsonFormat.generate "vicinae-settings" sharedSettings;
                   force = true;

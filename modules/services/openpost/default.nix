@@ -187,10 +187,11 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "ghcr.io/rodrgds/openpost@sha256:f01d07b114e33b4f0f1b1e085919ccf133de9e8f4664dd514fc738c02390731b";
+      default = "ghcr.io/getopenpost/openpost:latest";
       description = ''
-        OpenPost container image. Pin this to a release tag or digest for
-        reproducible production deploys.
+        OpenPost container image. Keep this aligned with the local tag promoted
+        by the signed deployment hook because the VPS service uses pullPolicy =
+        "never" and must not fetch an unverified registry reference at restart.
       '';
     };
 

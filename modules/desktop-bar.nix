@@ -9,6 +9,7 @@
     controlMinWidth = 26;
     outerGutter = 4;
     itemGap = 2;
+    indicatorHeight = 2;
     cornerRadius = 3;
   };
 

@@ -8,8 +8,6 @@
 }:
 let
   cfg = config.darwin.apps.aerospace;
-  desktopBar = import ../../../desktop-bar.nix { inherit constants; };
-
   # Helper to convert hex color to 0x format for Aerospace
   toAerospaceColor = hex: "0xff${lib.strings.removePrefix "#" hex}";
 
@@ -37,12 +35,12 @@ in
 
           # Start at login
           start-at-login = true
-          after-startup-command = [
-            'exec-and-forget /Applications/Vicinae.app/Contents/MacOS/Vicinae'
-          ]
+          # Vicinae is owned by launchd; starting it here as well creates two
+          # servers which race over the same control socket.
+          after-startup-command = []
 
           # Keep the platform-native bar in sync with Aerospace's workspace state.
-          exec-on-workspace-change = ['/bin/bash', '-c', 'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE']
+          exec-on-workspace-change = ['/bin/bash', '-c', '/Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE']
 
           # Normalization (similar to i3 behavior)
           enable-normalization-flatten-containers = true
@@ -70,8 +68,8 @@ in
           inner.vertical = 6
           outer.left = 3
           outer.bottom = 3
-          # Reserve the 28 px SketchyBar rail plus the established 3 px gap.
-          outer.top = ${toString (desktopBar.geometry.barHeight + 3)}
+          # macOS already reserves the menu-bar region occupied by SketchyBar.
+          outer.top = 3
           outer.right = 3
 
            # Main binding mode (equivalent to i3 default)
@@ -142,11 +140,11 @@ in
              alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
 
              # Launcher shortcuts mirror the desktop's Vicinae bindings.
-             alt-d = 'exec-and-forget /opt/homebrew/bin/vicinae toggle'
-             alt-period = "exec-and-forget /opt/homebrew/bin/vicinae 'vicinae://launch/core/search-emojis'"
+             alt-d = 'exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
+             alt-period = "exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
 
              # Match the desktop input-source toggle.
-             alt-m = "exec-and-forget osascript -e 'tell application \"System Events\" to key code 49 using control down'"
+             alt-m = 'exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/toggle-keyboard-layout'
 
            # Lock screen (macOS native) - using alt+ctrl+l to avoid conflict with focus right
            alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'

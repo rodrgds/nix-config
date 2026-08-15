@@ -69,7 +69,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        height: 2
+        height: Theme.indicatorHeight
         color: root.focused ? Theme.bg0 : root.activeHere ? Theme.orangeBright : Theme.fgMuted
     }
 

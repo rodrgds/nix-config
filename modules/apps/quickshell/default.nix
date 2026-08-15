@@ -33,6 +33,7 @@ let
       cornerRadius
       controlHeight
       controlMinWidth
+      indicatorHeight
       itemGap
       outerGutter
       ;

@@ -25,7 +25,7 @@ Singleton {
     readonly property int controlMinWidth: @controlMinWidth@
     readonly property int outerGutter: @outerGutter@
     readonly property int itemGap: @itemGap@
+    readonly property int indicatorHeight: @indicatorHeight@
     readonly property int cornerRadius: @cornerRadius@
-
     readonly property var workspaceSpecs: @workspaceSpecs@
 }

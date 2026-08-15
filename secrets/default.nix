@@ -135,6 +135,8 @@ let
     "montra_admin_emails"
     "montra_google_client_id"
     "montra_google_client_secret"
+    "montra_discord_search_webhook_url"
+    "montra_discord_signup_webhook_url"
     "montra_openrouter_api_key"
     "montra_meili_master_key"
     "montra_r2_access_key_id"

@@ -110,6 +110,8 @@ in
           ADMIN_EMAILS=${config.sops.placeholder.montra_admin_emails}
           GOOGLE_CLIENT_ID=${config.sops.placeholder.montra_google_client_id}
           GOOGLE_CLIENT_SECRET=${config.sops.placeholder.montra_google_client_secret}
+          DISCORD_SEARCH_WEBHOOK_URL=${config.sops.placeholder.montra_discord_search_webhook_url}
+          DISCORD_SIGNUP_WEBHOOK_URL=${config.sops.placeholder.montra_discord_signup_webhook_url}
           AI_PROVIDER=openrouter
           OPENROUTER_API_KEY=${config.sops.placeholder.montra_openrouter_api_key}
           OPENROUTER_QUERY_MODEL=google/gemini-2.5-flash-lite

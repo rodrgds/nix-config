@@ -4,6 +4,7 @@
 # the VPS. Consumed by:
 #   - modules/services/litellm  -> generates model_list + fallback chain
 #   - modules/apps/opencode     -> generates the litellm provider models
+#   - modules/apps/pi           -> generates the Pi custom models provider
 #
 # Add a model here and both the proxy and opencode pick it up automatically.
 {
@@ -22,6 +23,10 @@
     {
       alias = "flash";
       displayName = "LiteLLM Flash";
+      # Fallback order is strictly tier/key order: free key 1 -> free key 2 ->
+      # free key 3 -> free key 4, then paid key 1 -> paid key 2 -> paid key 3
+      # -> paid key 4. LiteLLM moves to the next deployment only after the
+      # current one errors, e.g. rate-limit exhaustion.
       tiers = [
         {
           name = "free";

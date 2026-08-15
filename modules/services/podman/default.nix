@@ -70,21 +70,12 @@ let
             end'
       }
 
-      # Container Image fields are immutable full IDs. Inspect regular, stopped,
-      # created, and external Buildah containers rather than relying on names.
-      container_ids_file="$work_dir/container-ids"
-      podman container list --all --external --quiet --no-trunc > "$container_ids_file"
-      mapfile -t container_ids < "$container_ids_file"
-      if [ "''${#container_ids[@]}" -gt 0 ]; then
-        podman container inspect "''${container_ids[@]}" \
-          | jq -er '.[] | .Image
-            | if type != "string" then error("container image ID is not a string")
-              elif test("^sha256:[0-9a-f]{64}$") then .
-              elif test("^[0-9a-f]{64}$") then "sha256:" + .
-              else error("container has malformed image ID: " + .)
-              end' \
-          >> "$protected"
-      fi
+      # Snapshot immutable full image IDs directly. This covers regular,
+      # stopped, created, and external Buildah containers without a racy second
+      # inspect after short-lived containers have disappeared.
+      podman container list --all --external --no-trunc --format '{{.ImageID}}' \
+        | normalize_image_ids \
+        >> "$protected"
 
       # Preserve deployment aliases even for helpers such as migration images
       # which intentionally have no persistent container.

@@ -3,6 +3,7 @@
 set -u
 
 metric="$1"
+meter_name="${NAME}.meter"
 
 # shellcheck source=/dev/null
 source "$CONFIG_DIR/theme.sh"
@@ -35,14 +36,30 @@ case "$metric" in
     ;;
 esac
 
-border_width=0
-if [ "$percent" -ge 90 ] 2>/dev/null; then
+if [ "$metric" != "cpu" ] && [ "$percent" -ge 90 ] 2>/dev/null; then
   accent="$RED_BRIGHT"
-  border_width=1
+fi
+
+case "$percent" in
+  ''|*[!0-9]*) percent=0 ;;
+esac
+if [ "$percent" -gt 100 ]; then
+  percent=100
 fi
 
 sketchybar --set "$NAME" \
   label="$value" \
   label.color="$FG0" \
-  background.border_width="$border_width" \
-  background.border_color="$accent"
+  background.border_width=0
+
+item_width="$(sketchybar --query "$NAME" 2>/dev/null | awk '/"size":/ { width=$3; gsub(/[^0-9.]/, "", width); printf "%.0f", width; exit }')"
+item_width="${item_width:-1}"
+
+# The zero-space slider occupies the same bounds as the text item, preserving
+# SketchyBar's native two-color icon/label rendering while adding the same
+# bottom-aligned utilization line as Quickshell.
+sketchybar --set "$meter_name" \
+  slider.width="$item_width" \
+  slider.percentage="$percent" \
+  slider.highlight_color="$accent" \
+  padding_left="-$item_width"
