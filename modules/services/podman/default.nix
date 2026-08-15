@@ -75,16 +75,16 @@ let
       container_ids_file="$work_dir/container-ids"
       podman container list --all --external --quiet --no-trunc > "$container_ids_file"
       mapfile -t container_ids < "$container_ids_file"
-      if [ "''${#container_ids[@]}" -gt 0 ]; then
-        podman container inspect "''${container_ids[@]}" \
-          | jq -er '.[] | .Image
-            | if type != "string" then error("container image ID is not a string")
-              elif test("^sha256:[0-9a-f]{64}$") then .
-              elif test("^[0-9a-f]{64}$") then "sha256:" + .
-              else error("container has malformed image ID: " + .)
-              end' \
-          >> "$protected"
-      fi
+      for container_id in "''${container_ids[@]}"; do
+        if container_image="$(podman container inspect "$container_id" --format '{{.Image}}' 2>/dev/null)"; then
+          printf '%s\n' "$container_image" | normalize_image_ids >> "$protected"
+        elif podman container exists --external "$container_id"; then
+          echo "podman-image-cleanup: cannot inspect existing container $container_id" >&2
+          exit 1
+        else
+          echo "podman-image-cleanup: skipping container removed during inventory $container_id"
+        fi
+      done
 
       # Preserve deployment aliases even for helpers such as migration images
       # which intentionally have no persistent container.
