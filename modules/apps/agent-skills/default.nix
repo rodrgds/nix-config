@@ -233,6 +233,14 @@ in
           "grilling"
           "writing-for-agents"
         ];
+
+        "h0rv/agent-skills" = [
+          "devenv"
+        ];
+
+        "max-sixty/worktrunk" = [
+          "worktrunk"
+        ];
       };
 
       description = ''
