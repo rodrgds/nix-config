@@ -68,12 +68,9 @@ let
       total = builtins.length variants;
     in
     lib.flatten (
-      lib.imap1 (
-        i: v:
-        lib.optional (i < total) {
-          ${v.name} = map (x: x.name) (lib.drop i variants);
-        }
-      ) variants
+      lib.imap1 (i: v: {
+        ${v.name} = map (x: x.name) (lib.drop i variants);
+      }) variants
     );
 
   fallbacks = lib.concatMap (model: mkFallbacks (mkVariants model)) catalog.models;
@@ -124,6 +121,12 @@ in
       default = 3600;
       description = "Seconds to keep a failed/exhausted key in cooldown.";
     };
+
+    requestTimeout = lib.mkOption {
+      type = lib.types.int;
+      default = 30;
+      description = "Per-upstream request timeout in seconds.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -147,7 +150,7 @@ in
 
         router_settings = {
           num_retries = 0;
-          timeout = 120;
+          timeout = cfg.requestTimeout;
           allowed_fails = 0;
           cooldown_time = cfg.cooldownTime;
 
