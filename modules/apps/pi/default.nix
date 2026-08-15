@@ -180,7 +180,7 @@ in
             ".pi/agent/settings.json".text = builtins.toJSON piSettings;
             ".pi/agent/models.json".text = builtins.toJSON piModels;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
-            ".pi/agent/AGENTS.md".source = ../_data/global-agents.md;
+            ".pi/agent/AGENTS.md".source = ./_data/global-agents.md;
             ".pi/agent/themes/flexoki.json".text = builtins.toJSON (
               import ./_data/flexoki-theme.nix {
                 inherit (constants) colors;
