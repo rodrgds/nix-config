@@ -40,7 +40,9 @@ in
               "--start-hidden"
               "--no-tray"
             ];
-            KeepAlive = true;
+            # Handy daemonizes on startup (the foreground process exits 0 and
+            # a detached process keeps running). KeepAlive would therefore
+            # respawn it in a loop, reopening the window every few seconds.
             RunAtLoad = true;
             StandardOutPath = "/tmp/handy.log";
             StandardErrorPath = "/tmp/handy.error.log";
