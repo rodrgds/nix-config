@@ -15,11 +15,25 @@ let
   packageName = "@earendil-works/pi-coding-agent";
   packagePath = "${installRoot}/lib/node_modules/@earendil-works/pi-coding-agent/package.json";
 
-  litellmCatalog = import ../../shared/litellm.nix;
+  nineRouterCatalog = import ../../shared/9router.nix;
 
   managedGlobalNpmPackages = [
     "${packageName}@latest"
+    "gnhf@latest"
   ];
+
+  gnhfConfig = ''
+    agent: pi
+
+    agentPathOverride:
+      pi: ${installRoot}/bin/pi
+
+    commitMessage:
+      preset: conventional
+
+    maxConsecutiveFailures: 3
+    preventSleep: true
+  '';
 
   managedPackages = [
     "npm:pi-web-access"
@@ -49,7 +63,6 @@ let
         --global \
         --prefix "$install_root" \
         @mariozechner/pi-coding-agent \
-        gnhf \
         >/dev/null 2>&1 || true
 
       npm install \
@@ -71,12 +84,6 @@ in
 {
   options.apps.pi = {
     enable = lib.mkEnableOption "Enable Pi";
-
-    litellm.baseURL = lib.mkOption {
-      type = lib.types.str;
-      default = "http://rgo-vps:4000/v1";
-      description = "LiteLLM OpenAI-compatible endpoint.";
-    };
 
     nineRouter.baseURL = lib.mkOption {
       type = lib.types.str;
@@ -121,7 +128,6 @@ in
         ...
       }:
       let
-        litellmMasterKeyPath = config.sops.secrets.litellm_master_key.path;
         nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
         exaApiKeyPath = config.sops.secrets.exa_api_key.path;
 
@@ -140,8 +146,7 @@ in
           enabledModels = [
             "commandcode/xiaomi/mimo-v2.5-pro"
           ]
-          ++ (map (model: "litellm/${model.alias}") litellmCatalog.models)
-          ++ (map (model: "nine_router/${model.alias}") litellmCatalog.models)
+          ++ (map (model: "nine_router/${model.alias}") nineRouterCatalog.models)
           ++ [
             "openai-codex/gpt-5.6-luna"
             "openai-codex/gpt-5.6-sol"
@@ -163,6 +168,15 @@ in
             path.mode = "basename";
             model.display = "name";
             git.hostIcon = true;
+            customItems = [
+              {
+                id = "gnhf";
+                statusKey = "gnhf";
+                position = "right";
+                prefix = "gnhf";
+                color = "accent";
+              }
+            ];
           };
 
           retry = {
@@ -179,20 +193,6 @@ in
         } cfg.settings;
 
         piModels = {
-          providers.litellm = {
-            baseUrl = cfg.litellm.baseURL;
-            api = "openai-completions";
-            apiKey = "!${pkgs.coreutils}/bin/cat ${litellmMasterKeyPath}";
-            models = map (
-              model:
-              {
-                id = model.alias;
-                name = model.displayName;
-              }
-              // (model.pi or { })
-            ) litellmCatalog.models;
-          };
-
           providers.nine_router = {
             baseUrl = cfg.nineRouter.baseURL;
             api = "openai-completions";
@@ -204,7 +204,7 @@ in
                 name = model.displayName;
               }
               // (model.pi or { })
-            ) litellmCatalog.models;
+            ) nineRouterCatalog.models;
           };
         };
       in
@@ -218,16 +218,18 @@ in
 
           home.sessionPath = [ "$HOME/${installDir}/bin" ];
 
-          # Bootstrap only when Pi is absent, or when migrating package names;
-          # routine updates happen through the scheduled updater.
+          # Bootstrap only when Pi or GNHF is absent, or when migrating package
+          # names; routine updates happen through the scheduled updater.
           home.activation.installPiCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             if [ ! -x "$HOME/${installDir}/bin/pi" ] || \
+               [ ! -x "$HOME/${installDir}/bin/gnhf" ] || \
                [ ! -f ${lib.escapeShellArg packagePath} ]; then
               ${updateScript}/bin/update-pi-cli
             fi
           '';
 
           home.file = {
+            ".gnhf/config.yml".text = gnhfConfig;
             ".pi/agent/settings.json".text = builtins.toJSON piSettings;
             ".pi/agent/models.json".text = builtins.toJSON piModels;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
@@ -258,7 +260,7 @@ in
 
         (lib.optionalAttrs isLinux {
           systemd.user.services.update-pi-cli = {
-            Unit.Description = "Update Pi from npm";
+            Unit.Description = "Update Pi and GNHF from npm";
             Service = {
               Type = "oneshot";
               ExecStart = "${updateScript}/bin/update-pi-cli";
@@ -268,7 +270,7 @@ in
           };
 
           systemd.user.timers.update-pi-cli = {
-            Unit.Description = "Periodically update Pi";
+            Unit.Description = "Periodically update Pi and GNHF";
             Timer = {
               OnBootSec = "15m";
               OnUnitActiveSec = "1d";
