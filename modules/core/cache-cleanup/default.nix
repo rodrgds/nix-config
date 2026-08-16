@@ -50,6 +50,7 @@ let
       esac
 
       home=${lib.escapeShellArg homeDir}
+      nix_cache_dir="$home/.cache/nix"
       interval_seconds=${toString cfg.intervalSeconds}
       transient_days=${toString cfg.transientRetentionDays}
       npx_days=${toString cfg.npxRetentionDays}
@@ -182,8 +183,14 @@ let
         days=$2
         if [ -d "$dir" ]; then
           log "removing files in $dir not accessed or modified for $days days"
-          run find "$dir" -xdev -type f -atime +"$days" -mtime +"$days" -delete
-          run find "$dir" -xdev -depth -mindepth 1 -type d -empty -delete
+          # Never prune Nix's own cache directory. It holds bare git repos
+          # whose refs/ tree (often empty) libgit2 requires: deleting those
+          # directories makes the next fetch fail with "could not find
+          # repository". Nix garbage-collects this cache itself.
+          run find "$dir" -xdev -type f -atime +"$days" -mtime +"$days" \
+            -not -path "$nix_cache_dir" -not -path "$nix_cache_dir/*" -delete
+          run find "$dir" -xdev -depth -mindepth 1 -type d -empty \
+            -not -path "$nix_cache_dir" -not -path "$nix_cache_dir/*" -delete
         fi
       }
 
@@ -194,6 +201,34 @@ let
         if [ -d "$dir" ]; then
           log "removing $pattern entries in $dir older than $days days"
           run find "$dir" -xdev -mindepth 1 -maxdepth 1 -type d -user "$(id -u)" -name "$pattern" -mtime +"$days" -exec rm -rf -- {} +
+        fi
+      }
+
+      repair_nix_git_cache() {
+        # Nix keeps its fetched flake inputs as bare git repos under
+        # ~/.cache/nix. Older runs of this cleanup stripped pieces of them
+        # (the refs/ tree, or HEAD/config), after which libgit2 rejects the
+        # repo and the next rebuild fails with "could not find repository".
+        # Drop any cache entry that is missing the bits libgit2 requires.
+
+        # tarball-cache-v2: a single bare repo. The observed corruption is
+        # HEAD/config surviving while the empty refs/ tree was removed.
+        cache="$nix_cache_dir/tarball-cache-v2"
+        if [ -e "$cache/HEAD" ] && [ -d "$cache/objects" ] && [ ! -d "$cache/refs" ]; then
+          log "removing corrupt Nix git cache at $cache (HEAD present, refs/ missing)"
+          run rm -rf "$cache"
+        fi
+
+        # gitv3: one bare repo per input. The observed corruption keeps the
+        # recently-fetched pack files but deletes HEAD and config entirely.
+        if [ -d "$nix_cache_dir/gitv3" ]; then
+          for entry in "$nix_cache_dir"/gitv3/*/; do
+            [ -d "$entry" ] || continue
+            if [ -d "$entry/objects" ] && [ ! -e "$entry/HEAD" ]; then
+              log "removing corrupt Nix git cache at $entry (objects present, HEAD missing)"
+              run rm -rf "$entry"
+            fi
+          done
         fi
       }
 
@@ -215,6 +250,8 @@ let
       fi
 
       log "started force=$force pressure=$pressure auto_pressure_triggered=$auto_pressure_triggered"
+
+      repair_nix_git_cache
 
       if [ "$do_homebrew" = "1" ] && command -v brew >/dev/null 2>&1; then
         export HOMEBREW_NO_AUTO_UPDATE=1
