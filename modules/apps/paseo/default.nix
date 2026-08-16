@@ -12,6 +12,27 @@ let
   inherit (constants) isDarwin isLinux;
   paseoPkgs = inputs.paseo.packages.${pkgs.stdenv.hostPlatform.system};
 
+  # Declarative base config. daemon.listen is not included here because it
+  # depends on the machine's Tailscale IP, which the activation script sets
+  # at runtime.
+  baseConfig = {
+    "$schema" = "https://paseo.sh/schemas/paseo.config.v1.json";
+    version = 1;
+    daemon = {
+      relay.enabled = false;
+      enableTerminalAgentHooks = false;
+      appendSystemPrompt = "You are running inside Paseo, a desktop/mobile app that launches and supervises agent CLIs. Your daemon config lives at ~/.paseo/config.json. The Nix module that manages Paseo installation and Tailscale listen address is at modules/apps/paseo/default.nix in the home-config repo.";
+    };
+    worktrees.root = "~/dev/worktrees";
+    features = {
+      dictation.enabled = false;
+      voiceMode.enabled = false;
+      webUi.enabled = false;
+    };
+  };
+
+  baseConfigFile = builtins.toFile "paseo-base-config.json" (builtins.toJSON baseConfig);
+
   # Tailscale CLI locations. On NixOS it comes from nixpkgs; on macOS it ships
   # inside the Homebrew Tailscale app bundle.
   tailscaleCandidates =
@@ -24,60 +45,64 @@ let
         "/usr/local/bin/tailscale"
       ];
 
-  # Surgically set daemon.listen to this machine's Tailscale IP, preserving
-  # every other key Paseo manages at runtime (relay, providers, password hash).
+  # Write the Nix-managed base config and merge daemon.listen from Tailscale.
+  # Preserves any keys the user added at runtime while ensuring Nix-owned
+  # defaults stay in place.
   setPaseoTailscaleListen = pkgs.writeShellApplication {
     name = "set-paseo-tailscale-listen";
     runtimeInputs = [
       pkgs.coreutils
       pkgs.jq
     ];
-    # The `$schema` JSON key is deliberately literal, not shell expansion, so
-    # suppress SC2016 ("expressions don't expand in single quotes").
     excludeShellChecks = [ "SC2016" ];
     text = ''
-      tailscale_bin=""
-      for candidate in ${lib.escapeShellArgs tailscaleCandidates}; do
-        if [ -x "$candidate" ]; then
-          tailscale_bin="$candidate"
-          break
+            cfg_file="$HOME/.paseo/config.json"
+            mkdir -p "$(dirname "$cfg_file")"
+
+            # If no config exists yet, write the Nix-managed base.
+            if [ ! -f "$cfg_file" ]; then
+              umask 077
+              cp ${lib.escapeShellArg baseConfigFile} "$cfg_file"
+            fi
+
+            # Merge Nix-managed base keys on top of the existing config. Runtime-
+            # added keys survive; Nix-owned keys are updated on rebuild.
+            merged="$(jq -s '.[0] * .[1]' "$cfg_file" ${lib.escapeShellArg baseConfigFile})"
+            umask 077
+            printf '%s\n' "$merged" > "$cfg_file.tmp"
+            mv -f "$cfg_file.tmp" "$cfg_file"
+
+      ${lib.optionalString cfg.tailscale.enable ''
+        tailscale_bin=""
+        for candidate in ${lib.escapeShellArgs tailscaleCandidates}; do
+          if [ -x "$candidate" ]; then
+            tailscale_bin="$candidate"
+            break
+          fi
+        done
+
+        if [ -z "$tailscale_bin" ]; then
+          echo "paseo: tailscale CLI not found; skipping daemon.listen" >&2
+          exit 0
         fi
-      done
 
-      if [ -z "$tailscale_bin" ]; then
-        echo "paseo: tailscale CLI not found; skipping daemon.listen" >&2
-        exit 0
-      fi
+        ip="$("$tailscale_bin" ip -4 2>/dev/null | head -n1)"
+        if [ -z "$ip" ]; then
+          echo "paseo: tailscale has no IPv4 address yet; skipping daemon.listen" >&2
+          exit 0
+        fi
 
-      ip="$("$tailscale_bin" ip -4 2>/dev/null | head -n1)"
-      if [ -z "$ip" ]; then
-        echo "paseo: tailscale has no IPv4 address yet; skipping daemon.listen" >&2
-        exit 0
-      fi
-
-      listen="$ip:${toString cfg.tailscale.port}"
-      cfg_file="$HOME/.paseo/config.json"
-
-      if [ -f "$cfg_file" ]; then
+        listen="$ip:${toString cfg.tailscale.port}"
         current="$(jq -r '.daemon.listen // empty' "$cfg_file" 2>/dev/null)"
-      else
-        current=""
-        mkdir -p "$(dirname "$cfg_file")"
-      fi
 
-      if [ "$current" = "$listen" ]; then
-        exit 0
-      fi
+        if [ "$current" = "$listen" ]; then
+          exit 0
+        fi
 
-      base='{"$schema":"https://paseo.sh/schemas/paseo.config.v1.json","version":1}'
-      if [ -f "$cfg_file" ]; then
-        base="$(cat "$cfg_file")"
-      fi
-
-      umask 077
-      printf '%s' "$base" | jq --arg listen "$listen" '.daemon.listen = $listen' > "$cfg_file.tmp"
-      mv -f "$cfg_file.tmp" "$cfg_file"
-      echo "paseo: set daemon.listen to $listen"
+        jq --arg listen "$listen" '.daemon.listen = $listen' "$cfg_file" > "$cfg_file.tmp"
+        mv -f "$cfg_file.tmp" "$cfg_file"
+        echo "paseo: set daemon.listen to $listen"
+      ''}
     '';
   };
 in
@@ -133,12 +158,12 @@ in
       {
         home-manager.users.${username} =
           { lib, ... }:
-          lib.mkIf cfg.tailscale.enable {
-            # daemon.listen is a startup setting, so the value applies the next
-            # time Paseo starts its daemon (desktop app launch, app update, or
-            # `paseo daemon restart`). The desktop app owns the daemon
-            # lifecycle, so this only writes the desired state to disk.
-            home.activation.paseoTailscaleListen = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          {
+            # Write the Nix-managed base config and, when Tailscale is enabled,
+            # merge daemon.listen with the machine's Tailscale IP. The desktop
+            # app owns the daemon lifecycle; activation only writes desired state
+            # to disk.
+            home.activation.paseoConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
               ${setPaseoTailscaleListen}/bin/set-paseo-tailscale-listen
             '';
           };

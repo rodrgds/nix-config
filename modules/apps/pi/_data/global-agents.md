@@ -13,7 +13,10 @@
 - Commit in logical chunks grouped by concern. Name your commits based on WHY the change was made, not WHAT changed.
 - Keep project `AGENTS.md` files current when the work changes conventions/architecture/workflows future agents need to know.
 - Prefer established, maintained libraries over bespoke implementations when they fit.
-- Use Worktrunk (`wt`) and it's skill as the canonical worktree manager. Don't use raw `git worktree`.
+- Use Paseo as the single system for agent delegation and worktree isolation.
+- Use Paseo subagents for independent research, review, or implementation.
+- When parallel agents may edit independently, give each a Paseo worktree-isolated workspace.
+- Do not create agent worktrees with raw `git worktree` or another subagent system.
 
 ## Managed machines
 

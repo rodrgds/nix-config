@@ -238,8 +238,8 @@ in
           "devenv"
         ];
 
-        "max-sixty/worktrunk" = [
-          "worktrunk"
+        "getpaseo/paseo" = [
+          "paseo"
         ];
       };
 

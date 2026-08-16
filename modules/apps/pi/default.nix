@@ -23,7 +23,6 @@ let
 
   managedPackages = [
     "npm:pi-web-access"
-    "npm:pi-subagents"
     "npm:pi-commandcode-provider"
     "npm:pi-powerline-footer"
     "npm:pi-copy-all"

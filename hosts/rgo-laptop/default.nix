@@ -60,7 +60,6 @@
   apps.opencode.enable = true;
   apps.agent-skills.enable = true;
   apps.pi.enable = true;
-  apps.worktrunk.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;
   apps.paseo = {
