@@ -184,15 +184,11 @@ in
 
           [[on-window-detected]]
           if.app-id = 'md.obsidian'
-          run = 'move-node-to-workspace 3'
+          run = 'move-node-to-workspace 4'
 
           [[on-window-detected]]
           if.app-id = 'com.beeper'
           run = 'move-node-to-workspace 5'
-
-          [[on-window-detected]]
-          if.app-id = 'com.stremio.stremio'
-          run = 'move-node-to-workspace 6'
 
           # Workspace 10 is the macOS equivalent of the desktop music scratchpad.
           [[on-window-detected]]
@@ -212,6 +208,11 @@ in
           if.app-id = 'com.apple.systempreferences'
           run = 'layout floating'
 
+          [[on-window-detected]]
+          if.app-id = 'com.apple.finder'
+          run = 'move-node-to-workspace 3'
+
+          # Float specific Finder windows (Info, Preferences)
           [[on-window-detected]]
           if.app-id = 'com.apple.finder'
           if.window-title-regex-substring = '(Info|Preferences)'
