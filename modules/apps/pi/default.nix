@@ -79,6 +79,12 @@ in
       description = "LiteLLM OpenAI-compatible endpoint.";
     };
 
+    nineRouter.baseURL = lib.mkOption {
+      type = lib.types.str;
+      default = "http://rgo-vps:20128/v1";
+      description = "9Router OpenAI-compatible endpoint.";
+    };
+
     packages = lib.mkOption {
       type = lib.types.listOf lib.types.anything;
       default = [ ];
@@ -117,6 +123,7 @@ in
       }:
       let
         litellmMasterKeyPath = config.sops.secrets.litellm_master_key.path;
+        nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
         exaApiKeyPath = config.sops.secrets.exa_api_key.path;
 
         piSettings = lib.recursiveUpdate {
@@ -135,6 +142,7 @@ in
             "commandcode/xiaomi/mimo-v2.5-pro"
           ]
           ++ (map (model: "litellm/${model.alias}") litellmCatalog.models)
+          ++ (map (model: "nine_router/${model.alias}") litellmCatalog.models)
           ++ [
             "openai-codex/gpt-5.6-luna"
             "openai-codex/gpt-5.6-sol"
@@ -176,6 +184,20 @@ in
             baseUrl = cfg.litellm.baseURL;
             api = "openai-completions";
             apiKey = "!${pkgs.coreutils}/bin/cat ${litellmMasterKeyPath}";
+            models = map (
+              model:
+              {
+                id = model.alias;
+                name = model.displayName;
+              }
+              // (model.pi or { })
+            ) litellmCatalog.models;
+          };
+
+          providers.nine_router = {
+            baseUrl = cfg.nineRouter.baseURL;
+            api = "openai-completions";
+            apiKey = "!${pkgs.coreutils}/bin/cat ${nineRouterApiKeyPath}";
             models = map (
               model:
               {

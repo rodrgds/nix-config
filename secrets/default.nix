@@ -166,6 +166,7 @@ let
     "openrouter_api_key"
     "openai_api_key"
     "litellm_master_key"
+    "nine_router_api_key"
     "location_latitude"
     "location_longitude"
     "context7_api_key"
