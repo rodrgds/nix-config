@@ -61,6 +61,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Paseo ships its own nixpkgs-unstable flake and package derivations, so
+    # use its package outputs directly rather than following this repo's pins.
+    paseo.url = "github:getpaseo/paseo";
+
     # Use Vicinae's own package set: the nixpkgs 26.05 build links against
     # Qt 6.11 and produces invalid X11 window geometry under i3.
     vicinae.url = "github:vicinaehq/vicinae";
@@ -158,6 +162,7 @@
             angrr.nixosModules.angrr
             # Register the options everywhere; hosts still opt in separately.
             inputs.vicinae.nixosModules.default
+            inputs.paseo.nixosModules.default
             # Declarative Flatpak manager
             inputs.nix-flatpak.nixosModules.nix-flatpak
             # Home-manager as NixOS module

@@ -183,6 +183,7 @@
   apps.worktrunk.enable = true;
   apps.codex.enable = true;
   apps.claude.enable = true;
+  apps.paseo.enable = true;
   apps.muse.enable = true;
   apps.t3-code.enable = true;
 
