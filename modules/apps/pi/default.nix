@@ -26,6 +26,7 @@ let
     "npm:pi-subagents"
     "npm:pi-commandcode-provider"
     "npm:pi-powerline-footer"
+    "npm:pi-copy-all"
     "npm:@narumitw/pi-goal"
     "npm:@narumitw/pi-btw"
     "npm:@agnishc/edb-context-viewer"
@@ -128,10 +129,10 @@ in
           shellPath = "${pkgs.bash}/bin/bash";
 
           defaultProvider = "commandcode";
-          defaultModel = "deepseek/deepseek-v4-pro";
+          defaultModel = "xiaomi/mimo-v2.5-pro";
           defaultThinkingLevel = "high";
           enabledModels = [
-            "commandcode/deepseek/deepseek-v4-pro"
+            "commandcode/xiaomi/mimo-v2.5-pro"
           ]
           ++ (map (model: "litellm/${model.alias}") litellmCatalog.models)
           ++ [
@@ -151,7 +152,7 @@ in
           powerline = {
             preset = "default";
             placement = "above";
-            welcome = true;
+            welcome = false;
             path.mode = "basename";
             model.display = "name";
             git.hostIcon = true;
