@@ -68,11 +68,9 @@
     personal.enable = true;
   };
   vps.hosting.deployments.enable = true;
-  vps.litellm = {
+  vps."9router" = {
     enable = true;
-    host = "0.0.0.0";
-    port = 4000;
-    cooldownTime = 3600;
+    bindAddress = "100.69.139.47";
   };
   vps.openpost = {
     enable = true;
@@ -160,7 +158,7 @@
     80
     443
   ];
-  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 4000 ];
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ ];
 
   users.users.${username} = {
     isNormalUser = true;
