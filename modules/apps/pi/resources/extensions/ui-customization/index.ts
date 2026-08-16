@@ -35,12 +35,12 @@ interface DashboardTui extends RenderableNode {
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
 const PALETTE: Rgb[] = [
-  [22, 83, 189],
-  [48, 129, 247],
-  [93, 171, 255],
-  [151, 205, 255],
-  [93, 171, 255],
-  [48, 129, 247],
+  [200, 85, 25],
+  [218, 112, 44],
+  [235, 145, 70],
+  [245, 185, 130],
+  [235, 145, 70],
+  [218, 112, 44],
 ];
 const TITLE_LINES = [
   "  _ __ __ _  ___  ",
