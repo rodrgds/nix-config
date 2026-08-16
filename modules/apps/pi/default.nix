@@ -19,7 +19,6 @@ let
 
   managedGlobalNpmPackages = [
     "${packageName}@latest"
-    "gnhf@latest"
   ];
 
   managedPackages = [
@@ -27,20 +26,10 @@ let
     "npm:pi-subagents"
     "npm:pi-commandcode-provider"
     "npm:pi-powerline-footer"
+    "npm:@narumitw/pi-goal"
+    "npm:@narumitw/pi-btw"
+    "npm:@agnishc/edb-context-viewer"
   ];
-
-  gnhfConfig = ''
-    agent: pi
-
-    agentPathOverride:
-      pi: ${installRoot}/bin/pi
-
-    commitMessage:
-      preset: conventional
-
-    maxConsecutiveFailures: 3
-    preventSleep: true
-  '';
 
   updateScript = pkgs.writeShellApplication {
     name = "update-pi-cli";
@@ -55,11 +44,12 @@ let
       install_root=${lib.escapeShellArg installRoot}
       mkdir -p "$install_root"
 
-      # Remove the pre-rename package after migration.
+      # Remove retired packages after migration.
       npm uninstall \
         --global \
         --prefix "$install_root" \
         @mariozechner/pi-coding-agent \
+        gnhf \
         >/dev/null 2>&1 || true
 
       npm install \
@@ -165,15 +155,6 @@ in
             path.mode = "basename";
             model.display = "name";
             git.hostIcon = true;
-            customItems = [
-              {
-                id = "gnhf";
-                statusKey = "gnhf";
-                position = "right";
-                prefix = "gnhf";
-                color = "accent";
-              }
-            ];
           };
 
           retry = {
@@ -215,11 +196,10 @@ in
 
           home.sessionPath = [ "$HOME/${installDir}/bin" ];
 
-          # Bootstrap only when Pi or GNHF is absent, or when migrating package
-          # names; routine updates happen through the scheduled updater.
+          # Bootstrap only when Pi is absent, or when migrating package names;
+          # routine updates happen through the scheduled updater.
           home.activation.installPiCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             if [ ! -x "$HOME/${installDir}/bin/pi" ] || \
-               [ ! -x "$HOME/${installDir}/bin/gnhf" ] || \
                [ ! -f ${lib.escapeShellArg packagePath} ]; then
               ${updateScript}/bin/update-pi-cli
             fi
@@ -233,7 +213,6 @@ in
             ".pi/web-search.json".text = builtins.toJSON {
               exaApiKey = "!${pkgs.coreutils}/bin/cat ${exaApiKeyPath}";
             };
-            ".gnhf/config.yml".text = gnhfConfig;
             ".pi/agent/themes/flexoki.json".text = builtins.toJSON (
               import ./_data/flexoki-theme.nix {
                 inherit (constants) colors;
@@ -257,7 +236,7 @@ in
 
         (lib.optionalAttrs isLinux {
           systemd.user.services.update-pi-cli = {
-            Unit.Description = "Update Pi and GNHF from npm";
+            Unit.Description = "Update Pi from npm";
             Service = {
               Type = "oneshot";
               ExecStart = "${updateScript}/bin/update-pi-cli";
@@ -267,7 +246,7 @@ in
           };
 
           systemd.user.timers.update-pi-cli = {
-            Unit.Description = "Periodically update Pi and GNHF";
+            Unit.Description = "Periodically update Pi";
             Timer = {
               OnBootSec = "15m";
               OnUnitActiveSec = "1d";
