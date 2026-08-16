@@ -2,12 +2,13 @@
   lib,
   config,
   pkgs,
+  username,
   constants,
   ...
 }:
 let
   cfg = config.apps.handy;
-  inherit (constants) isLinux isDarwin;
+  inherit (constants) isLinux isDarwin homeDir;
 in
 {
   options.apps.handy = {
@@ -32,8 +33,10 @@ in
         launchd.user.agents.handy = {
           serviceConfig = {
             Label = "com.user.handy";
+            # The cask ships only Handy.app and does not link a `handy` CLI
+            # into /opt/homebrew/bin, so target the bundled binary directly.
             ProgramArguments = [
-              "/opt/homebrew/bin/handy"
+              "/Applications/Handy.app/Contents/MacOS/handy"
               "--start-hidden"
               "--no-tray"
             ];
@@ -43,6 +46,22 @@ in
             StandardErrorPath = "/tmp/handy.error.log";
           };
         };
+
+        # Handy registers its own macOS login item (SMAppService) whenever
+        # `autostart_enabled` is true in its settings store, duplicating the
+        # launchd agent above. Pin the flag off so the login item does not
+        # come back after we remove it; launchd owns startup instead.
+        home-manager.users.${username} =
+          { lib, ... }:
+          {
+            home.activation.handyDisableAutostart = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              settings="${homeDir}/Library/Application Support/com.pais.handy/settings_store.json"
+              if [ -f "$settings" ]; then
+                ${pkgs.jq}/bin/jq '(.settings.autostart_enabled) = false' "$settings" > "$settings.tmp"
+                mv "$settings.tmp" "$settings"
+              fi
+            '';
+          };
       })
     ]
   );
