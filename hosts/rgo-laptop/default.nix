@@ -68,37 +68,34 @@
   };
   apps.muse.enable = true;
   apps.t3-code.enable = true;
-  apps.whop.enable = true;
   apps.dbeaver.enable = true;
   apps.cap.enable = true;
   apps.android-studio.enable = true;
   apps.android-sdk.enable = true;
-  apps.affinity.enable = false;
   apps.zed.enable = true;
+  apps.affinity.enable = false;
+  apps.whop.enable = false;
+  apps.maestro.enable = false;
 
   apps.telegram.enable = true;
   apps.teamspeak.enable = true;
   apps.beeper.enable = true;
-  apps.maestro.enable = false;
   apps.surfshark.enable = true;
 
   apps.vesktop.enable = true;
   apps.obsidian.enable = true;
   apps.typst.enable = true;
   apps.flameshot.enable = true;
-  apps.cake-wallet.enable = false;
 
   apps.mpv.enable = true;
   apps.stremio.enable = true;
-  apps.losslesscut.enable = true;
+  apps.losslesscut.enable = false;
+  apps.cake-wallet.enable = false;
+  apps.ollama.enable = false;
 
   apps.syncthing.enable = true;
-
   apps.handy.enable = true;
-
   apps.ngrok.enable = true;
-
-  apps.ollama.enable = true;
 
   darwin.core.networking.tailscale.enable = true;
   core.docker.enable = true;

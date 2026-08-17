@@ -100,9 +100,6 @@
   apps.golang.enable = true;
   apps.vscode.enable = true;
   apps.zed.enable = true;
-  apps.cursor.enable = false;
-  apps.antigravity.enable = false;
-  apps.arduino.enable = false;
   apps.nodejs.enable = true;
   apps.pnpm.enable = true;
   apps.bun.enable = true;
@@ -111,41 +108,46 @@
   apps.php.enable = true;
   apps.android-studio.enable = true;
   apps.android-sdk.enable = true;
-  apps.stripe-cli.enable = true;
   apps.dbeaver.enable = true;
+  apps.cursor.enable = false;
+  apps.antigravity.enable = false;
+  apps.arduino.enable = false;
+  apps.stripe-cli.enable = false;
   apps.laravel.enable = false;
   apps.affinity.enable = false;
 
   apps.hyprland.enable = true;
   apps.quickshell.enable = true;
-  # The i3 and Polybar modules remain in the repository, but this host now
-  # exposes only the Hyprland desktop session.
+
   apps.i3.enable = false;
   apps.polybar.enable = false;
   apps.bumblebee-status.enable = false;
-  apps.dunst.enable = true;
   apps.redshift.enable = false;
+  apps.rofi.enable = false;
+
+  apps.dunst.enable = true;
   apps.solaar.enable = true;
   apps.xdg-portals.enable = true;
+  apps.rescrobbled.enable = true;
+
   apps.gtk-theme.enable = true;
   apps.qt-theme.enable = true;
   apps.cursor-theme.enable = true;
-  apps.rofi.enable = false;
 
   apps.obs.enable = true;
-  apps.cap.enable = true;
   apps.mpv.enable = true;
-  apps.darktable.enable = false;
-  apps.gimp.enable = false;
   apps.auto-editor.enable = true;
-  apps.losslesscut.enable = true;
-  apps.flameshot.enable = false;
   apps.normcap.enable = true;
   apps.charm-freeze.enable = true;
   apps.stremio.enable = true;
   apps.grayjay.enable = true;
+
+  apps.cap.enable = false;
+  apps.losslesscut.enable = false;
+  apps.darktable.enable = false;
+  apps.gimp.enable = false;
+  apps.flameshot.enable = false;
   apps.flatpak.installFlatseal = false;
-  apps.rescrobbled.enable = true;
 
   apps.steam.enable = true;
   apps.gamemode.enable = true;
@@ -164,17 +166,18 @@
   apps.beeper.enable = true;
   apps.vesktop.enable = true;
   apps.telegram.enable = true;
-  apps.teamspeak.enable = true;
   apps.thunderbird.enable = true;
   apps.anydesk.enable = true;
+
+  apps.teamspeak.enable = false;
   apps.maestro.enable = false;
   apps.surfshark.enable = false;
+  apps.cake-wallet.enable = false;
 
   apps.obsidian.enable = true;
   apps.qbittorrent.enable = true;
   apps.typst.enable = true;
   apps.qdirstat.enable = true;
-  apps.cake-wallet.enable = false;
 
   apps.core-packages.enable = true;
   apps.synology-drive.enable = true;
@@ -193,6 +196,5 @@
   apps.t3-code.enable = true;
 
   apps.handy.enable = true;
-
   apps.vicinae.enable = true;
 }
