@@ -140,6 +140,11 @@ in
   vps.pocketbase.enable = false;
   vps.immich-public-proxy.enable = false;
 
+  vps.glances = {
+    enable = true;
+    bindAddress = "100.69.139.47";
+  };
+
   apps.bash.enable = true;
 
   boot.loader.grub = {
