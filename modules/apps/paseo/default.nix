@@ -54,7 +54,11 @@ let
       pkgs.coreutils
       pkgs.jq
     ];
-    excludeShellChecks = [ "SC2016" ];
+    excludeShellChecks = [
+      "SC2016"
+      # On Linux tailscaleCandidates is a single path, so this loop runs once.
+      "SC2043"
+    ];
     text = ''
             cfg_file="$HOME/.paseo/config.json"
             mkdir -p "$(dirname "$cfg_file")"
