@@ -264,9 +264,19 @@ let
 
       if [ "$do_bun" = "1" ]; then
         if process_running '(^|/)(bun)( |$).*(install|add|update)'; then
-          log "keeping Bun cache while a package operation is active"
+          log "keeping Bun caches while a package operation is active"
         else
-          clear_cache_dir "Bun package" "$home/.bun/install/cache" "$bun_max_gib"
+          bun_caches=( "$home/.bun/install/cache" )
+          bun_caches+=(
+      ${lib.concatMapStringsSep "\n" (
+        dir: "            ${lib.escapeShellArg dir}"
+      ) cfg.bun.extraDirectories}
+          )
+          for bun_cache in "''${bun_caches[@]}"; do
+            if [ -d "$bun_cache" ]; then
+              clear_cache_dir "Bun package" "$bun_cache" "$bun_max_gib"
+            fi
+          done
         fi
       fi
 
@@ -453,6 +463,12 @@ in
       type = lib.types.ints.positive;
       default = 6;
       description = "Keep the Bun package cache unless it grows beyond this size.";
+    };
+
+    bun.extraDirectories = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional reproducible Bun package caches managed like the default cache under `$HOME/.bun`.";
     };
 
     npm.enable = lib.mkOption {

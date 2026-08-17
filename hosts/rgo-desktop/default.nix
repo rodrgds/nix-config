@@ -74,6 +74,9 @@
     goBuildCache.extraDirectories = [
       "/home/${username}/dev/openpost/.devenv/state/go-build"
     ];
+    bun.extraDirectories = [
+      "/home/${username}/dev/openpost/.devenv/state/bun-cache"
+    ];
   };
 
   scripts.enable = true;

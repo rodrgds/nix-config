@@ -103,9 +103,13 @@
   darwin.core.networking.tailscale.enable = true;
   core.docker.enable = true;
   core.downloads-cleanup.enable = true;
-  core.cache-cleanup.enable = true;
-  core.cache-cleanup.pnpm.projectRoots = [
-    "/Users/rgo"
-    "/Users/rgo/dev/openpost"
-  ];
+  core.cache-cleanup = {
+    enable = true;
+    goBuildCache.extraDirectories = [
+      "/Users/rgo/dev/openpost/.devenv/state/go-build"
+    ];
+    bun.extraDirectories = [
+      "/Users/rgo/dev/openpost/.devenv/state/bun-cache"
+    ];
+  };
 }
