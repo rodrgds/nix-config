@@ -32,6 +32,19 @@ in
   core.networking.enable = true;
   core.networking.tailscale.acceptDns = false;
 
+  # Converge to whatever is committed to main instead of a root-owned checkout
+  # of the user's git repo. The repo is public, so no token is needed. Weekly
+  # Sunday ~04:00; other VPS maintenance is staggered to avoid a midnight pileup.
+  system.autoUpgrade = {
+    enable = true;
+    flake = lib.mkForce "github:rodrgds/nix-config#rgo-vps";
+    dates = lib.mkForce "Sun *-*-* 04:00:00";
+    randomizedDelaySec = lib.mkForce "20min";
+  };
+
+  # Keep GC out of the 00:00/04:00 maintenance windows.
+  nix.gc.dates = lib.mkForce "*-*-* 05:30:00";
+
   apps.nix-tools.enable = true;
   environment.systemPackages = [ pkgs.git ];
 
