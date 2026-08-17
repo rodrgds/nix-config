@@ -29,6 +29,16 @@ let
       voiceMode.enabled = false;
       webUi.enabled = false;
     };
+    # Pin provider binaries so the daemon can find them even when its spawned
+    # shell does not inherit the user's full login PATH (common on NixOS with
+    # Electron-launched daemons). The paths come from home.sessionPath entries
+    # in the corresponding app modules.
+    agents.providers = {
+      pi.command = [ "${constants.homeDir}/.local/share/npm-global/bin/pi" ];
+      claude.command = [ "${constants.homeDir}/.local/share/npm-global/bin/claude" ];
+      codex.command = [ "${constants.homeDir}/.local/share/npm-global/bin/codex" ];
+      opencode.command = [ "${constants.homeDir}/.local/share/npm-global/bin/opencode" ];
+    };
   };
 
   baseConfigFile = builtins.toFile "paseo-base-config.json" (builtins.toJSON baseConfig);
