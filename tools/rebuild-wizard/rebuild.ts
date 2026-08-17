@@ -44,6 +44,7 @@ import {
   detectSystemdMajorUpgrade,
   directTargetHelp,
   directTargetFromArgs,
+  directTargetUsage,
   isNixOS,
   notify,
   parseFlakeInputs,
@@ -1016,6 +1017,25 @@ async function tuiMain(): Promise<void> {
   const app = new App(renderer);
   renderer.start();
 
+  // Watch for the terminal dying under us (closed window, revoked pty):
+  // stdin/stdout then fail with EIO, but nothing terminates the TUI loop
+  // and the renderer keeps polling a dead stream at full CPU. Exit cleanly
+  // instead of spinning forever.
+  let exiting = false;
+  const exitOnDeadTerminal = () => {
+    if (exiting) return;
+    exiting = true;
+    try {
+      app.destroy();
+    } finally {
+      process.exit(0);
+    }
+  };
+  process.stdin.on("error", exitOnDeadTerminal);
+  process.stdin.on("close", exitOnDeadTerminal);
+  process.stdout.on("error", exitOnDeadTerminal);
+  process.on("SIGTERM", exitOnDeadTerminal);
+
   try {
     await mainLoop(app);
   } catch (error) {
@@ -1041,6 +1061,16 @@ try {
   if (directTarget) {
     await directRebuild(directTarget);
   } else {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      console.error(
+        "The rebuild wizard is interactive and needs a terminal.",
+      );
+      console.error(
+        "Run it in a terminal, or pass a target to rebuild it directly:",
+      );
+      console.error(`  ${directTargetUsage()}`);
+      process.exit(1);
+    }
     await tuiMain();
   }
 } catch (error) {

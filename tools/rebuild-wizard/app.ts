@@ -41,7 +41,10 @@ export class App {
     this.renderer.keyInput.on("keypress", (key: ParsedKey) => {
       if (this.destroyed) return;
       if (key.ctrl && key.name === "c") {
+        // Ctrl+C must actually leave: destroying the renderer without
+        // resolving the awaited menu() leaves the wizard alive but dead.
         this.destroy();
+        process.exit(0);
         return;
       }
       this.keyHandler?.(key);
