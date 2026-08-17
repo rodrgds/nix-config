@@ -140,8 +140,8 @@ in
 
           shellPath = "${pkgs.bash}/bin/bash";
 
-          defaultProvider = "commandcode";
-          defaultModel = "xiaomi/mimo-v2.5-pro";
+          defaultProvider = "nine_router";
+          defaultModel = "flash";
           defaultThinkingLevel = "high";
           enabledModels = [
             "commandcode/xiaomi/mimo-v2.5-pro"
