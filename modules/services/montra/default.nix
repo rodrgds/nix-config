@@ -11,6 +11,13 @@ let
   apiPort = 8788;
   webPort = 8091;
   apiImage = "ghcr.io/rodrgds/montra-api:latest";
+
+  # Podman runs the first check immediately; keep the transient systemd unit
+  # active while the service boots so a restart does not briefly fail the
+  # NixOS switch (montra-api uses the same pattern with a bun one-liner).
+  pythonHealthCheck =
+    url:
+    "--health-cmd=python -c \"import urllib.request,time\nfor i in range(30):\n    try:\n        urllib.request.urlopen('${url}')\n        exit(0)\n    except Exception:\n        time.sleep(1)\nexit(1)\"";
   montraMaintenance = pkgs.writeShellScriptBin "montra-catalog-maintenance" ''
     set -euo pipefail
     [ "$#" -gt 0 ] || {
@@ -293,8 +300,9 @@ in
         extraOptions = [
           "--network=podman"
           "--pull=never"
-          "--health-cmd=python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8811/health')\""
+          (pythonHealthCheck "http://127.0.0.1:8811/health")
           "--health-interval=30s"
+          "--health-timeout=35s"
           "--health-retries=10"
           "--memory=3g"
         ];
@@ -304,8 +312,9 @@ in
         extraOptions = [
           "--network=podman"
           "--pull=never"
-          "--health-cmd=python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8812/health/ready')\""
+          (pythonHealthCheck "http://127.0.0.1:8812/health/ready")
           "--health-interval=30s"
+          "--health-timeout=35s"
           "--health-retries=10"
           "--memory=2g"
         ];
