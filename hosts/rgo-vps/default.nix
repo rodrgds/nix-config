@@ -30,7 +30,6 @@
   core.networking.tailscale.acceptDns = false;
 
   apps.nix-tools.enable = true;
-  apps.typst.enable = true;
   environment.systemPackages = [ pkgs.git ];
 
   core.audio.enable = lib.mkForce false;
@@ -59,11 +58,11 @@
   vps.vaultwarden.enable = true;
   vps.teamspeak.enable = true;
   vps.directus.enable = true;
-  vps.n8n.enable = true;
   vps.shlink = {
     enable = true;
     extraDomains = [ "ref.rgo.pt" ];
   };
+  apps.typst.enable = true;
   vps.hosting.sites = {
     personal.enable = true;
   };
@@ -129,6 +128,7 @@
     };
   };
 
+  vps.n8n.enable = false;
   vps.trndb.enable = false;
   vps.termix.enable = false;
   vps.postiz.enable = false;
