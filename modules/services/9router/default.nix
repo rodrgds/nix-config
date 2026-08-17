@@ -1,5 +1,5 @@
 # 9Router AI gateway
-# OpenAI-compatible proxy with dashboard, API key management, and Headroom sidecar.
+# OpenAI-compatible proxy with dashboard and API key management.
 {
   config,
   lib,
@@ -50,14 +50,6 @@ in
     };
 
     virtualisation.oci-containers.containers = {
-      "9router-headroom" = {
-        image = "ghcr.io/chopratejas/headroom:latest";
-
-        extraOptions = [
-          "--network=podman"
-        ];
-      };
-
       "9router" = {
         image = "docker.io/decolua/9router:latest";
 
@@ -66,8 +58,6 @@ in
           PORT = toString containerPort;
           HOSTNAME = "0.0.0.0";
           NODE_ENV = "production";
-
-          HEADROOM_URL = "http://9router-headroom:8787";
 
           ENABLE_REQUEST_LOGS = "false";
           OBSERVABILITY_ENABLED = "false";
@@ -87,10 +77,6 @@ in
 
         ports = [
           "${cfg.bindAddress}:${toString cfg.port}:${toString containerPort}"
-        ];
-
-        dependsOn = [
-          "9router-headroom"
         ];
 
         extraOptions = [
