@@ -7,6 +7,7 @@ import { App } from "./app";
 import { generateCommitMessageWithOpenRouter } from "./ai";
 import {
   AGE_KEY_FILE,
+  HOME,
   OPENROUTER_MODEL,
   REPO_DIR,
   SECRETS_DIR,
@@ -22,8 +23,10 @@ import {
   basename,
   deleteFile,
   dirExists,
+  fileExists,
   join,
   pathExists,
+  readText,
   writeText,
 } from "./fs";
 import {
@@ -184,6 +187,81 @@ async function listPlainSecretFiles(): Promise<string[]> {
   return output.split("\n").filter(Boolean).sort();
 }
 
+const NINE_ROUTER_MODELS_URL = "http://rgo-vps:20128/v1/models";
+const COMBOS_FILE = join(
+  REPO_DIR,
+  "modules/shared/9router/combos.json",
+);
+
+async function readNineRouterApiKey(): Promise<string | null> {
+  const uid = (
+    await runCapture("id", ["-u"], { cwd: "/", check: false })
+  ).trim();
+
+  const candidates = [
+    Bun.env.XDG_RUNTIME_DIR
+      ? join(Bun.env.XDG_RUNTIME_DIR, "secrets/nine_router_api_key")
+      : null,
+    uid ? `/run/user/${uid}/secrets/nine_router_api_key` : null,
+    HOME ? join(HOME, ".config/sops-nix/secrets/nine_router_api_key") : null,
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (!(await fileExists(candidate))) continue;
+    const value = (await readText(candidate)).trim();
+    if (value) return value;
+  }
+
+  return null;
+}
+
+async function refreshNineRouterCombos(
+  append: (line: string) => void,
+): Promise<void> {
+  const apiKey = await readNineRouterApiKey();
+  if (!apiKey) {
+    append("9Router API key not found; keeping the committed combos snapshot.");
+    return;
+  }
+
+  try {
+    const response = await fetch(NINE_ROUTER_MODELS_URL, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const body = (await response.json()) as {
+      data: { id: string; owned_by: string }[];
+    };
+    const combos = (body.data ?? [])
+      .filter((model) => model.owned_by === "combo")
+      .map((model) => ({ alias: model.id, displayName: model.id }))
+      .sort((a, b) => a.alias.localeCompare(b.alias));
+
+    if (combos.length === 0) {
+      append("9Router reports no combos; keeping the committed snapshot.");
+      return;
+    }
+
+    await writeText(
+      COMBOS_FILE,
+      `${JSON.stringify({ models: combos }, null, 2)}\n`,
+    );
+    await runCapture("git", ["add", "--", COMBOS_FILE], {
+      cwd: REPO_DIR,
+      check: false,
+    });
+    append(
+      `Refreshed 9Router combos: ${combos.map((c) => c.alias).join(", ")}.`,
+    );
+  } catch (error) {
+    append(
+      `9Router fetch failed (${error instanceof Error ? error.message : error}); keeping the committed snapshot.`,
+    );
+  }
+}
+
 async function runPreparationAndRebuild(
   app: App,
   platform: PlatformKind,
@@ -198,6 +276,9 @@ async function runPreparationAndRebuild(
     "Preparation log",
     `Target: ${target.name}. Running flake updates, statix, and nixfmt.`,
     async (append) => {
+      append("Refreshing 9Router combo catalog from the proxy...");
+      await refreshNineRouterCombos(append);
+
       if (options.updateInputs.length > 0) {
         await runLogged(
           append,

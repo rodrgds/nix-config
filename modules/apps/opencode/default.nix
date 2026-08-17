@@ -12,7 +12,7 @@ let
   installDir = ".local/share/npm-global";
   installRoot = "${constants.homeDir}/${installDir}";
   packageName = "opencode-ai";
-  litellmCatalog = import ../../shared/litellm.nix;
+  nineRouterCatalog = import ../../shared/9router.nix;
   updateScript = pkgs.writeShellScript "update-opencode-cli" ''
     set -eu
     export PATH="${pkgs.nodejs}/bin:$PATH"
@@ -30,13 +30,12 @@ in
 {
   options.apps.opencode = {
     enable = lib.mkEnableOption "Enable Opencode";
-    litellm = {
+    nineRouter = {
       baseURL = lib.mkOption {
         type = lib.types.str;
-        default = "http://rgo-vps:4000/v1";
-        description = "LiteLLM OpenAI-compatible API base URL.";
+        default = "http://rgo-vps:20128/v1";
+        description = "9Router OpenAI-compatible API base URL.";
       };
-
     };
 
     web = {
@@ -52,21 +51,21 @@ in
         home-manager.users.${username} =
           { config, lib, ... }:
           let
-            litellmMasterKeyPath = config.sops.secrets.litellm_master_key.path;
+            nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
 
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
               autoupdate = true;
               theme = "flexoki";
-              model = "litellm/flash";
+              model = "nine_router/flash";
               plugin = [ "@mohak34/opencode-notifier@latest" ];
               provider = {
-                litellm = {
+                nine_router = {
                   npm = "@ai-sdk/openai-compatible";
-                  name = "My LiteLLM (VPS)";
+                  name = "My 9Router (VPS)";
                   options = {
-                    baseURL = cfg.litellm.baseURL;
-                    apiKey = "{env:LITELLM_MASTER_KEY}";
+                    baseURL = cfg.nineRouter.baseURL;
+                    apiKey = "{env:NINE_ROUTER_API_KEY}";
                   };
                   models = builtins.listToAttrs (
                     map (m: {
@@ -74,7 +73,7 @@ in
                       value = {
                         name = m.displayName;
                       };
-                    }) litellmCatalog.models
+                    }) nineRouterCatalog.models
                   );
                 };
               };
@@ -170,14 +169,14 @@ in
             };
 
             programs.bash.initExtra = lib.mkAfter ''
-              if [ -z "''${LITELLM_MASTER_KEY:-}" ] && [ -r "${litellmMasterKeyPath}" ]; then
-                export LITELLM_MASTER_KEY="$(tr -d '\n' < "${litellmMasterKeyPath}")"
+              if [ -z "''${NINE_ROUTER_API_KEY:-}" ] && [ -r "${nineRouterApiKeyPath}" ]; then
+                export NINE_ROUTER_API_KEY="$(tr -d '\n' < "${nineRouterApiKeyPath}")"
               fi
             '';
 
             programs.zsh.envExtra = lib.mkAfter ''
-              if [ -z "''${LITELLM_MASTER_KEY:-}" ] && [ -r "${litellmMasterKeyPath}" ]; then
-                export LITELLM_MASTER_KEY="$(tr -d '\n' < "${litellmMasterKeyPath}")"
+              if [ -z "''${NINE_ROUTER_API_KEY:-}" ] && [ -r "${nineRouterApiKeyPath}" ]; then
+                export NINE_ROUTER_API_KEY="$(tr -d '\n' < "${nineRouterApiKeyPath}")"
               fi
             '';
 

@@ -1,0 +1,12 @@
+{
+  "models": [
+    {
+      "alias": "flash",
+      "displayName": "flash"
+    },
+    {
+      "alias": "good",
+      "displayName": "good"
+    }
+  ]
+}

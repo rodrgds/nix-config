@@ -44,7 +44,7 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 
 ## Architecture
 
-- **Shared source of truth** - when several modules need the same data, keep it in one shared place and import it. `modules/shared/litellm.nix` is the model: one LiteLLM catalog consumed by the proxy, opencode, and Pi.
+- **Shared source of truth** - when several modules need the same data, keep it in one shared place and import it. `modules/shared/9router.nix` is the model: one 9Router combo catalog consumed by opencode and Pi. The rebuild wizard refreshes its `9router/combos.json` snapshot from the proxy before every rebuild.
 - **Declarative wiring, self-updating tools** - machine wiring is declarative; upstream-managed tools stay mutable when Nix pinning would hurt reliability. npm CLIs (Pi, Codex, skills) self-update on systemd/launchd timers. New tools follow the same model.
 - **Agent skills** - install upstream skills through the declarative mechanism in `modules/apps/agent-skills/default.nix` rather than vendoring them. Project skills for this repo live in `.agents/skills/`.
 - **Rebuild commits** - the wizard owns commit semantics (default `<target>: generation <n>` or `<target>: rebuild <date>`, plus OpenRouter or manual messages). Document changes there.

@@ -21,7 +21,6 @@ in
           pip
           tkinter
           ytmusicapi
-          litellm
           pyperclip
           pillow
           netifaces
