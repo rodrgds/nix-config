@@ -1,5 +1,8 @@
 # Disk layout for Hetzner Cloud (x86_64, BIOS boot)
 # Used by nixos-anywhere + disko during installation.
+let
+  rootUuid = (import ./root-disk.nix).uuid;
+in
 {
   disko.devices = {
     disk.main = {
@@ -31,6 +34,13 @@
             content = {
               type = "filesystem";
               format = "ext4";
+              # Pin the live root filesystem's UUID so a disaster-recovery
+              # reinstall reproduces it. The host mounts "/" by this UUID (not
+              # the GPT partlabel) to survive GPT name loss (see root-disk.nix).
+              extraArgs = [
+                "-U"
+                rootUuid
+              ];
               mountpoint = "/";
             };
           };

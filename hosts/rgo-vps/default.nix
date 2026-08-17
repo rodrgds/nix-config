@@ -6,6 +6,9 @@
   pkgs,
   ...
 }:
+let
+  rootDisk = import ./root-disk.nix;
+in
 {
   imports = [
     ./hardware-configuration.nix
@@ -182,10 +185,25 @@
     }
   ];
 
+  # Mount root by filesystem UUID instead of the GPT partition label. The Aug
+  # 2026 boot failure was caused by partition 3's GPT name (disk-main-root)
+  # vanishing while the ext4 filesystem itself stayed intact; the initrd waits
+  # for /dev/disk/by-partlabel/disk-main-root and would not boot. A UUID-based
+  # mount survives that class of GPT metadata loss. The same UUID is pinned in
+  # disko.nix so a disaster-recovery reinstall reproduces it (see root-disk.nix).
+  fileSystems."/".device = lib.mkForce "/dev/disk/by-uuid/${rootDisk.uuid}";
+
+  # Root slice memory protection: let systemd-oomd reclaim under pressure
+  # instead of the whole VM hanging and being power-cycled.
+  systemd.oomd = {
+    enable = true;
+    enableRootSlice = true;
+  };
+
   services.journald.extraConfig = ''
-    SystemMaxUse=50M
-    SystemMaxFileSize=10M
-    RuntimeMaxUse=10M
+    SystemMaxUse=512M
+    SystemMaxFileSize=64M
+    RuntimeMaxUse=64M
   '';
 
   networking.wireless.enable = lib.mkForce false;
