@@ -207,6 +207,19 @@ in
             ) nineRouterCatalog.models;
           };
         };
+
+        # pi-web-access resolves its web-search config to
+        # $XDG_CONFIG_HOME/pi/web-search.json (Linux, where XDG_CONFIG_HOME
+        # is set) or ~/.pi/web-search.json (Darwin fallback). Manage both so
+        # the Exa key is found regardless of the runtime environment.
+        webSearchConfig = builtins.toJSON {
+          provider = "exa";
+          # Return results to the agent directly instead of opening the
+          # interactive curator browser. Alternatives: "summary-review"
+          # (curator, default) or "auto-summary" (AI summary, no browser).
+          workflow = "none";
+          exaApiKey = "!${pkgs.coreutils}/bin/cat ${exaApiKeyPath}";
+        };
       in
       lib.mkMerge [
         {
@@ -234,9 +247,8 @@ in
             ".pi/agent/models.json".text = builtins.toJSON piModels;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
             ".pi/agent/AGENTS.md".source = ./_data/global-agents.md;
-            ".pi/web-search.json".text = builtins.toJSON {
-              exaApiKey = "!${pkgs.coreutils}/bin/cat ${exaApiKeyPath}";
-            };
+            ".config/pi/web-search.json".text = webSearchConfig;
+            ".pi/web-search.json".text = webSearchConfig;
             ".pi/agent/themes/flexoki.json".text = builtins.toJSON (
               import ./_data/flexoki-theme.nix {
                 inherit (constants) colors;
