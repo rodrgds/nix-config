@@ -43,7 +43,22 @@ let
     "npm:@narumitw/pi-goal"
     "npm:@narumitw/pi-btw"
     "npm:@agnishc/edb-context-viewer"
+    # Codex-style OpenAI server-side compaction for openai/* and openai-codex/*
+    # models. Experimental; mirrors how codex uses the Responses compaction v2
+    # protocol. Self-updates from repo HEAD via `pi update --extensions`.
+    "git:github.com/algal/pi-openai-server-compaction"
   ];
+
+  # Config for the pi-openai-server-compaction extension. Matches the
+  # extension's documented defaults; kept here so it is tunable in the repo.
+  openaiServerCompactionConfig = builtins.toJSON {
+    enabled = true;
+    includeAzure = false;
+    compactThreshold = 0;
+    thresholdRatio = 0.7;
+    usePreviousResponseId = true;
+    notify = false;
+  };
 
   updateScript = pkgs.writeShellApplication {
     name = "update-pi-cli";
@@ -247,6 +262,7 @@ in
             ".pi/agent/models.json".text = builtins.toJSON piModels;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
             ".pi/agent/AGENTS.md".source = ./_data/global-agents.md;
+            ".pi/agent/openai-server-compaction.json".text = openaiServerCompactionConfig;
             ".config/pi/web-search.json".text = webSearchConfig;
             ".pi/web-search.json".text = webSearchConfig;
             ".pi/agent/themes/flexoki.json".text = builtins.toJSON (
