@@ -147,11 +147,11 @@ in
         exaApiKeyPath = config.sops.secrets.exa_api_key.path;
 
         piSettings = lib.recursiveUpdate {
-          npmCommand = [
-            "${pkgs.nodejs}/bin/npm"
-            "--prefix"
-            installRoot
-          ];
+          # Plain npm. The global prefix comes from the managed ~/.npmrc so
+          # Pi's local installs (git package dependency installs run as plain
+          # `npm install` in the package dir) resolve their own package.json
+          # instead of the global root. A --prefix here would break those.
+          npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
 
           shellPath = "${pkgs.bash}/bin/bash";
 
@@ -257,6 +257,7 @@ in
           '';
 
           home.file = {
+            ".npmrc".text = "prefix=${installRoot}\n";
             ".gnhf/config.yml".text = gnhfConfig;
             ".pi/agent/settings.json".text = builtins.toJSON piSettings;
             ".pi/agent/models.json".text = builtins.toJSON piModels;
