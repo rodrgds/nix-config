@@ -28,6 +28,10 @@ in
           configDir = "${homeDir}/.config/syncthing";
           overrideDevices = false;
           overrideFolders = false;
+          # Forget tombstone entries for deleted files after 6 months instead of
+          # the default 15: deletions still propagate reliably across the few
+          # weeks a device may be offline, without a multi-GB index database.
+          extraFlags = [ "--db-delete-retention-interval=4368h" ];
           settings = {
             devices = {
               rgo-desktop = {
