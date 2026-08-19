@@ -40,7 +40,12 @@ in
           after-startup-command = []
 
           # Keep the platform-native bar in sync with Aerospace's workspace state.
-          exec-on-workspace-change = ['/bin/bash', '-c', '/Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE']
+          ${
+            if config.darwin.apps.sketchybar.enable then
+              "exec-on-workspace-change = ['/bin/bash', '-c', '/Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE']"
+            else
+              "# exec-on-workspace-change: SketchyBar is disabled"
+          }
 
           # Normalization (similar to i3 behavior)
           enable-normalization-flatten-containers = true
@@ -68,7 +73,7 @@ in
           inner.vertical = 6
           outer.left = 3
           outer.bottom = 3
-          # macOS already reserves the menu-bar region occupied by SketchyBar.
+          # macOS already reserves the top region for the menu bar or SketchyBar.
           outer.top = 3
           outer.right = 3
 
@@ -143,8 +148,13 @@ in
              alt-d = 'exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
              alt-period = "exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
 
-             # Match the desktop input-source toggle.
-             alt-m = 'exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/toggle-keyboard-layout'
+             # Match the desktop input-source toggle. Requires the keyboard-layout module.
+             ${
+               if config.darwin.apps.keyboard-layout.enable then
+                 "alt-m = 'exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/toggle-keyboard-layout'"
+               else
+                 "# alt-m: keyboard-layout module is disabled"
+             }
 
            # Lock screen (macOS native) - using alt+ctrl+l to avoid conflict with focus right
            alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'

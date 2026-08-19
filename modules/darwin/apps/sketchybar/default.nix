@@ -20,19 +20,6 @@ let
     };
   });
 
-  keyboardToggle = pkgs.writeShellScriptBin "toggle-keyboard-layout" ''
-    current="$(${lib.getExe pkgs.macism})"
-    case "$current" in
-      com.apple.keylayout.Portuguese)
-        ${lib.getExe pkgs.macism} com.apple.keylayout.US
-        ;;
-      *)
-        ${lib.getExe pkgs.macism} com.apple.keylayout.Portuguese
-        ;;
-    esac
-    ${lib.getExe sketchybarPackage} --trigger keyboard_layout_change
-  '';
-
   toSketchyColor = hex: "0xff${lib.removePrefix "#" hex}";
 
   theme = pkgs.replaceVars ./config/theme.sh.in {
@@ -111,6 +98,11 @@ in
 {
   options.darwin.apps.sketchybar = {
     enable = lib.mkEnableOption "the rgo SketchyBar instrument rail";
+    hideMenuBar = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Hide the native macOS menu bar while SketchyBar shows the instrument rail";
+    };
     trayAliases = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
@@ -148,33 +140,32 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = constants.isDarwin;
-        message = "darwin.apps.sketchybar is only supported on macOS";
-      }
-    ];
+  config = lib.mkMerge [
+    (lib.mkIf cfg.enable {
+      assertions = [
+        {
+          assertion = constants.isDarwin;
+          message = "darwin.apps.sketchybar is only supported on macOS";
+        }
+      ];
 
-    # SketchyBar owns the visible rail; reveal Apple's menu bar at the screen
-    # edge when its native status items are needed.
-    system.defaults.NSGlobalDomain._HIHideMenuBar = true;
-
-    home-manager.users.${username} = {
-      programs.sketchybar = {
-        enable = true;
-        package = sketchybarPackage;
-        config = {
-          source = generatedConfig;
-          recursive = true;
+      home-manager.users.${username} = {
+        programs.sketchybar = {
+          enable = true;
+          package = sketchybarPackage;
+          config = {
+            source = generatedConfig;
+            recursive = true;
+          };
+          extraPackages = [ pkgs.nowplaying-cli ];
         };
-        extraPackages = [
-          pkgs.nowplaying-cli
-          pkgs.macism
-        ];
       };
-
-      home.packages = [ keyboardToggle ];
-    };
-  };
+    })
+    {
+      # The menu bar decision applies in both states: disabling the bar restores
+      # the native menu bar instead of leaving _HIHideMenuBar set from a previous
+      # enable. The toggle is darwin.apps.sketchybar.hideMenuBar.
+      system.defaults.NSGlobalDomain._HIHideMenuBar = cfg.enable && cfg.hideMenuBar;
+    }
+  ];
 }
