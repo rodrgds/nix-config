@@ -6,13 +6,15 @@
   name = "flexoki";
 
   vars = {
-    bg0 = colors.bg0;
-    bg1 = colors.bg1;
-    bg2 = colors.bg2;
-
-    fg0 = colors.fg0;
-    fg1 = colors.fg1;
-    fg2 = colors.fg2;
+    inherit (colors)
+      bg0
+      bg1
+      bg2
+      fg0
+      fg1
+      fg2
+      purple
+      ;
 
     red = colors.redBright;
     green = colors.greenBright;
@@ -21,7 +23,6 @@
     magenta = colors.magentaBright;
     cyan = colors.cyanBright;
     orange = colors.orangeBright;
-    purple = colors.purple;
   };
 
   colors = {
