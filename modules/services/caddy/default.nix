@@ -183,7 +183,7 @@ let
   }
   // lib.optionalAttrs config.vps.umami.enable {
     # Umami - analytics
-    "analytics.rgo.pt" = {
+    "cool.rgo.pt" = {
       extraConfig = ''
         reverse_proxy localhost:${toString (cfg.internalPorts.umami or 3000)}
 

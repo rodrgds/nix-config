@@ -18,7 +18,7 @@ in
 
     domain = lib.mkOption {
       type = lib.types.str;
-      default = "analytics.rgo.pt";
+      default = "cool.rgo.pt";
       description = "Domain for Umami";
     };
   };
