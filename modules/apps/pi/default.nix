@@ -145,6 +145,7 @@ in
       let
         nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
         exaApiKeyPath = config.sops.secrets.exa_api_key.path;
+        opencodeGoApiKeyPath = config.sops.secrets.opencode_go_api_key.path;
 
         piSettings = lib.recursiveUpdate {
           # Plain npm. The global prefix comes from the managed ~/.npmrc so
@@ -155,14 +156,15 @@ in
 
           shellPath = "${pkgs.bash}/bin/bash";
 
-          defaultProvider = "nine_router";
-          defaultModel = "flash";
+          defaultProvider = "opencode-go";
+          defaultModel = "muse-spark-1.2-contributor";
           defaultThinkingLevel = "high";
           enabledModels = [
             "commandcode/xiaomi/mimo-v2.5-pro"
           ]
           ++ (map (model: "nine_router/${model.alias}") nineRouterCatalog.models)
           ++ [
+            "opencode-go/muse-spark-1.2-contributor"
             "openai-codex/gpt-5.6-luna"
             "openai-codex/gpt-5.6-sol"
           ];
@@ -220,6 +222,34 @@ in
               }
               // (model.pi or { })
             ) nineRouterCatalog.models;
+          };
+
+          # OpenCode Go subscription. muse-spark-1.2-contributor is served
+          # through the Responses API (/v1/responses); declare it explicitly
+          # so the built-in opencode-go model list does not need to carry it.
+          providers.opencode-go = {
+            baseUrl = "https://opencode.ai/zen/go/v1";
+            api = "openai-responses";
+            apiKey = "!${pkgs.coreutils}/bin/cat ${opencodeGoApiKeyPath}";
+            models = [
+              {
+                id = "muse-spark-1.2-contributor";
+                name = "Muse Spark 1.2 Contributor";
+                reasoning = true;
+                input = [
+                  "text"
+                  "image"
+                ];
+                contextWindow = 1048576;
+                maxTokens = 131072;
+                cost = {
+                  input = 0.10;
+                  output = 0.20;
+                  cacheRead = 0.002;
+                  cacheWrite = 0;
+                };
+              }
+            ];
           };
         };
 

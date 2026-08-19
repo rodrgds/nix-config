@@ -170,6 +170,7 @@ let
     "location_longitude"
     "context7_api_key"
     "exa_api_key"
+    "opencode_go_api_key"
     "github_pat"
     "ngrok_auth_token"
   ];
