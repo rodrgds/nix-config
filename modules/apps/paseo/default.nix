@@ -33,10 +33,28 @@ let
     # shell does not inherit the user's full login PATH (common on NixOS with
     # Electron-launched daemons). The paths come from home.sessionPath entries
     # in the corresponding app modules.
+    #
+    # pi and codex are `#!/usr/bin/env node` scripts. The Paseo daemon runs
+    # with a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) so `env node`
+    # fails with 127. Invoke via the Nix-managed node explicitly and inject a
+    # PATH that covers internal `spawn("node", ...)` calls (e.g. pi's
+    # rpc-client.js).
     agents.providers = {
-      pi.command = [ "${constants.homeDir}/.local/share/npm-global/bin/pi" ];
+      pi = {
+        command = [
+          "/run/current-system/sw/bin/node"
+          "${constants.homeDir}/.local/share/npm-global/bin/pi"
+        ];
+        env.PATH = "/run/current-system/sw/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+      };
+      codex = {
+        command = [
+          "/run/current-system/sw/bin/node"
+          "${constants.homeDir}/.local/share/npm-global/bin/codex"
+        ];
+        env.PATH = "/run/current-system/sw/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+      };
       claude.command = [ "${constants.homeDir}/.local/share/npm-global/bin/claude" ];
-      codex.command = [ "${constants.homeDir}/.local/share/npm-global/bin/codex" ];
       opencode.command = [ "${constants.homeDir}/.local/share/npm-global/bin/opencode" ];
     };
   };

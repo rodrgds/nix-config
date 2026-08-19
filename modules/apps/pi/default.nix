@@ -66,6 +66,7 @@ let
     runtimeInputs = [
       pkgs.coreutils
       pkgs.git
+      pkgs.gnused
       pkgs.nodejs
     ];
 
@@ -88,10 +89,26 @@ let
         --no-fund \
         ${lib.concatStringsSep " " managedGlobalNpmPackages}
 
+      # Paseo launches with minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) so
+      # `env node` shebangs fail. The Nix-managed paseo provider now invokes
+      # pi via absolute node, but pi's own rpc-client still does
+      # spawn("node", ...) which needs PATH. Patch it to use
+      # process.execPath so it works regardless of PATH; reapply after
+      # every update until upstream fixes it.
+      rpc_client="$install_root/lib/node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-client.js"
+      if [ -f "$rpc_client" ]; then
+        sed -i -e 's/spawn("node",/spawn(process.execPath,/g' "$rpc_client" || true
+      fi
+
       # Update declaratively configured, unpinned Pi packages without changing
       # Home Manager-owned settings.json.
       if [ -x "$install_root/bin/pi" ]; then
         "$install_root/bin/pi" update --extensions
+      fi
+
+      # Reapply after `pi update --extensions` which may reinstall Pi.
+      if [ -f "$rpc_client" ]; then
+        sed -i -e 's/spawn("node",/spawn(process.execPath,/g' "$rpc_client" || true
       fi
     '';
   };
