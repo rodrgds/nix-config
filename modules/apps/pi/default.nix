@@ -181,6 +181,7 @@ in
           ]
           ++ (map (model: "nine_router/${model.alias}") nineRouterCatalog.models)
           ++ [
+            "opencode/x-preview-f-free"
             "opencode-go/muse-spark-1.2-contributor"
             "openai-codex/gpt-5.6-luna"
             "openai-codex/gpt-5.6-sol"
@@ -264,6 +265,38 @@ in
                   output = 0.20;
                   cacheRead = 0.002;
                   cacheWrite = 0;
+                };
+              }
+            ];
+          };
+
+          # Ox Alpha (0x) free stealth model via OpenCode Zen (`x-preview-f-free`).
+          # Endpoint: https://opencode.ai/zen/v1/chat/completions (openai-completions).
+          # Reuses the same OpenCode Zen API key as opencode-go. Free, zero-retention.
+          providers.opencode = {
+            apiKey = "!${pkgs.coreutils}/bin/cat ${opencodeGoApiKeyPath}";
+            models = [
+              {
+                id = "x-preview-f-free";
+                name = "Ox Alpha Free (0x)";
+                api = "openai-completions";
+                reasoning = true;
+                input = [
+                  "text"
+                  "image"
+                ];
+                contextWindow = 1048576;
+                maxTokens = 131072;
+                cost = {
+                  input = 0;
+                  output = 0;
+                  cacheRead = 0;
+                  cacheWrite = 0;
+                };
+                compat = {
+                  supportsStore = false;
+                  supportsDeveloperRole = false;
+                  maxTokensField = "max_tokens";
                 };
               }
             ];
