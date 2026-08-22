@@ -119,7 +119,7 @@ in
 
     nineRouter.baseURL = lib.mkOption {
       type = lib.types.str;
-      default = "http://rgo-vps:20128/v1";
+      default = "http://rgo-nas:20128/v1";
       description = "9Router OpenAI-compatible endpoint.";
     };
 

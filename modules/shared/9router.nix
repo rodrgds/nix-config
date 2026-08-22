@@ -1,7 +1,7 @@
 # Shared 9Router combo catalog.
 #
 # Single source of truth for the public combo names served by the 9Router
-# gateway on the VPS. Consumed by:
+# gateway on the NAS. Consumed by:
 #   - modules/apps/opencode -> opencode provider model list
 #   - modules/apps/pi       -> Pi custom models provider
 #

@@ -152,11 +152,6 @@ let
     "unprompted_openrouter_api_key"
     "unprompted_smtp_password"
     # "openpost_mastodon_servers"
-    # 9Router
-    "nine_router_jwt_secret"
-    "nine_router_initial_password"
-    "nine_router_api_key_secret"
-    "nine_router_machine_id_salt"
     # Deploy webhook
     "deploy_webhook_secret"
   ];

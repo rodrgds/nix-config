@@ -78,10 +78,6 @@ in
     personal.enable = true;
   };
   vps.hosting.deployments.enable = true;
-  vps."9router" = {
-    enable = true;
-    bindAddress = "100.69.139.47";
-  };
   vps.openpost = {
     enable = true;
     edition = "cloud";

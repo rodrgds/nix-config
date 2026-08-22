@@ -188,7 +188,7 @@ async function listPlainSecretFiles(): Promise<string[]> {
   return output.split("\n").filter(Boolean).sort();
 }
 
-const NINE_ROUTER_MODELS_URL = "http://rgo-vps:20128/v1/models";
+const NINE_ROUTER_MODELS_URL = "http://rgo-nas:20128/v1/models";
 const COMBOS_FILE = join(
   REPO_DIR,
   "modules/shared/9router/combos.json",

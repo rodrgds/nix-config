@@ -33,7 +33,7 @@ in
     nineRouter = {
       baseURL = lib.mkOption {
         type = lib.types.str;
-        default = "http://rgo-vps:20128/v1";
+        default = "http://rgo-nas:20128/v1";
         description = "9Router OpenAI-compatible API base URL.";
       };
     };
@@ -62,7 +62,7 @@ in
               provider = {
                 nine_router = {
                   npm = "@ai-sdk/openai-compatible";
-                  name = "My 9Router (VPS)";
+                  name = "My 9Router (NAS)";
                   options = {
                     baseURL = cfg.nineRouter.baseURL;
                     apiKey = "{env:NINE_ROUTER_API_KEY}";
