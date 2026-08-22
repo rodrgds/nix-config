@@ -91,6 +91,7 @@ in
       "d /var/lib/montra/postgres 0700 70 70 -"
       "d /var/lib/montra/meilisearch 0750 1000 1000 -"
       "d /var/lib/montra/bootstrap 0750 root root -"
+      "d /var/lib/montra/backup-status 0755 root root -"
       "d /var/backup/montra 0750 root root -"
       "f /run/montra-catalog-maintenance.lock 0666 root root -"
     ];
@@ -148,6 +149,27 @@ in
           OBJECT_STORAGE_ACCESS_KEY=${config.sops.placeholder.montra_r2_access_key_id}
           OBJECT_STORAGE_SECRET_KEY=${config.sops.placeholder.montra_r2_secret_access_key}
           OBJECT_STORAGE_PUBLIC_URL=https://media.${cfg.domain}
+          # Catalog operations console identity. The fingerprint is derived
+          # from this pair, so changing either invalidates in-flight reviews.
+          CATALOG_TARGET_ID=montra-production
+          CATALOG_ENVIRONMENT=production
+          CATALOG_CONSOLE_CLIENT_ID=montra-catalog-console
+          ADMIN_CONSOLE_ORIGINS=https://${cfg.domain}
+          # Verified-backup gate. The daily backup job writes status.json after
+          # gzip verification; catalog mutations block while it goes stale.
+          CATALOG_BACKUP_STATUS_FILE=/var/lib/montra/backup-status/status.json
+          CATALOG_BACKUP_MAX_AGE_HOURS=24
+          # Private write-once artifact bucket for source runs. Never exposed
+          # on a public domain; imports reference keys plus their SHA-256.
+          CATALOG_ARTIFACT_STORAGE_PROVIDER=r2
+          CATALOG_ARTIFACT_STORAGE_ENDPOINT=https://1e84f0262ece6e76da6df50801960036.r2.cloudflarestorage.com
+          CATALOG_ARTIFACT_STORAGE_REGION=auto
+          CATALOG_ARTIFACT_STORAGE_BUCKET=montra-artifacts
+          CATALOG_ARTIFACT_STORAGE_ACCESS_KEY_ID=${config.sops.placeholder.montra_r2_artifact_access_key_id}
+          CATALOG_ARTIFACT_STORAGE_SECRET_ACCESS_KEY=${config.sops.placeholder.montra_r2_artifact_secret_access_key}
+          CATALOG_ARTIFACT_STORAGE_FORCE_PATH_STYLE=false
+          # Schedules ship disabled by default on purpose; enabling automated
+          # runs is an explicit later operator decision.
         '';
         mode = "0400";
       };
@@ -323,7 +345,10 @@ in
         image = apiImage;
         environmentFiles = [ config.sops.templates.montra-env.path ];
         ports = [ "127.0.0.1:${toString apiPort}:8787" ];
-        volumes = [ "/run/montra-catalog-maintenance.lock:/run/montra-catalog-maintenance.lock" ];
+        volumes = [
+          "/run/montra-catalog-maintenance.lock:/run/montra-catalog-maintenance.lock"
+          "/var/lib/montra/backup-status:/var/lib/montra/backup-status:ro"
+        ];
         dependsOn = [
           "montra-postgres"
           "montra-meilisearch"
@@ -351,7 +376,10 @@ in
           "admin:worker"
         ];
         environmentFiles = [ config.sops.templates.montra-env.path ];
-        volumes = [ "/run/montra-catalog-maintenance.lock:/run/montra-catalog-maintenance.lock" ];
+        volumes = [
+          "/run/montra-catalog-maintenance.lock:/run/montra-catalog-maintenance.lock"
+          "/var/lib/montra/backup-status:/var/lib/montra/backup-status:ro"
+        ];
         dependsOn = [
           "montra-postgres"
           "montra-meilisearch"
@@ -465,6 +493,16 @@ in
           ${pkgs.gzip}/bin/gzip -t "$partial"
           ${pkgs.coreutils}/bin/mv "$partial" "$backup"
           trap - EXIT
+
+          # The catalog console refuses mutations while this status file goes
+          # stale, so it must only exist after a verified recovery point.
+          ${pkgs.coreutils}/bin/printf '{"verifiedAt":"%s","checksum":"%s","label":"%s"}\n' \
+            "$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            "$(${pkgs.coreutils}/bin/sha256sum "$backup" | ${pkgs.coreutils}/bin/cut -d' ' -f1)" \
+            "$(${pkgs.coreutils}/bin/basename "$backup")" \
+            > /var/lib/montra/backup-status/status.json.tmp
+          ${pkgs.coreutils}/bin/mv /var/lib/montra/backup-status/status.json.tmp \
+            /var/lib/montra/backup-status/status.json
 
           # Full dumps are roughly 2 GiB each on this host. Keep exactly the
           # two newest verified recovery points instead of accumulating by age.

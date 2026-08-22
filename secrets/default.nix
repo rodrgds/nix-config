@@ -141,6 +141,8 @@ let
     "montra_meili_master_key"
     "montra_r2_access_key_id"
     "montra_r2_secret_access_key"
+    "montra_r2_artifact_access_key_id"
+    "montra_r2_artifact_secret_access_key"
     # Unprompted
     "unprompted_deploy_webhook_secret"
     "unprompted_postgres_password"

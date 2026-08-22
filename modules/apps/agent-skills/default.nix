@@ -15,8 +15,13 @@ let
   skillsBin = "${installRoot}/bin/skills";
 
   # All skills live in this repo directory. It is the single source of truth.
-  # Edit skills here; the rebuild syncs them to ~/.agents/skills/.
-  skillsDir = ./skills;
+  # Edit skills here; the rebuild creates a symlink at ~/.agents/skills/.
+  # The skills CLI writes through the symlink, so `skills add` and `skills update`
+  # install directly into the repo. Commit after updating.
+  # Use an absolute string path (not a Nix path like ./skills) so the
+  # symlink points at the mutable repo, not a read-only /nix/store
+  # snapshot that gets GC'd and breaks.
+  skillsDir = "${constants.homeDir}/.config/home/modules/apps/agent-skills/skills";
 
   installSkillsCli = pkgs.writeShellApplication {
     name = "install-skills-cli";
@@ -40,8 +45,6 @@ let
     '';
   };
 
-  # Use `update-agent-skills` to pull upstream skill updates into ~/.agents/skills/.
-  # Then copy changed files back into the repo skills directory and commit.
   updateAgentSkills = pkgs.writeShellApplication {
     name = "update-agent-skills";
 
@@ -78,15 +81,17 @@ in
 
           home.sessionPath = [ "$HOME/${installDir}/bin" ];
 
-          # The repo's skills/ directory is the source of truth.
-          # Rebuild syncs it to ~/.agents/skills/.
-          home.activation.syncSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          # Symlink ~/.agents/skills → repo skills directory (mutable, not /nix/store).
+          # Single source of truth. Skills CLI writes through the symlink.
+          home.activation.linkSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             source=${lib.escapeShellArg skillsDir}
             target="$HOME/.agents/skills"
-            chmod -R u+w "$target" 2>/dev/null || true
-            rm -rf "$target"
-            mkdir -p "$target"
-            cp -a "$source/". "$target/"
+            if [ -d "$target" ] && [ ! -L "$target" ]; then
+              chmod -R u+w "$target" 2>/dev/null || true
+              rm -rf "$target"
+            fi
+            mkdir -p "$(dirname "$target")"
+            ln -sfn "$source" "$target"
           '';
         }
 

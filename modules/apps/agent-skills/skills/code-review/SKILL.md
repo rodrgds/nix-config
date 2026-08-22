@@ -1,115 +1,87 @@
 ---
 name: code-review
-description: Review changes since a fixed point. Track every finding in a ledger, select a risk-based review tier, and verify closures on an incremental delta. Max two cycles. Use when asked to "review since X", review a branch, review a PR, or inspect work-in-progress changes.
+description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
 ---
 
-Two-axis review — **Standards** and **Spec** — of the diff between a stable HEAD and a fixed point the user supplies. Every finding gets a stable ID, a severity, and a disposition. The same reviewers verify closures on the incremental delta between review rounds.
+Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
+
+- **Standards**: does the code conform to this repo's documented coding standards?
+- **Spec**: does the code faithfully implement the originating issue / spec?
+
+Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
 
 The issue tracker should have been provided to you. If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.
 
-## Finding format
-
-Every finding in the ledger carries:
-
-- **ID** — stable per cycle. First cycle: `S-1`, `S-2`, ... (standards) and `P-1`, `P-2`, ... (spec). Second cycle spillover: `N-S-1`, `N-P-1`, etc.
-- **Severity** — `critical` (auth bypass, data loss, security hole — must fix before merge), `major` (correctness or standards violation — blocks merge), `minor` (suggestion, smell, style).
-- **Axis** — `standards` or `spec`.
-- **File** and **Line(s)**.
-- **Quote** — the relevant code.
-- **Description** — what is wrong and how to fix.
-
-Dispositions during fix: `fixed` (with commit ref), `wontfix` (with reason), `deferred` (ticket created), `false-positive` (reviewer error).
-
 ## Process
 
-### 1. Pin the stable SHA
+### 1. Pin the fixed point
 
-Whatever the user said is the fixed point — a commit SHA, branch name, tag, `main`, `HEAD~5`, etc. If they did not specify one, ask.
+Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one, ask for it.
 
-Confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty (`git diff <fixed-point>...HEAD`). Capture the diff command and the commit list (`git log <fixed-point>..HEAD --oneline`). **Done when:** the SHA resolves and the diff is non-empty.
+Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
 
-### 2. Assess risk
+Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
 
-Classify the change as **low**, **medium**, or **high** risk.
+### 2. Identify the spec source
 
-Escalate to **high** when the diff touches authorization or access control, destructive or irreversible operations, database migrations, external service integration, authentication boundaries, encryption, or data retention.
+Look for the originating spec, in this order:
 
-Escalate to **medium** when the diff changes shared state, async flows, error handling, or cross-module interfaces.
-
-Default to **low**.
-
-### 3. Identify the spec source
-
-Look for the originating spec:
-
-1. Issue references in commit messages (`#123`, `Closes #45`, GitLab `!67`) — fetch via the workflow in `docs/agents/issue-tracker.md`.
+1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.), fetched via the workflow in `docs/agents/issue-tracker.md`.
 2. A path the user passed as an argument.
 3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
-4. If nothing is found, ask the user. If they say there is no spec, skip the Spec axis and note this in the final report.
+4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
 
-**Done when:** the spec path is resolved or the user confirms there is none.
+### 3. Identify the standards sources
 
-### 4. Select the review tier
+Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
 
-Choose based on risk:
+On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
 
-- **Low** — one reviewer reads the diff, applies both Standards and Spec in a single pass, fills one ledger.
-- **Medium** — one reviewer reads the diff, produces a ledger with separate `## Standards` and `## Spec` sections.
-- **High** — two independent sub-agents run in parallel: one Standards, one Spec. Each fills its own ledger. See [`PROMPTS.md`](PROMPTS.md) for the sub-agent prompts.
+- **The repo overrides.** A documented repo standard always wins; where it endorses something the baseline would flag, suppress the smell.
+- **Always a judgement call.** Each smell is a labelled heuristic ("possible Feature Envy"), never a hard violation. Like any standard here, skip anything tooling already enforces.
 
-The smell baseline is always part of the Standards context. Read [`SMELLS.md`](SMELLS.md) and include it in the review context — sub-agents have no access to skill files. See [`TIERS.md`](TIERS.md) for full tier definitions.
+Each smell reads *what it is* → *how to fix*; match it against the diff:
 
-### 5. Review
+- **Mysterious Name**: a function, variable, or type whose name doesn't reveal what it does or holds. → rename it; if no honest name comes, the design's murky.
+- **Duplicated Code**: the same logic shape appears in more than one hunk or file in the change. → extract the shared shape, call it from both.
+- **Feature Envy**: a method that reaches into another object's data more than its own. → move the method onto the data it envies.
+- **Data Clumps**: the same few fields or params keep travelling together (a type wanting to be born). → bundle them into one type, pass that.
+- **Primitive Obsession**: a primitive or string standing in for a domain concept that deserves its own type. → give the concept its own small type.
+- **Repeated Switches**: the same `switch`/`if`-cascade on the same type recurs across the change. → replace with polymorphism, or one map both sites share.
+- **Shotgun Surgery**: one logical change forces scattered edits across many files in the diff. → gather what changes together into one module.
+- **Divergent Change**: one file or module is edited for several unrelated reasons. → split so each module changes for one reason.
+- **Speculative Generality**: abstraction, parameters, or hooks added for needs the spec doesn't have. → delete it; inline back until a real need shows.
+- **Message Chains**: long `a.b().c().d()` navigation the caller shouldn't depend on. → hide the walk behind one method on the first object.
+- **Middle Man**: a class or function that mostly just delegates onward. → cut it, call the real target direct.
+- **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
 
-Read the diff against the spec (if present) and the standards. Fill the ledger with every finding — per file, per hunk, per axis. Include the smell baseline on the first pass.
+### 4. Spawn both sub-agents in parallel
 
-**Done when:** every finding is numbered, classified by severity, and in the ledger.
+**Standards sub-agent prompt** should include:
 
-### 6. Fix
+- The full diff command and commit list.
+- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the sub-agent has no other access to it).
+- The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
-The implementer addresses every finding in one batch. Mark each:
+**Spec sub-agent prompt** should include:
 
-- `fixed` — with the commit reference.
-- `wontfix` — with a reason.
-- `deferred` — a ticket has been created.
-- `false-positive` — the reviewer got it wrong.
+- The diff command and commit list.
+- The path or fetched contents of the spec.
+- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
 
-**Done when:** every finding has a disposition. The review cannot proceed until this is true.
+If the spec is missing, skip the Spec sub-agent and note this in the final report.
 
-### 7. Verify the delta (incremental pass)
+### 5. Aggregate
 
-Same reviewers, new context. Reviewers receive:
+Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
 
-- The existing ledger.
-- The incremental diff: `git diff <old-HEAD>...<new-HEAD>`.
-- The old and new SHAs.
+End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
 
-For each finding:
+## Why two axes
 
-- Verify the closure. Check the commit that claims to fix it. Confirm `fixed` findings are actually resolved. Confirm `wontfix` and `deferred` dispositions are sound.
-- If a `wontfix` or `deferred` is disputed, escalate to the human.
-- Inspect the new diff for spillover — new issues introduced by the fixes. Number spillover findings with the cycle prefix (e.g., `N-S-1`).
+A change can pass one axis and fail the other:
 
-**Done when:** every closure is verified and all spillover is in the ledger.
+- Code that follows every standard but implements the wrong thing → **Standards pass, Spec fail.**
+- Code that does exactly what the issue asked but breaks the project's conventions → **Spec pass, Standards fail.**
 
-### 8. Cycle cap
-
-Maximum two review-fix cycles. After the second incremental pass:
-
-- **All clear** — the ticket is ready to merge.
-- **Spillover growing** — the ticket needs splitting.
-- **Disputed dispositions** — escalate to the human.
-
-A third cycle means the ticket is too large or the changes are too entangled. Split or escalate.
-
-## Final report
-
-- **Summary** — total findings per axis, worst issue per axis.
-- **Ledger** — every finding with its final disposition.
-- **Manual verification** — anything that cannot be verified from the diff (browser behaviour, deployed state, provider interaction).
-- **Cycle count** — how many review-fix cycles were used.
-
-## Rules
-
-- When the spec is missing, skip the Spec axis entirely. Note this in the final report.
-- Exclude tooling-enforced checks from the review. Linters, type checkers, and formatters own their domains. The review covers what tooling cannot catch.
+Reporting them separately stops one axis from masking the other.
