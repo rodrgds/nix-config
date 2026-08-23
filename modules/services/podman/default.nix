@@ -125,6 +125,10 @@ let
           echo "podman-image-cleanup: refusing malformed candidate ID: $image_id" >&2
           exit 1
         }
+        if ! podman image exists "$image_id"; then
+          echo "podman-image-cleanup: skipping already removed image $image_id"
+          continue
+        fi
         if [[ -n "''${protected_ids[$image_id]+present}" ]]; then
           echo "podman-image-cleanup: preserving protected image $image_id"
           continue
