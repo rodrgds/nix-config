@@ -66,7 +66,7 @@ in
     "exec --no-startup-id bash ${scriptDir}/screenshot.sh region && python3 ${scriptDir}/twitter_reply.py && notify-send 'Reply copied!'";
   "${mod}+Shift+w" =
     "exec --no-startup-id bash ${scriptDir}/code_to_image.sh && notify-send 'Image generated and copied!'";
-  "${mod}+w" = "exec microsoft-edge";
+  "${mod}+w" = "exec google-chrome-stable";
   "${mod}+n" = "exec thunar";
   "${mod}+period" = "exec --no-startup-id vicinae 'vicinae://launch/core/search-emojis'";
   "Print" = "exec --no-startup-id bash ${scriptDir}/screenshot.sh full";

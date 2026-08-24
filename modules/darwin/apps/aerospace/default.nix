@@ -135,7 +135,7 @@ in
 
              # Application launching (using -n flag to always open new instances)
              alt-enter = 'exec-and-forget open -na Ghostty'
-             alt-w = 'exec-and-forget open -na "Microsoft Edge"'
+             alt-w = 'exec-and-forget open -na "Google Chrome"'
              alt-n = 'exec-and-forget open -a Finder'
 
              # Handy (speech-to-text)
@@ -190,6 +190,10 @@ in
 
           [[on-window-detected]]
           if.app-id = 'com.microsoft.edgemac'
+          run = 'move-node-to-workspace 2'
+
+          [[on-window-detected]]
+          if.app-id = 'com.google.Chrome'
           run = 'move-node-to-workspace 2'
 
           [[on-window-detected]]

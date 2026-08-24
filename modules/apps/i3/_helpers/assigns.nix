@@ -16,6 +16,9 @@ in
     { class = "(?i)zen-browser"; }
     { class = "(?i)microsoft-edge-dev"; }
     { class = "(?i)microsoft-edge"; }
+    { class = "(?i)google-chrome"; }
+    { class = "(?i)chrome"; }
+    { class = "(?i)chromium"; }
     { class = "(?i)Navigator"; }
     { class = "(?i)floorp"; }
     { class = "(?i)vivaldi"; }
