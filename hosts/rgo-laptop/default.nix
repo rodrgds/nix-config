@@ -34,7 +34,8 @@
 
   networking.hostName = "rgo-laptop";
 
-  apps.microsoft-edge.enable = true;
+  apps.microsoft-edge.enable = false;
+  apps.google-chrome.enable = true;
   apps.ghostty.enable = true;
   apps.bash.enable = true;
   apps.git.enable = true;

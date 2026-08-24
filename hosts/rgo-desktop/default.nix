@@ -157,7 +157,8 @@
   apps.winetricks.enable = true;
   apps.mangohud.enable = true;
 
-  apps.microsoft-edge.enable = true;
+  apps.microsoft-edge.enable = false;
+  apps.google-chrome.enable = true;
   apps.ungoogled-chromium.enable = true;
   apps.playwright = {
     enable = true;
