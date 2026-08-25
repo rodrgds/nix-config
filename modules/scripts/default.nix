@@ -110,11 +110,20 @@ in
     }
     # Merge with Darwin-specific configuration
     // lib.optionalAttrs isDarwin {
-      home-manager.users.${username} = mkHomeConfig commonAliases;
+      home-manager.users.${username} = (mkHomeConfig commonAliases) // {
+        sops.secrets = {
+          openrouter_api_key = { };
+        };
+      };
     }
     # Merge with Linux-specific home-manager configuration
     // lib.optionalAttrs isLinux {
-      home-manager.users.${username} = mkHomeConfig linuxAliases;
+      home-manager.users.${username} = (mkHomeConfig linuxAliases) // {
+        sops.secrets = {
+          openrouter_api_key = { };
+          openai_api_key = { };
+        };
+      };
     }
   );
 }
