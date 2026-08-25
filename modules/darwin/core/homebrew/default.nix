@@ -1,6 +1,4 @@
-# Darwin core Homebrew configuration
-# Provides the Homebrew infrastructure (taps, settings)
-# Actual app installations are in hosts/rgo-laptop/homebrew.nix
+# Homebrew infrastructure. App modules own their formulae and casks.
 {
   lib,
   config,

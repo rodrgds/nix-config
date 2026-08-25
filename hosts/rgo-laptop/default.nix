@@ -21,6 +21,11 @@
   profiles.development.enable = true;
   profiles.agentWorkstation.enable = true;
 
+  # Dormant shells kept for intentional, temporary opt-in.
+  apps.fish.enable = false;
+  apps.nushell.enable = false;
+  apps.zsh.enable = false;
+
   nixpkgs.config.allowUnfree = true;
 
   darwin.apps.aerospace.enable = true;
