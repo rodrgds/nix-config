@@ -1,17 +1,23 @@
 {
   lib,
   config,
-  pkgs,
+  inputs,
   username,
   constants,
   ...
 }:
 let
   cfg = config.darwin.apps.aerospace;
-  # Helper to convert hex color to 0x format for Aerospace
-  toAerospaceColor = hex: "0xff${lib.strings.removePrefix "#" hex}";
+  homeDir = "/Users/${username}";
+  helperSource = "${inputs.omacosy}/helper/main.swift";
+  helperSourceRevision = inputs.omacosy.rev or "9e60b396b5e48a862bcb46bca5f2b13a63a822aa";
+  helperBuildId = builtins.hashString "sha256" "${helperSourceRevision}:rgo-aerospace-helper-v1";
+  helperBinary = "${homeDir}/.local/libexec/rgo-aerospace-helper";
 
-  inherit (constants) colors;
+  workspaceChangeCommands = lib.concatStringsSep "; " (
+    lib.optional config.darwin.apps.lightweight-borders.enable ": > /tmp/rgo-aerospace-ws-switch"
+    ++ lib.optional config.darwin.apps.sketchybar.enable "${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE"
+  );
 in
 {
   options.darwin.apps.aerospace = {
@@ -23,220 +29,231 @@ in
     homebrew.casks = [ "aerospace" ];
 
     # Aerospace configuration via home-manager
-    home-manager.users.${username} = {
-      home.file = {
-        ".aerospace.toml".text = ''
-          # AeroSpace configuration
-          # Based on i3 configuration from NixOS
-          # Flexoki Dark theme
+    home-manager.users.${username} =
+      { lib, ... }:
+      {
+        home.file = {
+          ".aerospace.toml".text = ''
+            # AeroSpace configuration
+            # Based on i3 configuration from NixOS
+            # Flexoki Dark theme
 
-          # Config version
-          config-version = 2
+            # Config version
+            config-version = 2
 
-          # Start at login
-          start-at-login = true
-          # Vicinae is owned by launchd; starting it here as well creates two
-          # servers which race over the same control socket.
-          after-startup-command = []
+            # Start at login
+            start-at-login = true
+            # Vicinae is owned by launchd; starting it here as well creates two
+            # servers which race over the same control socket.
+            after-startup-command = []
 
-          # Keep the platform-native bar in sync with Aerospace's workspace state.
-          ${
-            if config.darwin.apps.sketchybar.enable then
-              "exec-on-workspace-change = ['/bin/bash', '-c', '/Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE']"
-            else
-              "# exec-on-workspace-change: SketchyBar is disabled"
-          }
+            # Keep the border and bar in sync with AeroSpace workspace state.
+            exec-on-workspace-change = ['/bin/bash', '-c', '${workspaceChangeCommands}']
 
-          # Normalization (similar to i3 behavior)
-          enable-normalization-flatten-containers = true
-          enable-normalization-opposite-orientation-for-nested-containers = true
+            # Set the next split from the focused window's shape. This gives
+            # AeroSpace the same stable spiral rule as Hyprland's dwindle layout.
+            on-focus-changed = ['exec-and-forget ${helperBinary} split-hint']
 
-          # Accordion padding (gap between windows in accordion layout)
-          accordion-padding = 30
+            # Normalization (similar to i3 behavior)
+            enable-normalization-flatten-containers = false
+            enable-normalization-opposite-orientation-for-nested-containers = false
 
-          # Default layout
-          default-root-container-layout = 'tiles'
-          default-root-container-orientation = 'auto'
+            # Accordion padding (gap between windows in accordion layout)
+            accordion-padding = 30
 
-           # Mouse follows focus when changing monitors
-           on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+            # Default layout
+            default-root-container-layout = 'tiles'
+            default-root-container-orientation = 'auto'
 
-          # Automatically unhide macOS hidden apps
-          automatically-unhide-macos-hidden-apps = false
+             # Mouse follows focus when changing monitors
+             on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
-          # Persistent workspaces (keep workspaces alive even when empty)
-          persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+            # Automatically unhide macOS hidden apps
+            automatically-unhide-macos-hidden-apps = false
 
-          # Gaps configuration (matching i3 gaps)
-          [gaps]
-          inner.horizontal = 6
-          inner.vertical = 6
-          outer.left = 3
-          outer.bottom = 3
-          # macOS already reserves the top region for the menu bar or SketchyBar.
-          outer.top = 3
-          outer.right = 3
+            # Persistent workspaces (keep workspaces alive even when empty)
+            persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 
-           # Main binding mode (equivalent to i3 default)
-           [mode.main.binding]
-           # Workspaces (alt+number, similar to Mod4+number in i3)
-           alt-1 = 'workspace 1'
-           alt-2 = 'workspace 2'
-           alt-3 = 'workspace 3'
-           alt-4 = 'workspace 4'
-           alt-5 = 'workspace 5'
-           alt-6 = 'workspace 6'
-           alt-7 = 'workspace 7'
-           alt-8 = 'workspace 8'
-           alt-9 = 'workspace 9'
-           alt-0 = 'workspace 10'
+            # Gaps configuration (matching i3 gaps)
+            [gaps]
+            inner.horizontal = 6
+            inner.vertical = 6
+            outer.left = 3
+            outer.bottom = 3
+            # macOS already reserves the top region for the menu bar or SketchyBar.
+            outer.top = 3
+            outer.right = 3
 
-           # Move windows to workspaces (alt+shift+number)
-           alt-shift-1 = 'move-node-to-workspace 1'
-           alt-shift-2 = 'move-node-to-workspace 2'
-           alt-shift-3 = 'move-node-to-workspace 3'
-           alt-shift-4 = 'move-node-to-workspace 4'
-           alt-shift-5 = 'move-node-to-workspace 5'
-           alt-shift-6 = 'move-node-to-workspace 6'
-           alt-shift-7 = 'move-node-to-workspace 7'
-           alt-shift-8 = 'move-node-to-workspace 8'
-           alt-shift-9 = 'move-node-to-workspace 9'
-           alt-shift-0 = 'move-node-to-workspace 10'
+             # Main binding mode. Super is Caps Lock held through Karabiner.
+             [mode.main.binding]
+             # Workspaces and moving windows.
+             cmd-ctrl-alt-1 = 'workspace 1'
+             cmd-ctrl-alt-2 = 'workspace 2'
+             cmd-ctrl-alt-3 = 'workspace 3'
+             cmd-ctrl-alt-4 = 'workspace 4'
+             cmd-ctrl-alt-5 = 'workspace 5'
+             cmd-ctrl-alt-6 = 'workspace 6'
+             cmd-ctrl-alt-7 = 'workspace 7'
+             cmd-ctrl-alt-8 = 'workspace 8'
+             cmd-ctrl-alt-9 = 'workspace 9'
+             cmd-ctrl-alt-0 = 'workspace 10'
 
-           # Window focus (vim-style, matching i3's j/k/b/o layout)
-           # Note: Aerospace uses h/j/k/l, i3 uses j/k/b/o
-           # Arrow key focus removed - use alt+h/j/k/l instead to keep alt+arrows free for text editing
-           alt-h = 'focus left'
-           alt-j = 'focus down'
-           alt-k = 'focus up'
-           alt-l = 'focus right'
+             cmd-ctrl-alt-shift-1 = 'move-node-to-workspace 1'
+             cmd-ctrl-alt-shift-2 = 'move-node-to-workspace 2'
+             cmd-ctrl-alt-shift-3 = 'move-node-to-workspace 3'
+             cmd-ctrl-alt-shift-4 = 'move-node-to-workspace 4'
+             cmd-ctrl-alt-shift-5 = 'move-node-to-workspace 5'
+             cmd-ctrl-alt-shift-6 = 'move-node-to-workspace 6'
+             cmd-ctrl-alt-shift-7 = 'move-node-to-workspace 7'
+             cmd-ctrl-alt-shift-8 = 'move-node-to-workspace 8'
+             cmd-ctrl-alt-shift-9 = 'move-node-to-workspace 9'
+             cmd-ctrl-alt-shift-0 = 'move-node-to-workspace 10'
 
-           # Move windows
-           alt-shift-h = 'move left'
-           alt-shift-j = 'move down'
-           alt-shift-k = 'move up'
-           alt-shift-l = 'move right'
+             # Focus and move without taking Option+Arrow away from editors.
+             cmd-ctrl-alt-left = 'focus left'
+             cmd-ctrl-alt-down = 'focus down'
+             cmd-ctrl-alt-up = 'focus up'
+             cmd-ctrl-alt-right = 'focus right'
+             cmd-ctrl-alt-shift-left = 'move left'
+             cmd-ctrl-alt-shift-down = 'move down'
+             cmd-ctrl-alt-shift-up = 'move up'
+             cmd-ctrl-alt-shift-right = 'move right'
 
-            # Window management
-            # Use AppleScript to send Cmd+Q for proper app quitting on macOS
-            alt-q = "close --quit-if-last-window"
-            alt-f = 'fullscreen'
-            alt-space = 'layout floating tiling'
+             # Window and layout controls.
+             cmd-ctrl-alt-w = 'close --quit-if-last-window'
+             cmd-ctrl-alt-f = 'fullscreen --no-outer-gaps'
+             cmd-ctrl-alt-t = 'layout floating tiling'
+             cmd-ctrl-alt-j = 'layout tiles horizontal vertical'
+             cmd-ctrl-alt-s = 'layout accordion horizontal vertical'
+             cmd-ctrl-alt-g = 'layout tiles horizontal vertical'
+             cmd-ctrl-alt-minus = 'resize smart -50'
+             cmd-ctrl-alt-equal = 'resize smart +50'
 
-            # Layouts (matching i3)
-            alt-s = 'layout accordion horizontal vertical'
-            alt-g = 'layout tiles horizontal vertical'
-            # alt-e removed - Aerospace doesn't have 'layout toggle' command
-            # alt-a removed - Aerospace doesn't have 'focus parent' command
+             # Apps and launcher.
+             cmd-ctrl-alt-enter = 'exec-and-forget open -na Ghostty'
+             cmd-ctrl-alt-shift-enter = 'exec-and-forget open -na "Google Chrome"'
+             cmd-ctrl-alt-shift-f = 'exec-and-forget open -a Finder'
+             cmd-ctrl-alt-space = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
+             cmd-ctrl-alt-d = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
+             cmd-ctrl-alt-period = "exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
 
-           # Resize
-           alt-minus = 'resize smart -50'
-           alt-equal = 'resize smart +50'
+             # Screenshot.
+             cmd-ctrl-alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
 
-             # Application launching (using -n flag to always open new instances)
-             alt-enter = 'exec-and-forget open -na Ghostty'
-             alt-w = 'exec-and-forget open -na "Google Chrome"'
-             alt-n = 'exec-and-forget open -a Finder'
+               # Match the desktop input-source toggle. Requires the keyboard-layout module.
+               ${
+                 if config.darwin.apps.keyboard-layout.enable then
+                   "cmd-ctrl-alt-m = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/toggle-keyboard-layout'"
+                 else
+                   "# Super+M: keyboard-layout module is disabled"
+               }
 
-             # Handy (speech-to-text)
-             # alt-shift-h = 'exec-and-forget handy --toggle-transcription'
+             # Lock and reload.
+             cmd-ctrl-alt-shift-l = 'exec-and-forget ${helperBinary} lock'
+             cmd-ctrl-alt-shift-c = 'reload-config'
+             cmd-ctrl-alt-shift-r = 'reload-config'
 
-             # Screenshots (Flameshot)
-             alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
+             # Workspace navigation.
+             cmd-ctrl-alt-tab = 'workspace --wrap-around next'
+             cmd-ctrl-alt-shift-tab = 'workspace --wrap-around prev'
+             cmd-ctrl-alt-b = 'workspace-back-and-forth'
 
-             # Launcher shortcuts mirror the desktop's Vicinae bindings.
-             alt-d = 'exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
-             alt-period = "exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
+             # Service mode.
+             cmd-ctrl-alt-shift-semicolon = 'mode service'
 
-             # Match the desktop input-source toggle. Requires the keyboard-layout module.
-             ${
-               if config.darwin.apps.keyboard-layout.enable then
-                 "alt-m = 'exec-and-forget /Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/toggle-keyboard-layout'"
-               else
-                 "# alt-m: keyboard-layout module is disabled"
-             }
+             # Service mode bindings
+             [mode.service.binding]
+             esc = ['reload-config', 'mode main']
+             r = ['flatten-workspace-tree', 'mode main']
+             f = ['layout floating tiling', 'mode main']
+             backspace = ['close-all-windows-but-current', 'mode main']
 
-           # Lock screen (macOS native) - using alt+ctrl+l to avoid conflict with focus right
-           alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'
+             # Join windows.
+             h = ['join-with left', 'mode main']
+             j = ['join-with down', 'mode main']
+             k = ['join-with up', 'mode main']
+             l = ['join-with right', 'mode main']
 
-            # Config reload (matching i3 - both alt-shift-c and alt-shift-r work)
-            alt-shift-c = 'reload-config'
-            alt-shift-r = 'reload-config'
+            # Window detection callbacks - auto-assign apps to workspaces
+            [[on-window-detected]]
+            if.app-id = 'com.mitchellh.ghostty'
+            run = 'move-node-to-workspace 1'
 
-           # Workspace navigation
-           alt-tab = 'workspace-back-and-forth'
-           alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
+            [[on-window-detected]]
+            if.app-id = 'com.microsoft.edgemac'
+            run = 'move-node-to-workspace 2'
 
-           # Service mode (like i3's resize mode)
-           alt-shift-semicolon = 'mode service'
+            [[on-window-detected]]
+            if.app-id = 'com.google.Chrome'
+            run = 'move-node-to-workspace 2'
 
-           # Service mode bindings
-           [mode.service.binding]
-           esc = ['reload-config', 'mode main']
-           r = ['flatten-workspace-tree', 'mode main']
-           f = ['layout floating tiling', 'mode main']
-           backspace = ['close-all-windows-but-current', 'mode main']
+            [[on-window-detected]]
+            if.app-id = 'md.obsidian'
+            run = 'move-node-to-workspace 4'
 
-           # Join windows (similar to i3 split)
-           alt-shift-h = ['join-with left', 'mode main']
-           alt-shift-j = ['join-with down', 'mode main']
-           alt-shift-k = ['join-with up', 'mode main']
-           alt-shift-l = ['join-with right', 'mode main']
+            [[on-window-detected]]
+            if.app-id = 'com.beeper'
+            run = 'move-node-to-workspace 5'
 
-          # Window detection callbacks - auto-assign apps to workspaces
-          [[on-window-detected]]
-          if.app-id = 'com.mitchellh.ghostty'
-          run = 'move-node-to-workspace 1'
+            # Workspace 10 is the macOS equivalent of the desktop music scratchpad.
+            [[on-window-detected]]
+            if.app-id = 'com.spotify.client'
+            run = 'move-node-to-workspace 10'
 
-          [[on-window-detected]]
-          if.app-id = 'com.microsoft.edgemac'
-          run = 'move-node-to-workspace 2'
+            [[on-window-detected]]
+            if.app-id = 'com.apple.Music'
+            run = 'move-node-to-workspace 10'
 
-          [[on-window-detected]]
-          if.app-id = 'com.brave.Browser'
-          run = 'move-node-to-workspace 2'
+            [[on-window-detected]]
+            if.app-id = 'com.brave.Browser'
+            run = 'move-node-to-workspace 2'
 
-          [[on-window-detected]]
-          if.app-id = 'com.google.Chrome'
-          run = 'move-node-to-workspace 2'
+            # Float specific window types
+            [[on-window-detected]]
+            if.window-title-regex-substring = '^(Picture-in-Picture|PiP)'
+            run = 'layout floating'
 
-          [[on-window-detected]]
-          if.app-id = 'md.obsidian'
-          run = 'move-node-to-workspace 4'
+            [[on-window-detected]]
+            if.app-id = 'com.apple.systempreferences'
+            run = 'layout floating'
 
-          [[on-window-detected]]
-          if.app-id = 'com.beeper'
-          run = 'move-node-to-workspace 5'
+            [[on-window-detected]]
+            if.app-id = 'com.apple.finder'
+            run = 'move-node-to-workspace 3'
 
-          # Workspace 10 is the macOS equivalent of the desktop music scratchpad.
-          [[on-window-detected]]
-          if.app-id = 'com.spotify.client'
-          run = 'move-node-to-workspace 10'
+            # Float specific Finder windows (Info, Preferences)
+            [[on-window-detected]]
+            if.app-id = 'com.apple.finder'
+            if.window-title-regex-substring = '(Info|Preferences)'
+            run = 'layout floating'
+          '';
+        };
 
-          [[on-window-detected]]
-          if.app-id = 'com.apple.Music'
-          run = 'move-node-to-workspace 10'
+        home.activation.compileAerospaceHelper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          set -eu
 
-          # Float specific window types
-          [[on-window-detected]]
-          if.window-title-regex-substring = '^(Picture-in-Picture|PiP)'
-          run = 'layout floating'
+          /bin/mkdir -p ${homeDir}/.local/libexec
+          stamp=${homeDir}/.local/libexec/.rgo-aerospace-helper-source
 
-          [[on-window-detected]]
-          if.app-id = 'com.apple.systempreferences'
-          run = 'layout floating'
+          if [ ! -x ${helperBinary} ] || [ ! -f "$stamp" ] || [ "$(/bin/cat "$stamp")" != ${lib.escapeShellArg helperBuildId} ]; then
+            build_dir="$(/usr/bin/mktemp -d /tmp/rgo-aerospace-helper.XXXXXX)"
+            trap '/bin/rm -rf "$build_dir"' EXIT
 
-          [[on-window-detected]]
-          if.app-id = 'com.apple.finder'
-          run = 'move-node-to-workspace 3'
+            /usr/bin/sed \
+              -e 's|/tmp/omacosy-split-state-|/tmp/rgo-aerospace-split-state-|g' \
+              -e 's|/tmp/omacosy-split-hint.log|/tmp/rgo-aerospace-split-hint.log|g' \
+              ${helperSource} > "$build_dir/helper.swift"
 
-          # Float specific Finder windows (Info, Preferences)
-          [[on-window-detected]]
-          if.app-id = 'com.apple.finder'
-          if.window-title-regex-substring = '(Info|Preferences)'
-          run = 'layout floating'
+            /usr/bin/xcrun swiftc -O \
+              -F /System/Library/PrivateFrameworks \
+              -framework DisplayServices \
+              -o "$build_dir/rgo-aerospace-helper" \
+              "$build_dir/helper.swift"
+            /usr/bin/codesign --force --sign - --identifier dev.rgo.aerospace-helper "$build_dir/rgo-aerospace-helper"
+            /bin/mv "$build_dir/rgo-aerospace-helper" ${helperBinary}
+            printf '%s\n' ${lib.escapeShellArg helperBuildId} > "$stamp"
+          fi
         '';
       };
-    };
   };
 }

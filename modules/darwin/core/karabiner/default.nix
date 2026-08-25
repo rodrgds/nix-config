@@ -12,7 +12,7 @@ let
   karabinerConfig = {
     global = {
       check_for_updates_on_startup = false;
-      show_in_menu_bar = true;
+      show_in_menu_bar = false;
       show_profile_name_in_menu_bar = false;
     };
     profiles = [
@@ -22,6 +22,32 @@ let
         simple_modifications = [ ];
         complex_modifications = {
           rules = [
+            {
+              description = "Use Caps Lock as Super when held and Escape when tapped";
+              manipulators = [
+                {
+                  type = "basic";
+                  from = {
+                    key_code = "caps_lock";
+                    modifiers.optional = [ "any" ];
+                  };
+                  to = [
+                    {
+                      key_code = "left_command";
+                      modifiers = [
+                        "left_control"
+                        "left_option"
+                      ];
+                    }
+                  ];
+                  to_if_alone = [
+                    {
+                      key_code = "escape";
+                    }
+                  ];
+                }
+              ];
+            }
             {
               description = "Remap ± (§) key to backtick (`) and Shift+± to tilde (~)";
               manipulators = [
