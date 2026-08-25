@@ -37,6 +37,7 @@ let
     name = "update-javascript-toolchain";
     runtimeInputs = [
       pkgs.coreutils
+      pkgs.flock
       pkgs.git
       pkgs.gnused
       cfg.node.package
@@ -46,21 +47,11 @@ let
 
       install_root=${lib.escapeShellArg installRoot}
       lock_root=${lib.escapeShellArg lockRoot}
-      lock_dir="$lock_root/javascript-toolchain-update.lock"
-      acquired=0
-
-      cleanup() {
-        if [ "$acquired" = "1" ]; then
-          rmdir "$lock_dir" 2>/dev/null || true
-        fi
-      }
-
-      trap cleanup EXIT INT TERM
+      lock_file="$lock_root/javascript-toolchain-update.lock"
 
       mkdir -p "$install_root" "$lock_root"
-      if mkdir "$lock_dir" 2>/dev/null; then
-        acquired=1
-      else
+      exec 9>"$lock_file"
+      if ! flock --nonblock 9; then
         echo "javascript-toolchain: update already running, skipping" >&2
         exit 0
       fi
