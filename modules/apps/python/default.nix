@@ -18,12 +18,6 @@ in
       (pkgs.python3.withPackages (
         ps: with ps; [
           requests
-          pip
-          tkinter
-          ytmusicapi
-          pyperclip
-          pillow
-          netifaces
         ]
       ))
     ];

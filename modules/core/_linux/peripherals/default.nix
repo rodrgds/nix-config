@@ -9,6 +9,7 @@ in
 
   config = lib.mkIf cfg.enable {
     hardware.logitech.wireless.enable = true;
-    hardware.logitech.wireless.enableGraphical = true;
+    # apps.solaar owns the graphical package and user service.
+    hardware.logitech.wireless.enableGraphical = false;
   };
 }

@@ -10,17 +10,13 @@ let
   cfg = config.profiles;
   inherit (constants) isDarwin isLinux;
 
-  personalWorkstationPackages = [
+  personalWorkstationPackages = lib.optionals isLinux [
     pkgs.htop
     pkgs.unzip
     pkgs.zip
     pkgs.wget
-    pkgs.curl
-    pkgs.gnugrep
     pkgs.tealdeer
     pkgs.openssl
-  ]
-  ++ lib.optionals isLinux [
     pkgs.inxi
     pkgs.pciutils
     pkgs.dmidecode
@@ -31,7 +27,6 @@ let
     pkgs.pavucontrol
     pkgs.playerctl
     pkgs.libnotify
-    pkgs.dconf
   ];
 
   developmentPackages = [
@@ -81,7 +76,6 @@ in
 
       apps.javascript-toolchain = {
         enable = lib.mkDefault true;
-        node.enable = lib.mkDefault true;
         bun.enable = lib.mkDefault true;
       };
 
