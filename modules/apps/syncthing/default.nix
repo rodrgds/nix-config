@@ -43,9 +43,6 @@ in
               rgo-laptop = {
                 id = "ZEVRZIA-4O22UC5-5XPMEAD-HGW3WEZ-F7J6ZTU-USJCCNC-WAB72VT-QIOL6QV";
               };
-              rgo-openclaw = {
-                id = "X3J2265-7PNVAYL-NHNAAJC-OZLWWGQ-QIGL7X2-HIVIDP6-PGEMPIU-LQIFFQB";
-              };
             };
           };
         };

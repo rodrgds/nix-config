@@ -13,12 +13,6 @@ let
   isLinux = !isDarwin;
 in
 {
-  options.services.openclaw.enable = lib.mkOption {
-    type = lib.types.bool;
-    default = false;
-    description = "Enable OpenClaw AI assistant";
-  };
-
   imports = [
     # Cross-platform modules (auto-discovered)
     # import-tree skips _linux/ by default because of /_ in path

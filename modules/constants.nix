@@ -67,7 +67,6 @@ in
   sshPublicKeys = {
     rgo-laptop = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDC/Jjb+539tc/YzVy7RqNVv8YoPlO8d+BPbvEnJkNQ6 rgo@rgo-laptop";
     rgo-desktop = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINK2FzW5OZRry66mr9+mpoaoT/506XUv7D9agrcCwZkl rgo@rgopc";
-    rgo-openclaw = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJcxo+nnir12XLpwQD5C9c3X1xHnG/Tz4Jeg89MMTWVN rgo@rgo-openclaw";
     rgo-termix = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAU8WdT+rpucAPIhHEw6pmj4VGJyAIh21EFDLJ5+6HWn";
     hermes-nas = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFyn3LXPT/xfYPq7/YHH6yNjjjzTCvvKKEfxi5t68XOQ hermes@NAS";
   };

@@ -65,8 +65,7 @@
     # use its package outputs directly rather than following this repo's pins.
     paseo.url = "github:getpaseo/paseo";
 
-    # Use Vicinae's own package set: the nixpkgs 26.05 build links against
-    # Qt 6.11 and produces invalid X11 window geometry under i3.
+    # Use Vicinae's own package set so its package and NixOS module stay aligned.
     vicinae.url = "github:vicinaehq/vicinae";
 
     devenv = {
@@ -93,10 +92,6 @@
       url = "github:linyinfeng/angrr";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # nix-openclaw = {
-    #   url = "github:openclaw/nix-openclaw";
-    # };
   };
 
   outputs =
@@ -114,7 +109,6 @@
       steam-config-nix,
       nix-index-database,
       angrr,
-      # nix-openclaw,
       ...
     }@inputs:
     let
@@ -185,7 +179,6 @@
                   sops-nix.homeManagerModules.sops
                   steam-config-nix.homeModules.default
                   inputs.vicinae.homeManagerModules.default
-                  # nix-openclaw.homeManagerModules.openclaw
                 ];
               };
             }
