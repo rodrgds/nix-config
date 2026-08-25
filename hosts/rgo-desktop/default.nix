@@ -100,9 +100,11 @@
   apps.golang.enable = true;
   apps.vscode.enable = true;
   apps.zed.enable = true;
-  apps.nodejs.enable = true;
-  apps.pnpm.enable = true;
-  apps.bun.enable = true;
+  apps.javascript-toolchain = {
+    enable = true;
+    node.enable = true;
+    bun.enable = true;
+  };
   apps.openjdk.enable = true;
   apps.python.enable = true;
   apps.php.enable = true;

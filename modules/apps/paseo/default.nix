@@ -10,6 +10,7 @@
 let
   cfg = config.apps.paseo;
   inherit (constants) isDarwin isLinux;
+  toolchain = config.apps.javascript-toolchain;
   paseoPkgs = inputs.paseo.packages.${pkgs.stdenv.hostPlatform.system};
 
   # Declarative base config. daemon.listen is not included here because it
@@ -42,24 +43,24 @@ let
     agents.providers = {
       pi = {
         command = [
-          "/run/current-system/sw/bin/node"
-          "${constants.homeDir}/.local/share/npm-global/bin/pi"
+          toolchain.node.binPath
+          "${toolchain.npm.binDir}/pi"
         ];
-        env.PATH = "/run/current-system/sw/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+        env.PATH = "${toolchain.node.binDir}:${toolchain.npm.binDir}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
       };
       codex = {
         command = [
-          "/run/current-system/sw/bin/node"
-          "${constants.homeDir}/.local/share/npm-global/bin/codex"
+          toolchain.node.binPath
+          "${toolchain.npm.binDir}/codex"
         ];
-        env.PATH = "/run/current-system/sw/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+        env.PATH = "${toolchain.node.binDir}:${toolchain.npm.binDir}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
       };
-      claude.command = [ "${constants.homeDir}/.local/share/npm-global/bin/claude" ];
-      opencode.command = [ "${constants.homeDir}/.local/share/npm-global/bin/opencode" ];
+      claude.command = [ "${toolchain.npm.binDir}/claude" ];
+      opencode.command = [ "${toolchain.npm.binDir}/opencode" ];
     };
   };
 
-  baseConfigFile = builtins.toFile "paseo-base-config.json" (builtins.toJSON baseConfig);
+  baseConfigFile = pkgs.writeText "paseo-base-config.json" (builtins.toJSON baseConfig);
 
   # Tailscale CLI locations. On NixOS it comes from nixpkgs; on macOS it ships
   # inside the Homebrew Tailscale app bundle.

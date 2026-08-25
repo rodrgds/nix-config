@@ -8,11 +8,7 @@
 }:
 let
   cfg = config.apps.agents;
-  inherit (constants) isDarwin isLinux;
-
-  installDir = ".local/share/npm-global";
-  installRoot = "${constants.homeDir}/${installDir}";
-  skillsBin = "${installRoot}/bin/skills";
+  toolchain = config.apps.javascript-toolchain;
 
   # All skills live in this repo directory. It is the single source of truth.
   # Edit skills here; the rebuild creates a symlink at ~/.agents/skills/.
@@ -22,46 +18,6 @@ let
   # symlink points at the mutable repo, not a read-only /nix/store
   # snapshot that gets GC'd and breaks.
   skillsDir = "${constants.homeDir}/.config/home/modules/apps/agents/skills";
-
-  installSkillsCli = pkgs.writeShellApplication {
-    name = "install-skills-cli";
-
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.nodejs
-    ];
-
-    text = ''
-      install_root=${lib.escapeShellArg installRoot}
-      mkdir -p "$install_root"
-
-      npm install \
-        --global \
-        --prefix "$install_root" \
-        --ignore-scripts \
-        --no-audit \
-        --no-fund \
-        skills@latest
-    '';
-  };
-
-  updateAgentSkills = pkgs.writeShellApplication {
-    name = "update-agent-skills";
-
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.nodejs
-    ];
-
-    text = ''
-      ${installSkillsCli}/bin/install-skills-cli
-
-      exec ${lib.escapeShellArg skillsBin} \
-        update \
-        --global \
-        --yes
-    '';
-  };
 in
 {
   imports = [
@@ -84,18 +40,24 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    apps.nodejs.enable = true;
+    apps.javascript-toolchain = {
+      enable = true;
+      npm.cliPackages.skills = {
+        package = "skills@latest";
+        postUpdate = [
+          ''
+            if [ -x ${lib.escapeShellArg toolchain.npm.binDir}/skills ]; then
+              ${lib.escapeShellArg toolchain.npm.binDir}/skills update --global --yes
+            fi
+          ''
+        ];
+      };
+    };
 
     home-manager.users.${username} =
       { lib, ... }:
       lib.mkMerge [
         {
-          home.packages = [
-            updateAgentSkills
-          ];
-
-          home.sessionPath = [ "$HOME/${installDir}/bin" ];
-
           # Global AGENTS.md - single source of truth for all agents.
           # Deployed to every harness so instructions stay consistent
           # regardless of which CLI is driving the session.
@@ -118,47 +80,6 @@ in
             ln -sfn "$source" "$target"
           '';
         }
-
-        (lib.optionalAttrs isLinux {
-          systemd.user.services.update-agent-skills = {
-            Unit.Description = "Update skills.sh CLI and global Agent Skills";
-            Service = {
-              Type = "oneshot";
-              ExecStart = "${updateAgentSkills}/bin/update-agent-skills";
-              Nice = 10;
-              IOSchedulingClass = "idle";
-            };
-          };
-
-          systemd.user.timers.update-agent-skills = {
-            Unit.Description = "Periodically update global Agent Skills";
-            Timer = {
-              OnBootSec = "25m";
-              OnUnitActiveSec = "1d";
-              RandomizedDelaySec = "2h";
-              Persistent = true;
-            };
-            Install.WantedBy = [ "timers.target" ];
-          };
-        })
-
-        (lib.optionalAttrs isDarwin {
-          launchd.agents.update-agent-skills = {
-            enable = true;
-            config = {
-              Label = "pt.rgo.update-agent-skills";
-              ProgramArguments = [ "${updateAgentSkills}/bin/update-agent-skills" ];
-              StartCalendarInterval = lib.hm.darwin.mkCalendarInterval "daily";
-              ProcessType = "Background";
-              LowPriorityIO = true;
-              StandardOutPath = "/tmp/update-agent-skills.log";
-              StandardErrorPath = "/tmp/update-agent-skills.err";
-              EnvironmentVariables = {
-                HOME = constants.homeDir;
-              };
-            };
-          };
-        })
       ];
   };
 }

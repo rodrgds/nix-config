@@ -9,24 +9,16 @@
 let
   cfg = config.apps.pi;
   inherit (constants) isDarwin isLinux;
-
-  installDir = ".local/share/npm-global";
-  installRoot = "${constants.homeDir}/${installDir}";
+  toolchain = config.apps.javascript-toolchain;
   packageName = "@earendil-works/pi-coding-agent";
-  packagePath = "${installRoot}/lib/node_modules/@earendil-works/pi-coding-agent/package.json";
 
   nineRouterCatalog = import ../../shared/9router.nix;
-
-  managedGlobalNpmPackages = [
-    "${packageName}@latest"
-    "gnhf@latest"
-  ];
 
   gnhfConfig = ''
     agent: pi
 
     agentPathOverride:
-      pi: ${installRoot}/bin/pi
+      pi: ${toolchain.npm.binDir}/pi
 
     commitMessage:
       preset: conventional
@@ -59,59 +51,6 @@ let
     usePreviousResponseId = true;
     notify = false;
   };
-
-  updateScript = pkgs.writeShellApplication {
-    name = "update-pi-cli";
-
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.git
-      pkgs.gnused
-      pkgs.nodejs
-    ];
-
-    text = ''
-      install_root=${lib.escapeShellArg installRoot}
-      mkdir -p "$install_root"
-
-      # Remove retired packages after migration.
-      npm uninstall \
-        --global \
-        --prefix "$install_root" \
-        @mariozechner/pi-coding-agent \
-        >/dev/null 2>&1 || true
-
-      npm install \
-        --global \
-        --prefix "$install_root" \
-        --ignore-scripts \
-        --no-audit \
-        --no-fund \
-        ${lib.concatStringsSep " " managedGlobalNpmPackages}
-
-      # Paseo launches with minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) so
-      # `env node` shebangs fail. The Nix-managed paseo provider now invokes
-      # pi via absolute node, but pi's own rpc-client still does
-      # spawn("node", ...) which needs PATH. Patch it to use
-      # process.execPath so it works regardless of PATH; reapply after
-      # every update until upstream fixes it.
-      rpc_client="$install_root/lib/node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-client.js"
-      if [ -f "$rpc_client" ]; then
-        sed -i -e 's/spawn("node",/spawn(process.execPath,/g' "$rpc_client" || true
-      fi
-
-      # Update declaratively configured, unpinned Pi packages without changing
-      # Home Manager-owned settings.json.
-      if [ -x "$install_root/bin/pi" ]; then
-        "$install_root/bin/pi" update --extensions
-      fi
-
-      # Reapply after `pi update --extensions` which may reinstall Pi.
-      if [ -f "$rpc_client" ]; then
-        sed -i -e 's/spawn("node",/spawn(process.execPath,/g' "$rpc_client" || true
-      fi
-    '';
-  };
 in
 {
   options.apps.pi = {
@@ -143,7 +82,33 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    apps.nodejs.enable = true;
+    apps.javascript-toolchain = {
+      enable = true;
+      npm.cliPackages = {
+        pi = {
+          package = "${packageName}@latest";
+          bootstrapFiles = [ "lib/node_modules/@earendil-works/pi-coding-agent/package.json" ];
+          retiredPackages = [ "@mariozechner/pi-coding-agent" ];
+          postUpdate = [
+            ''
+              rpc_client="$install_root/lib/node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-client.js"
+              if [ -f "$rpc_client" ]; then
+                sed -i -e 's/spawn("node",/spawn(process.execPath,/g' "$rpc_client" || true
+              fi
+
+              if [ -x "$install_root/bin/pi" ]; then
+                "$install_root/bin/pi" update --extensions
+              fi
+
+              if [ -f "$rpc_client" ]; then
+                sed -i -e 's/spawn("node",/spawn(process.execPath,/g' "$rpc_client" || true
+              fi
+            ''
+          ];
+        };
+        gnhf.package = "gnhf@latest";
+      };
+    };
 
     # Essential CLI tools for pi.
     environment.systemPackages = [
@@ -169,7 +134,7 @@ in
           # Pi's local installs (git package dependency installs run as plain
           # `npm install` in the package dir) resolve their own package.json
           # instead of the global root. A --prefix here would break those.
-          npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
+          npmCommand = [ toolchain.npm.binPath ];
 
           shellPath = "${pkgs.bash}/bin/bash";
 
@@ -327,23 +292,9 @@ in
           home.packages = [
             pkgs.ripgrep
             pkgs.fd
-            updateScript
           ];
 
-          home.sessionPath = [ "$HOME/${installDir}/bin" ];
-
-          # Bootstrap only when Pi or GNHF is absent, or when migrating package
-          # names; routine updates happen through the scheduled updater.
-          home.activation.installPiCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-            if [ ! -x "$HOME/${installDir}/bin/pi" ] || \
-               [ ! -x "$HOME/${installDir}/bin/gnhf" ] || \
-               [ ! -f ${lib.escapeShellArg packagePath} ]; then
-              ${updateScript}/bin/update-pi-cli
-            fi
-          '';
-
           home.file = {
-            ".npmrc".text = "prefix=${installRoot}\n";
             ".gnhf/config.yml".text = gnhfConfig;
             ".pi/agent/settings.json".text = builtins.toJSON piSettings;
             ".pi/agent/models.json".text = builtins.toJSON piModels;
@@ -371,47 +322,6 @@ in
             };
           };
         }
-
-        (lib.optionalAttrs isLinux {
-          systemd.user.services.update-pi-cli = {
-            Unit.Description = "Update Pi and GNHF from npm";
-            Service = {
-              Type = "oneshot";
-              ExecStart = "${updateScript}/bin/update-pi-cli";
-              Nice = 10;
-              IOSchedulingClass = "idle";
-            };
-          };
-
-          systemd.user.timers.update-pi-cli = {
-            Unit.Description = "Periodically update Pi and GNHF";
-            Timer = {
-              OnBootSec = "15m";
-              OnUnitActiveSec = "1d";
-              RandomizedDelaySec = "1h";
-              Persistent = true;
-            };
-            Install.WantedBy = [ "timers.target" ];
-          };
-        })
-
-        (lib.optionalAttrs isDarwin {
-          launchd.agents.update-pi-cli = {
-            enable = true;
-            config = {
-              Label = "pt.rgo.update-pi-cli";
-              ProgramArguments = [ "${updateScript}/bin/update-pi-cli" ];
-              StartCalendarInterval = lib.hm.darwin.mkCalendarInterval "daily";
-              ProcessType = "Background";
-              LowPriorityIO = true;
-              StandardOutPath = "/tmp/update-pi-cli.log";
-              StandardErrorPath = "/tmp/update-pi-cli.err";
-              EnvironmentVariables = {
-                HOME = constants.homeDir;
-              };
-            };
-          };
-        })
       ];
   };
 }

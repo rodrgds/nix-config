@@ -60,7 +60,6 @@ let
       do_beeper_uploads=${if cfg.beeperUploads.enable then "1" else "0"}
       do_bun=${if cfg.bun.enable then "1" else "0"}
       do_npm=${if cfg.npm.enable then "1" else "0"}
-      do_pnpm=${if cfg.pnpm.enable then "1" else "0"}
       do_gradle=${if cfg.gradle.enable then "1" else "0"}
       do_xcode=${if cfg.xcodeDerivedData.enable then "1" else "0"}
       do_cocoapods=${if cfg.cocoapods.enable then "1" else "0"}
@@ -293,24 +292,6 @@ let
         prune_top_level_by_age "$home/.npm/_npx" "$npx_days"
       fi
 
-      if [ "$do_pnpm" = "1" ] && command -v pnpm >/dev/null 2>&1; then
-        pnpm_roots=(
-      ${lib.concatMapStringsSep "\n" (root: "          ${lib.escapeShellArg root}") cfg.pnpm.projectRoots}
-        )
-        for root in "''${pnpm_roots[@]}"; do
-          if [ -d "$root" ]; then
-            log "pruning pnpm store selected by $root"
-            if (cd "$root" && pnpm store prune); then
-              :
-            else
-              status=$?
-              failures=$((failures + 1))
-              log "warning: pnpm store prune failed with status=$status in $root"
-            fi
-          fi
-        done
-      fi
-
       if [ "$do_gradle" = "1" ]; then
         if process_running 'GradleDaemon|(^|/)(gradle|gradlew)( |$)'; then
           log "keeping Gradle cache while a build daemon is active"
@@ -481,18 +462,6 @@ in
       type = lib.types.ints.positive;
       default = 4;
       description = "Keep the npm content cache unless it grows beyond this size.";
-    };
-
-    pnpm.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Run pnpm store prune to remove unreferenced store packages.";
-    };
-
-    pnpm.projectRoots = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ homeDir ];
-      description = "Project roots used to select and prune each active pnpm store version.";
     };
 
     gradle.enable = lib.mkOption {

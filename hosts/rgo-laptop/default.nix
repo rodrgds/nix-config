@@ -49,9 +49,11 @@
   apps.graphviz.enable = true;
   apps.doxygen.enable = true;
   apps.golang.enable = true;
-  apps.nodejs.enable = true;
-  apps.pnpm.enable = true;
-  apps.bun.enable = true;
+  apps.javascript-toolchain = {
+    enable = true;
+    node.enable = true;
+    bun.enable = true;
+  };
   apps.python.enable = true;
   apps.php.enable = true;
   apps.cocoapods.enable = true;
