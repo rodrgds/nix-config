@@ -71,7 +71,7 @@ in
               github_pat = { };
             };
           })
-          (lib.optionalAttrs isLinux {
+          (lib.optionalAttrs (isLinux && !isVps) {
             sops.templates."nix-conf" = {
               content = ''
                 access-tokens = github.com=${config.sops.placeholder.github_pat}
