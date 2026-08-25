@@ -35,10 +35,9 @@
   apps.brave.enable = true;
 
   darwin.apps.aerospace.enable = true;
-  darwin.apps.jankyborders.enable = true;
-  # Instrument rail. It is lightweight and was not the cause of the CPU issue
-  # (Syncthing was); if it ever needs to go, flip to false - the native macOS
-  # menu bar returns. hideMenuBar controls the menu bar in the enabled state.
+  darwin.apps.lightweight-borders.enable = true;
+  # The native bar remains lighter than the tested Swift replacement. Its
+  # observers update shared state without one polling process per item.
   darwin.apps.sketchybar.enable = true;
   darwin.apps.keyboard-layout.enable = true;
 

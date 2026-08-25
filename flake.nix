@@ -61,6 +61,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Source for the lightweight macOS border helper. Pin it because the
+    # helper uses private frameworks whose contract can change with macOS.
+    omacosy = {
+      url = "github:paulsp94/omacosy/9e60b396b5e48a862bcb46bca5f2b13a63a822aa";
+      flake = false;
+    };
+
     # Paseo ships its own nixpkgs-unstable flake and package derivations, so
     # use its package outputs directly rather than following this repo's pins.
     paseo.url = "github:getpaseo/paseo";

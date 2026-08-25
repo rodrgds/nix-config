@@ -30,6 +30,12 @@ let
       done
     fi
 
+    if ! "$vicinae" ping >/dev/null 2>&1; then
+      /usr/bin/osascript -e 'display notification "Unlock the login keychain, then try again." with title "Vicinae could not start"' >/dev/null 2>&1 || true
+      printf '%s\n' 'Vicinae could not start. Unlock the login keychain, then try again.' >&2
+      exit 1
+    fi
+
     if [ "$#" -eq 0 ]; then
       set -- toggle
     elif [ "''${1#vicinae://}" != "$1" ]; then
@@ -202,7 +208,10 @@ in
                       "server"
                       "--replace"
                     ];
-                    KeepAlive = true;
+                    # A locked or stale login keychain makes Vicinae abort.
+                    # Run once at login and let the launcher retry on demand
+                    # instead of asking launchd to create a crash loop.
+                    KeepAlive = false;
                     RunAtLoad = true;
                     ProcessType = "Interactive";
                     StandardOutPath = "/tmp/vicinae.log";

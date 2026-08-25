@@ -8,6 +8,5 @@ sketchybar --add item media left \
     scroll_texts=off \
     click_script="$PLUGIN_DIR/media_click.sh" \
     script="$PLUGIN_DIR/media.sh" \
-    update_freq=3 \
   --subscribe media \
-    aerospace_workspace_change media_change mouse.entered mouse.exited
+    aerospace_workspace_change media_change system_woke mouse.entered mouse.exited

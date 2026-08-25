@@ -59,12 +59,7 @@ let
         icon.background.corner_radius=0 \
         icon.background.y_offset=-9 \
         width="$CONTROL_MIN_WIDTH" \
-        click_script="aerospace workspace ${toString workspace.id}" \
-        script="$PLUGIN_DIR/workspace.sh ${toString workspace.id}" \
-        update_freq=5 \
-      --subscribe "space.${toString workspace.id}" \
-        aerospace_workspace_change space_windows_change system_woke \
-        front_app_switched mouse.entered mouse.exited
+        click_script="aerospace workspace ${toString workspace.id}"
   '') desktopBar.workspaces;
 
   # Alias creation is reversed because SketchyBar prepends right-side items.

@@ -979,6 +979,23 @@
         "type": "github"
       }
     },
+    "omacosy": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787619666,
+        "narHash": "sha256-Ij7MXUHTpjTmU63QuzFnZk3DVpjUHmLsYsHSSDTV5Sg=",
+        "owner": "paulsp94",
+        "repo": "omacosy",
+        "rev": "9e60b396b5e48a862bcb46bca5f2b13a63a822aa",
+        "type": "github"
+      },
+      "original": {
+        "owner": "paulsp94",
+        "repo": "omacosy",
+        "rev": "9e60b396b5e48a862bcb46bca5f2b13a63a822aa",
+        "type": "github"
+      }
+    },
     "on-linux": {
       "flake": false,
       "locked": {
@@ -1048,6 +1065,7 @@
         "nixpkgs": "nixpkgs_5",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-unstable": "nixpkgs-unstable",
+        "omacosy": "omacosy",
         "paseo": "paseo",
         "sops-nix": "sops-nix",
         "steam-config-nix": "steam-config-nix",

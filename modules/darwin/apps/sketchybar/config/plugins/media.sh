@@ -15,7 +15,7 @@ if [ -z "$title" ] || [ "$title" = "null" ]; then
 else
   now_playing="$title"
   if [ -n "$artist" ] && [ "$artist" != "null" ]; then
-    now_playing="$artist — $title"
+    now_playing="$artist - $title"
   fi
 fi
 

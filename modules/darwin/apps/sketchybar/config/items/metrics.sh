@@ -3,7 +3,8 @@
 add_metric_meter() {
   local name="$1"
   local accent="$2"
-  local click_action="$3"
+  local width="$3"
+  local click_action="$4"
 
   sketchybar --add slider "${name}.meter" right 1 \
     --set "${name}.meter" \
@@ -11,6 +12,7 @@ add_metric_meter() {
       label.drawing=off \
       background.drawing=off \
       slider.percentage=0 \
+      slider.width="$width" \
       slider.highlight_color="$accent" \
       slider.knob.drawing=off \
       slider.background.drawing=on \
@@ -24,31 +26,36 @@ add_metric_meter() {
       updates=off
 }
 
-add_metric_meter disk "$YELLOW_BRIGHT" "open /"
+add_metric_meter disk "$YELLOW_BRIGHT" 57 "open /"
 sketchybar --add item disk right \
   --set disk \
     icon="DISK" \
     icon.color="$FG_MUTED" \
-    script="$PLUGIN_DIR/metric.sh disk" \
-    update_freq=30 \
+    width=57 \
     click_script="open /"
 
-add_metric_meter memory "$ORANGE" "open -a 'Activity Monitor'"
+add_metric_meter memory "$ORANGE" 64 "open -a 'Activity Monitor'"
 sketchybar --add item memory right \
   --set memory \
     icon="RAM" \
     icon.color="$FG_MUTED" \
-    script="$PLUGIN_DIR/metric.sh memory" \
-    update_freq=5 \
+    width=64 \
     click_script="open -a 'Activity Monitor'"
 
-add_metric_meter cpu "$ORANGE_BRIGHT" "open -a 'Activity Monitor'"
+add_metric_meter cpu "$ORANGE_BRIGHT" 56 "open -a 'Activity Monitor'"
 sketchybar --add item cpu right \
   --set cpu \
     icon="CPU" \
     icon.color="$FG_MUTED" \
-    script="$PLUGIN_DIR/metric.sh cpu" \
-    update_freq=3 \
+    width=56 \
     click_script="open -a 'Activity Monitor'"
+
+sketchybar --add item metrics.observer right \
+  --set metrics.observer \
+    drawing=off \
+    updates=on \
+    script="$PLUGIN_DIR/metrics.sh" \
+    update_freq=5 \
+  --subscribe metrics.observer system_woke
 
 unset -f add_metric_meter
