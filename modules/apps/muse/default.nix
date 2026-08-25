@@ -26,12 +26,6 @@ in
     # Muse's launcher downloads a checksum-verified native binary and updates it
     # in place. Its Linux build is statically linked, so it runs directly on
     # NixOS without an FHS wrapper.
-    environment.systemPackages = [
-      pkgs.bash
-      pkgs.coreutils
-      pkgs.curl
-    ];
-
     home-manager.users.${username} =
       { lib, ... }:
       {
