@@ -12,7 +12,7 @@ This is Rodrigo's personal workstation configuration. The primary desktop user m
 
 ## Product Purpose
 
-The repository makes one rebuild produce a complete, repeatable desktop environment. For `rgo-desktop`, success means Hyprland and Wayland can become the daily default without losing the established i3 workflow or an immediate X11 fallback.
+The repository makes one rebuild produce a complete, repeatable desktop environment. For `rgo-desktop`, success means Hyprland and Wayland remain the maintained daily environment while preserving the Linux desktop foundations shared with the rest of the config.
 
 ## Operating Context
 
@@ -23,9 +23,8 @@ The repository makes one rebuild produce a complete, repeatable desktop environm
 
 ## Capabilities and Constraints
 
-- Hyprland/Wayland is the default desktop experiment.
-- The complete i3/X11/Polybar implementation remains installed and selectable at login.
-- Quickshell replaces Polybar only in the Hyprland session and preserves the familiar workspace-left, telemetry-and-controls-right information architecture.
+- Hyprland/Wayland is the maintained desktop session.
+- Quickshell provides the desktop bar and preserves the familiar workspace-left, telemetry-and-controls-right information architecture.
 - Native Wayland and XWayland must coexist because the installed application set includes legacy or explicitly X11-bound software.
 - NVIDIA, portals, capture, idle handling, wallpapers, display switching, clipboard tools, and gaming launches must be session-aware.
 - Existing user-authored application configuration and unrelated working-tree changes are not migration material.
@@ -38,15 +37,14 @@ The repository makes one rebuild produce a complete, repeatable desktop environm
 ## Evidence on Hand
 
 - `screenshot.png` shows the incumbent dual-monitor desktop and compact top-bar treatment.
-- `modules/apps/i3/` defines the established keybindings, workspace model, routing, and window behavior.
-- `modules/apps/polybar/default.nix` defines the bar's content, order, colors, typography, and click actions.
+- `modules/apps/hyprland/` defines the maintained Linux desktop session, routing, and window behavior.
+- `modules/apps/quickshell/` defines the bar's content, order, colors, typography, and click actions.
 - No performance benchmark for the new Wayland session exists yet; future work must not claim one until measured on the machine.
 
 ## Product Principles
 
 - Preserve muscle memory wherever the compositor model permits it.
-- Keep fallback paths real, selectable, and maintained—not merely archived source.
-- Make session-specific behavior explicit instead of leaking Wayland settings into X11 or vice versa.
+- Make session-specific behavior explicit instead of leaking Wayland settings into unrelated layers.
 - Establish a conservative, observable baseline before opting into experimental latency or rendering features.
 - Keep desktop state useful at a glance without competing with focused work or fullscreen games.
 

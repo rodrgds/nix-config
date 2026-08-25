@@ -112,20 +112,11 @@
   apps.android-sdk.enable = true;
   apps.dbeaver.enable = true;
   apps.cursor.enable = false;
-  apps.antigravity.enable = false;
   apps.arduino.enable = false;
-  apps.stripe-cli.enable = false;
-  apps.laravel.enable = false;
   apps.affinity.enable = false;
 
   apps.hyprland.enable = true;
   apps.quickshell.enable = true;
-
-  apps.i3.enable = false;
-  apps.polybar.enable = false;
-  apps.bumblebee-status.enable = false;
-  apps.redshift.enable = false;
-  apps.rofi.enable = false;
 
   apps.dunst.enable = true;
   apps.solaar.enable = true;
@@ -145,7 +136,6 @@
   apps.grayjay.enable = true;
 
   apps.cap.enable = false;
-  apps.losslesscut.enable = false;
   apps.darktable.enable = false;
   apps.gimp.enable = false;
   apps.flameshot.enable = false;
@@ -159,7 +149,6 @@
   apps.winetricks.enable = true;
   apps.mangohud.enable = true;
 
-  apps.microsoft-edge.enable = false;
   apps.google-chrome.enable = true;
   apps.ungoogled-chromium.enable = true;
   apps.playwright = {
@@ -173,7 +162,6 @@
   apps.anydesk.enable = true;
 
   apps.teamspeak.enable = false;
-  apps.maestro.enable = false;
   apps.surfshark.enable = false;
   apps.cake-wallet.enable = false;
 

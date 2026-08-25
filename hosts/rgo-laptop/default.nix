@@ -34,7 +34,6 @@
 
   networking.hostName = "rgo-laptop";
 
-  apps.microsoft-edge.enable = false;
   apps.google-chrome.enable = true;
   apps.ghostty.enable = true;
   apps.bash.enable = true;
@@ -61,7 +60,6 @@
   apps.qbittorrent.enable = true;
   apps.vscode.enable = true;
   apps.cursor.enable = false;
-  apps.antigravity.enable = false;
   apps.clion.enable = false;
   apps.virtualization.enable = true;
   apps.opencode.enable = true;
@@ -81,8 +79,6 @@
   apps.android-sdk.enable = true;
   apps.zed.enable = true;
   apps.affinity.enable = false;
-  apps.whop.enable = false;
-  apps.maestro.enable = false;
 
   apps.telegram.enable = true;
   apps.teamspeak.enable = true;
@@ -96,9 +92,8 @@
 
   apps.mpv.enable = true;
   apps.stremio.enable = true;
-  apps.losslesscut.enable = false;
   apps.cake-wallet.enable = false;
-  apps.ollama.enable = false;
+  apps.ollama.enable = true;
 
   apps.syncthing.enable = true;
   apps.handy.enable = true;

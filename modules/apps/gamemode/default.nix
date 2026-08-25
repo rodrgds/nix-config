@@ -26,8 +26,9 @@ in
               renice = 10;
               ioprio = 0;
               disable_splitlock = 1;
-              # i3 does not expose org.freedesktop.ScreenSaver, so attempting
-              # to inhibit it only creates a D-Bus error on every launch.
+              # The current desktop session does not expose
+              # org.freedesktop.ScreenSaver, so attempting to inhibit it only
+              # creates a D-Bus error on every launch.
               inhibit_screensaver = 0;
             };
           };

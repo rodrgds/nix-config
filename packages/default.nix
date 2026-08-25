@@ -30,9 +30,6 @@ affinityOverlay
   # Cap screen recorder (official Linux release).
   cap = prev.callPackage ./cap { };
 
-  # Polybar with i3 support (not enabled by default in nixpkgs)
-  polybar = prev.polybar.override { i3Support = true; };
-
   # Handy - Speech-to-text application
   inherit (inputs.handy.packages.${prev.stdenv.hostPlatform.system}) handy;
 
