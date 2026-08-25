@@ -28,9 +28,6 @@ in
     apps.nh.enable = true;
     core.angrr.enable = true;
 
-    # Nix-specific development tools
-    environment.systemPackages = nixToolPackages;
-
     # Keep GUI-launched editors able to resolve Nix tooling from the user profile,
     # especially on macOS where Homebrew apps are often started outside a shell.
     home-manager.users.${username} = {

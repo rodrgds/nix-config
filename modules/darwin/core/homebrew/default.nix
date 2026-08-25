@@ -34,22 +34,12 @@ in
         {
           name = "nikitabobko/tap";
           trusted = true;
-        } # For Aerospace
+        }
         {
           name = "FelixKratz/formulae";
           trusted = true;
-        } # For JankyBorders
-        {
-          name = "gromgit/fuse";
-          trusted = true;
-        } # For sshfs-mac
+        }
       ];
-
-      # Brews (CLI tools installed via Homebrew)
-      brews = [
-        "mas" # Mac App Store CLI
-      ];
-
     };
 
     # Homebrew 4.6+ refuses formulae/casks from third-party taps until they are
@@ -58,7 +48,7 @@ in
     system.activationScripts.homebrew.text = lib.mkBefore ''
       if [ -x "${brewPrefix}/bin/brew" ]; then
         echo >&2 "trusting Homebrew taps..."
-        PATH="${brewPrefix}/bin:${lib.makeBinPath [ pkgs.mas ]}:$PATH" \
+        PATH="${brewPrefix}/bin:$PATH" \
         sudo \
           --preserve-env=PATH \
           --user=${lib.escapeShellArg config.system.primaryUser} \
@@ -69,10 +59,7 @@ in
               for tap in \
                 beeper/tap \
                 felixkratz/formulae \
-                gromgit/fuse \
-                mobile-dev-inc/tap \
-                nikitabobko/tap \
-                whopio/tap
+                nikitabobko/tap
               do
                 brew trust "$tap" >/dev/null 2>&1 || true
               done

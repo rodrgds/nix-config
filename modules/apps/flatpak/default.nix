@@ -138,12 +138,6 @@ in
       };
 
       apps.xdg-portals.enable = lib.mkDefault true;
-
-      environment.systemPackages = [
-        pkgs.flatpak
-        pkgs.xdg-utils
-      ];
-
       environment.extraInit = ''
         export XDG_DATA_DIRS="/var/lib/flatpak/exports/share:$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS"
       '';

@@ -11,11 +11,6 @@ affinityOverlay
     config.allowUnfree = true;
   };
 
-  stable = import inputs.nixpkgs {
-    inherit (prev.stdenv.hostPlatform) system;
-    config.allowUnfree = true;
-  };
-
   # Custom fonts
   bangers = prev.callPackage ./fonts/bangers { };
   bricolage-grotesque = prev.callPackage ./fonts/bricolage-grotesque { };
