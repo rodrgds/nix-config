@@ -31,7 +31,7 @@ let
     lib.flatten (map (cliPackage: cliPackage.postUpdate) cliPackages)
   );
 
-  toolchainEnabled = cfg.enable || cfg.node.enable || cfg.bun.enable || cliPackages != [ ];
+  toolchainEnabled = cfg.enable || cfg.bun.enable || cliPackages != [ ];
 
   updateScript = pkgs.writeShellApplication {
     name = "update-javascript-toolchain";
@@ -88,32 +88,6 @@ let
 in
 {
   imports = [
-    (lib.mkAliasOptionModule
-      [
-        "apps"
-        "nodejs"
-        "enable"
-      ]
-      [
-        "apps"
-        "javascript-toolchain"
-        "node"
-        "enable"
-      ]
-    )
-    (lib.mkAliasOptionModule
-      [
-        "apps"
-        "bun"
-        "enable"
-      ]
-      [
-        "apps"
-        "javascript-toolchain"
-        "bun"
-        "enable"
-      ]
-    )
     (lib.mkRemovedOptionModule [
       "apps"
       "pnpm"
@@ -125,12 +99,6 @@ in
     enable = lib.mkEnableOption "shared JavaScript toolchain ownership";
 
     node = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Install Node.js and npm.";
-      };
-
       package = lib.mkOption {
         type = lib.types.package;
         default = pkgs.nodejs;
