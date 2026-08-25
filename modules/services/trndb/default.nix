@@ -20,6 +20,16 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "trndb_key"
+      "trndb_secret"
+      "trndb_admin_email"
+      "trndb_admin_password"
+      "trndb_db_user"
+      "trndb_db_password"
+      "trndb_db_name"
+    ] (_: { });
+
     systemd.tmpfiles.rules = [
       "d /var/lib/trndb 0750 root root -"
       "d /var/lib/trndb/postgres 0700 70 70 -"

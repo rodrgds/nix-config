@@ -21,6 +21,10 @@ in
     home-manager.users.${username} =
       { config, lib, ... }:
       {
+        sops.secrets = {
+          ngrok_auth_token = { };
+        };
+
         home.packages = [ pkgs.ngrok ];
 
         home.activation = {

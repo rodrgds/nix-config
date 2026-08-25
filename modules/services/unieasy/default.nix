@@ -18,6 +18,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "unieasy_postgres_user"
+      "unieasy_postgres_password"
+      "unieasy_postgres_db"
+    ] (_: { });
+
     # Create persistent directories
     systemd.tmpfiles.rules = [
       "d /var/lib/unieasy 0750 root root -"

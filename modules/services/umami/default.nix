@@ -24,6 +24,13 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "umami_db_password"
+      "umami_db_user"
+      "umami_db_name"
+      "umami_app_secret"
+    ] (_: { });
+
     # Create persistent directories
     systemd.tmpfiles.rules = [
       "d /var/lib/umami 0750 root root -"

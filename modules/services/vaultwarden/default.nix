@@ -29,6 +29,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [ "vaultwarden_admin_token" ] (_: { });
+
     # Create persistent directories
     systemd.tmpfiles.rules = [
       "d /var/lib/vaultwarden 0750 root root -"

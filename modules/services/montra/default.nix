@@ -85,6 +85,22 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "montra_postgres_password"
+      "montra_better_auth_secret"
+      "montra_admin_emails"
+      "montra_google_client_id"
+      "montra_google_client_secret"
+      "montra_discord_search_webhook_url"
+      "montra_discord_signup_webhook_url"
+      "montra_openrouter_api_key"
+      "montra_meili_master_key"
+      "montra_r2_access_key_id"
+      "montra_r2_secret_access_key"
+      "montra_r2_artifact_access_key_id"
+      "montra_r2_artifact_secret_access_key"
+    ] (_: { });
+
     systemd.tmpfiles.rules = [
       "d /var/lib/montra 0750 root root -"
       "d /var/lib/montra/deploy-deliveries 0700 root root 30d"

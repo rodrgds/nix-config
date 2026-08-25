@@ -102,6 +102,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs (
+      [
+        "shlink_db_password"
+        "shlink_db_user"
+        "shlink_db_name"
+      ]
+      ++ lib.optionals cfg.geoLiteEnabled [ "shlink_geolite_license_key" ]
+    ) (_: { });
 
     # -------------------------------------------------------------------------
     # Persistent directories

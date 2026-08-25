@@ -93,6 +93,15 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "unprompted_postgres_password"
+      "unprompted_better_auth_secret"
+      "unprompted_openrouter_api_key"
+      "unprompted_smtp_password"
+      "unprompted_email_token_secret"
+      "unprompted_operations_token"
+    ] (_: { });
+
     sops.templates."unprompted-production-env" = {
       content = ''
         NODE_ENV=production

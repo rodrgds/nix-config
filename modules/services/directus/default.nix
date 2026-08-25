@@ -86,6 +86,13 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "directus_key"
+      "directus_secret"
+      "directus_admin_email"
+      "directus_admin_password"
+    ] (_: { });
+
     systemd.tmpfiles.rules = [
       "d /var/lib/directus 0750 root root -"
       "d /var/lib/directus/database 0750 1000 1000 -"

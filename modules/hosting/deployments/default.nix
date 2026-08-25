@@ -720,6 +720,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets =
+      lib.genAttrs [ "deploy_webhook_secret" ] (_: { })
+      // lib.optionalAttrs config.vps.unprompted.enable {
+        unprompted_deploy_webhook_secret = { };
+      };
+
     sops.templates."webhook-hooks" = {
       content = ''
         [

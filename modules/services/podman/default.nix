@@ -150,6 +150,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [ "packages_ghcr_token" ] (_: { });
+
     sops.templates.packages-registry-token = {
       content = config.sops.placeholder.packages_ghcr_token;
       mode = "0400";

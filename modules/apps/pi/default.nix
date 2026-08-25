@@ -318,6 +318,12 @@ in
       in
       lib.mkMerge [
         {
+          sops.secrets = {
+            nine_router_api_key = { };
+            exa_api_key = { };
+            opencode_go_api_key = { };
+          };
+
           home.packages = [
             pkgs.ripgrep
             pkgs.fd

@@ -238,6 +238,41 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs (
+      [
+        "openpost_jwt_secret"
+        "openpost_encryption_key"
+        "openpost_posthog_project_token"
+        "openpost_provider_apps"
+        "openpost_google_auth_client_id"
+        "openpost_google_auth_client_secret"
+        "openpost_pexels_api_key"
+        "openpost_pixabay_api_key"
+        "openpost_unsplash_access_key"
+        "openpost_feedback_webhook"
+        "openpost_smtp_password"
+        "openpost_twitter_client_id"
+        "openpost_twitter_client_secret"
+        "openpost_linkedin_client_id"
+        "openpost_linkedin_client_secret"
+        "openpost_threads_client_id"
+        "openpost_threads_client_secret"
+        "openpost_openrouter_api_key"
+      ]
+      ++ lib.optionals isCloud [
+        "openpost_postgres_password"
+        "openpost_s3_endpoint"
+        "openpost_s3_region"
+        "openpost_s3_bucket"
+        "openpost_s3_access_key_id"
+        "openpost_s3_secret_access_key"
+        "openpost_s3_public_base_url"
+        "openpost_paddle_api_key"
+        "openpost_paddle_client_token"
+        "openpost_paddle_webhook_secret"
+      ]
+    ) (_: { });
+
     # Create persistent directories
     # Note: Container runs as user 'openpost' (UID 1000)
     systemd.tmpfiles.rules = [

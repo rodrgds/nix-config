@@ -19,6 +19,11 @@ in
     home-manager.users.${username} =
       { config, ... }:
       {
+        sops.secrets = lib.optionalAttrs isLinux {
+          location_latitude = { };
+          location_longitude = { };
+        };
+
         systemd.user.services.redshift = lib.mkIf isLinux {
           Unit = {
             Description = "Redshift color temperature adjuster";

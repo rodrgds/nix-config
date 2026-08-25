@@ -21,6 +21,15 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "ghost_db_user"
+      "ghost_db_password"
+      "ghost_db_root_password"
+      "ghost_db_name"
+      "ghost_mailgun_user"
+      "ghost_mailgun_password"
+    ] (_: { });
+
     # Create persistent directories
     systemd.tmpfiles.rules = [
       "d /var/lib/ghost 0750 root root -"

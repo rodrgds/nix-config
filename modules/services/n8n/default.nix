@@ -100,6 +100,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [ "n8n_encryption_key" ] (_: { });
+
     # Create persistent directories and deploy Dockerfile
     systemd.tmpfiles.rules = [
       "d /var/lib/n8n 0750 root root -"

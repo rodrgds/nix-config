@@ -32,6 +32,31 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "postiz_jwt_secret"
+      "postiz_postgres_password"
+      "postiz_db_name"
+      "postiz_db_user"
+      "postiz_discord_id"
+      "postiz_discord_secret"
+      "postiz_discord_token"
+      "postiz_instagram_id"
+      "postiz_instagram_secret"
+      "postiz_linkedin_id"
+      "postiz_linkedin_secret"
+      "postiz_mastodon_id"
+      "postiz_mastodon_secret"
+      "postiz_openai_key"
+      "postiz_threads_id"
+      "postiz_threads_secret"
+      "postiz_tiktok_id"
+      "postiz_tiktok_secret"
+      "postiz_x_api"
+      "postiz_x_secret"
+      "postiz_youtube_id"
+      "postiz_youtube_secret"
+    ] (_: { });
+
     # Create persistent directories
     systemd.tmpfiles.rules = [
       "d /var/lib/postiz 0750 root root -"

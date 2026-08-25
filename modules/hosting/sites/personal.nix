@@ -93,6 +93,19 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    sops.secrets = lib.genAttrs [
+      "website_github_access_token"
+      "website_hevy_api_key"
+      "website_lastfm_api_key"
+      "website_lastfm_username"
+      "website_trakt_client_id"
+      "website_trakt_client_secret"
+      "website_tmdb_api_key"
+      "website_directus_url"
+      "website_directus_access_token"
+      "website_personal_data_api_key"
+    ] (_: { });
+
     sops.templates."personal-site-env" = {
       content = ''
         GITHUB_ACCESS_TOKEN=${config.sops.placeholder.website_github_access_token}

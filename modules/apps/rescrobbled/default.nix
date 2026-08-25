@@ -19,6 +19,12 @@ in
     home-manager.users.${username} =
       { config, ... }:
       {
+        sops.secrets = lib.optionalAttrs isLinux {
+          lastfm_api_key = { };
+          lastfm_secret = { };
+          lastfm_username = { };
+        };
+
         home.packages = [ pkgs.rescrobbled ];
 
         systemd.user.services.rescrobbled = lib.mkIf isLinux {
@@ -40,7 +46,7 @@ in
           };
         };
 
-        sops.templates."rescrobbled-config.toml" = {
+        sops.templates."rescrobbled-config.toml" = lib.mkIf isLinux {
           content = ''
             lastfm-key = "${config.sops.placeholder.lastfm_api_key}"
             lastfm-secret = "${config.sops.placeholder.lastfm_secret}"

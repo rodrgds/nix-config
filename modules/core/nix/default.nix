@@ -8,6 +8,7 @@
 let
   cfg = config.core.nix;
   inherit (constants) isLinux isDarwin homeDir;
+  isVps = config.secrets.isVps or false;
 in
 {
   options.core.nix = {
@@ -65,6 +66,11 @@ in
       home-manager.users.${username} =
         { config, lib, ... }:
         lib.mkMerge [
+          (lib.optionalAttrs (!isVps) {
+            sops.secrets = {
+              github_pat = { };
+            };
+          })
           (lib.optionalAttrs isLinux {
             sops.templates."nix-conf" = {
               content = ''
