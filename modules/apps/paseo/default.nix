@@ -12,6 +12,22 @@ let
   inherit (constants) isDarwin isLinux;
   toolchain = config.apps.javascript-toolchain;
   paseoPkgs = inputs.paseo.packages.${pkgs.stdenv.hostPlatform.system};
+  providerPath = lib.concatStringsSep ":" (
+    lib.optionals isLinux [
+      "/run/wrappers/bin"
+      "/run/current-system/sw/bin"
+    ]
+    ++ [
+      toolchain.node.binDir
+      toolchain.npm.binDir
+      "/opt/homebrew/bin"
+      "/usr/local/bin"
+      "/usr/bin"
+      "/bin"
+      "/usr/sbin"
+      "/sbin"
+    ]
+  );
 
   # Declarative base config. daemon.listen is not included here because it
   # depends on the machine's Tailscale IP, which the activation script sets
@@ -32,31 +48,37 @@ let
     };
     # Pin provider binaries so the daemon can find them even when its spawned
     # shell does not inherit the user's full login PATH (common on NixOS with
-    # Electron-launched daemons). The paths come from home.sessionPath entries
-    # in the corresponding app modules.
+    # Electron-launched daemons). The shared JavaScript toolchain supplies the
+    # npm and Node paths.
     #
     # pi and codex are `#!/usr/bin/env node` scripts. The Paseo daemon runs
     # with a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) so `env node`
     # fails with 127. Invoke via the Nix-managed node explicitly and inject a
-    # PATH that covers internal `spawn("node", ...)` calls (e.g. pi's
-    # rpc-client.js).
+    # PATH that covers internal `spawn("node", ...)` calls and the NixOS
+    # privilege wrappers used by shell commands.
     agents.providers = {
       pi = {
         command = [
           toolchain.node.binPath
           "${toolchain.npm.binDir}/pi"
         ];
-        env.PATH = "${toolchain.node.binDir}:${toolchain.npm.binDir}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+        env.PATH = providerPath;
       };
       codex = {
         command = [
           toolchain.node.binPath
           "${toolchain.npm.binDir}/codex"
         ];
-        env.PATH = "${toolchain.node.binDir}:${toolchain.npm.binDir}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+        env.PATH = providerPath;
       };
-      claude.command = [ "${toolchain.npm.binDir}/claude" ];
-      opencode.command = [ "${toolchain.npm.binDir}/opencode" ];
+      claude = {
+        command = [ "${toolchain.npm.binDir}/claude" ];
+        env.PATH = providerPath;
+      };
+      opencode = {
+        command = [ "${toolchain.npm.binDir}/opencode" ];
+        env.PATH = providerPath;
+      };
     };
   };
 
