@@ -6,6 +6,7 @@ import {
   directTargetHelp,
   directTargetFromArgs,
   directTargetUsage,
+  postRebuildHealthCommand,
   rebuildCommand,
 } from "./targets";
 
@@ -101,6 +102,23 @@ describe("local rebuild visibility", () => {
 
     const [, args] = rebuildCommand(target!, "rgo-laptop");
     expect(args).toContain("--show-activation-logs");
+  });
+
+  test("checks laptop health after a local Darwin rebuild", () => {
+    const target = TARGETS.find(({ name }) => name === "rgo-laptop");
+    expect(target).toBeDefined();
+
+    expect(postRebuildHealthCommand(target!, "rgo-laptop")).toEqual([
+      "/run/current-system/sw/bin/rgo-laptop-health",
+      [],
+    ]);
+  });
+
+  test("does not run laptop health for another host", () => {
+    const target = TARGETS.find(({ name }) => name === "rgo-laptop");
+    expect(target).toBeDefined();
+
+    expect(postRebuildHealthCommand(target!, "rgo-desktop")).toBeNull();
   });
 
   test("shows NixOS activation logs", () => {

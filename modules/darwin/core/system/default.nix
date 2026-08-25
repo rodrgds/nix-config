@@ -7,6 +7,7 @@
 }:
 let
   cfg = config.darwin.core.system;
+  laptopHealth = pkgs.writeShellScriptBin "rgo-laptop-health" (builtins.readFile ./laptop-health.sh);
 in
 {
   options.darwin.core.system = {
@@ -14,6 +15,20 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    networking.applicationFirewall = {
+      enable = true;
+      enableStealthMode = true;
+      blockAllIncoming = false;
+      allowSigned = true;
+      allowSignedApp = true;
+    };
+
+    # Keep sudo fast at the laptop and inside long-lived terminal sessions.
+    security.pam.services.sudo_local = {
+      touchIdAuth = true;
+      reattach = true;
+    };
+
     # System-wide macOS settings
     system.defaults = {
       # Dock settings
@@ -102,6 +117,7 @@ in
 
     # Ensure Bash is in /etc/shells and set as login shell
     environment.shells = [ pkgs.bash ];
+    environment.systemPackages = [ laptopHealth ];
 
     # Home-manager state version
     home-manager.users.${username} = {

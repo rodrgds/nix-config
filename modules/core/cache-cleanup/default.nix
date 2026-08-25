@@ -310,6 +310,19 @@ let
 
       if [ "$do_user_cache" = "1" ]; then
         prune_cache_files_by_age "$home/.cache" "$user_cache_days"
+        if [ "$pressure" = "1" ]; then
+          pressure_cache_dirs=(
+      ${lib.concatMapStringsSep "\n" (
+        dir: "      ${lib.escapeShellArg dir}"
+      ) cfg.userCache.pressureDirectories}
+          )
+          for pressure_cache_dir in "''${pressure_cache_dirs[@]}"; do
+            if [ -d "$pressure_cache_dir" ]; then
+              run chmod -R u+w "$pressure_cache_dir"
+            fi
+            clear_cache_dir "pressure-only user" "$pressure_cache_dir" 1
+          done
+        fi
       fi
 
       if [ "$do_go_builds" = "1" ]; then
@@ -492,6 +505,23 @@ in
       type = lib.types.bool;
       default = true;
       description = "Prune stale files and resulting empty directories in the user cache directory.";
+    };
+
+    userCache.pressureDirectories = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = lib.optionals isDarwin [
+        "${homeDir}/Library/Caches/dotslash"
+        "${homeDir}/Library/Caches/Google"
+        "${homeDir}/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation"
+        "${homeDir}/Library/Caches/ms-playwright"
+        "${homeDir}/Library/Caches/beepertexts-updater"
+        "${homeDir}/Library/Caches/vesktop-updater"
+        "${homeDir}/Library/Caches/golangci-lint"
+        "${homeDir}/Library/Caches/bun"
+        "${homeDir}/Library/Caches/pip"
+        "${homeDir}/Library/Caches/node-gyp"
+      ];
+      description = "Reproducible or updater caches cleared only when pressure cleanup runs.";
     };
 
     goBuilds.enable = lib.mkOption {

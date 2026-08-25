@@ -48,6 +48,7 @@ import {
   isNixOS,
   notify,
   parseFlakeInputs,
+  postRebuildHealthCommand,
   rebuildCommand,
 } from "./targets";
 import type { SystemdMajorUpgrade } from "./targets";
@@ -381,6 +382,19 @@ async function runPreparationAndRebuild(
     args,
     { cwd: REPO_DIR, retryNixDaemonCrash: true },
   );
+
+  const healthCommand = postRebuildHealthCommand(target, currentHost);
+  if (success && healthCommand) {
+    const [healthCmd, healthArgs] = healthCommand;
+    const healthy = await app.externalCommandScreen(
+      "Post-rebuild health",
+      `Target: ${target.name}. Checking live desktop services and host security.`,
+      healthCmd,
+      healthArgs,
+      { cwd: REPO_DIR },
+    );
+    if (!healthy) return false;
+  }
 
   if (success) {
     const message = systemdUpgrade
@@ -996,6 +1010,21 @@ async function directRebuild(targetName: string): Promise<void> {
   if (code !== 0) {
     await notify(platform, "Rebuild failed", target.name);
     throw new Error(`Rebuild failed with exit code ${code}.`);
+  }
+
+  const healthCommand = postRebuildHealthCommand(target, currentHost);
+  if (healthCommand) {
+    const [healthCmd, healthArgs] = healthCommand;
+    console.log("");
+    console.log("Checking live laptop health...");
+    const healthCode = await runInteractive(healthCmd, healthArgs, {
+      cwd: REPO_DIR,
+      check: false,
+    });
+    if (healthCode !== 0) {
+      await notify(platform, "Post-rebuild health failed", target.name);
+      throw new Error(`Post-rebuild health failed with exit code ${healthCode}.`);
+    }
   }
 
   await notify(

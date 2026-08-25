@@ -308,6 +308,15 @@ export function rebuildCommand(
   return ["nix", deployArgs];
 }
 
+export function postRebuildHealthCommand(
+  target: Target,
+  currentHost: string,
+): [string, string[]] | null {
+  if (target.kind !== "darwin" || currentHost !== target.name) return null;
+
+  return ["/run/current-system/sw/bin/rgo-laptop-health", []];
+}
+
 function withEarlySudo(command: [string, string[]]): [string, string[]] {
   const [cmd, args] = command;
 
