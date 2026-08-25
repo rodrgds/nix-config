@@ -28,6 +28,8 @@ The three machines are `rgo-desktop` (NixOS), `rgo-laptop` (macOS), `rgo-vps` (N
 
 macOS uses Home Manager `sops.secrets.<name>.path`; `sops.templates` and `config.sops.placeholder.*` are not available on Darwin in this setup.
 
+Declare each secret in its narrowest consuming module under the same enable condition. `secrets/default.nix` owns only the SOPS backend, default file, and age key. Dormant modules keep encrypted values without creating runtime secret files.
+
 Plaintext secrets never reach a commit; the wizard refuses to commit while `secrets/*_plain*` files exist. Preserve that check if you change the wizard.
 
 ## Validation
