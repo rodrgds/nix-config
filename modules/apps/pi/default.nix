@@ -342,7 +342,6 @@ in
             ".pi/agent/settings.json".text = builtins.toJSON piSettings;
             ".pi/agent/models.json".text = builtins.toJSON piModels;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
-            ".pi/agent/AGENTS.md".source = ./_data/global-agents.md;
             ".pi/agent/openai-server-compaction.json".text = openaiServerCompactionConfig;
             ".config/pi/web-search.json".text = webSearchConfig;
             ".pi/web-search.json".text = webSearchConfig;

@@ -1,6 +1,6 @@
 # AGENTS
 
-Instructions for agents working in this repository. Rules that apply everywhere live in the shared global file (`modules/apps/pi/_data/global-agents.md`); this file covers what is specific to this repo.
+Instructions for agents working in this repository. Rules that apply everywhere live in the shared global file (`modules/apps/agents/AGENTS.md`); this file covers what is specific to this repo.
 
 ## Source of truth
 
@@ -46,12 +46,12 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 
 - **Shared source of truth** - when several modules need the same data, keep it in one shared place and import it. `modules/shared/9router.nix` is the model: one 9Router combo catalog consumed by opencode and Pi. The rebuild wizard refreshes its `9router/combos.json` snapshot from the proxy before every rebuild.
 - **Declarative wiring, self-updating tools** - machine wiring is declarative; upstream-managed tools stay mutable when Nix pinning would hurt reliability. npm CLIs (Pi, Codex, skills) self-update on systemd/launchd timers. New tools follow the same model.
-- **Agent skills** - install upstream skills through the declarative mechanism in `modules/apps/agent-skills/default.nix` rather than vendoring them. Project skills for this repo live in `.agents/skills/`.
+- **Agent skills** - install upstream skills through the declarative mechanism in `modules/apps/agents/default.nix` rather than vendoring them. Project skills live in `modules/apps/agents/skills/` (symlinked to `~/.agents/skills/`).
 - **Rebuild commits** - the wizard owns commit semantics (default `<target>: generation <n>` or `<target>: rebuild <date>`, plus OpenRouter or manual messages). Document changes there.
 - **One-off tools** - the global file owns this rule. Repo-specific addition: when the nix-config repo itself needs a tool, use `devenv`.
 
 ## Pi configuration
 
-Pi is configured in `modules/apps/pi/default.nix`; its shared global instructions come from `modules/apps/pi/_data/global-agents.md`. Change Pi there and rebuild.
+Agents (global `AGENTS.md` + skills) are configured in `modules/apps/agents/default.nix`; Pi is configured in `modules/apps/pi/default.nix`. Change them there and rebuild.
 
 Model preferences are configuration, not rules. The default provider/model and picker ordering live in the Pi module; change them where they are defined rather than restating them in a doc.
