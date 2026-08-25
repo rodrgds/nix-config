@@ -46,6 +46,7 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 
 - **Shared source of truth** - when several modules need the same data, keep it in one shared place and import it. `modules/shared/9router.nix` is the model: one 9Router combo catalog consumed by opencode and Pi. The rebuild wizard refreshes its `9router/combos.json` snapshot from the proxy before every rebuild.
 - **Declarative wiring, self-updating tools** - machine wiring is declarative; upstream-managed tools stay mutable when Nix pinning would hurt reliability. Shared npm CLI ownership lives in `modules/apps/javascript-toolchain/default.nix`; harness modules contribute package needs and hook behavior there instead of owning their own prefix or timer.
+- **Role profiles first** - shared workstation defaults belong in `modules/profiles/default.nix`. Host files should mostly pick profiles, keep true host-specific apps explicit, and keep explicit `false` toggles for dormant modules the user may re-enable.
 - **Agent skills** - install upstream skills through the declarative mechanism in `modules/apps/agents/default.nix` rather than vendoring them. Project skills live in `modules/apps/agents/skills/` (symlinked to `~/.agents/skills/`).
 - **Rebuild commits** - the wizard owns commit semantics (default `<target>: generation <n>` or `<target>: rebuild <date>`, plus OpenRouter or manual messages). Document changes there.
 - **One-off tools** - the global file owns this rule. Repo-specific addition: when the nix-config repo itself needs a tool, use `devenv`.

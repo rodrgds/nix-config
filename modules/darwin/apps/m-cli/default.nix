@@ -1,15 +1,27 @@
-# m-cli - Swiss Army Knife for macOS
-# Installed via Homebrew on Darwin
 {
   lib,
   config,
   ...
 }:
 let
-  cfg = config.apps.m-cli;
+  cfg = config.darwin.apps.mCli;
 in
 {
-  options.apps.m-cli = {
+  imports = [
+    (lib.mkAliasOptionModule
+      [
+        "apps"
+        "m-cli"
+      ]
+      [
+        "darwin"
+        "apps"
+        "mCli"
+      ]
+    )
+  ];
+
+  options.darwin.apps.mCli = {
     enable = lib.mkEnableOption "Enable m-cli";
   };
 

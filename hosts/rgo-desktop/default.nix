@@ -79,38 +79,11 @@
     ];
   };
 
-  scripts.enable = true;
-  secrets.enable = true;
+  profiles.personalWorkstation.enable = true;
+  profiles.development.enable = true;
+  profiles.agentWorkstation.enable = true;
 
-  apps.ghostty.enable = true;
-  apps.bash.enable = true;
-  apps.starship.enable = true;
-  apps.git.enable = true;
-  apps.gh.enable = true;
-  apps.ssh.enable = true;
-  apps.neovim.enable = true;
   apps.thunar.enable = true;
-
-  apps.nix-tools.enable = true;
-
-  apps.direnv.enable = true;
-  apps.development-tools.enable = true;
-  apps.graphviz.enable = true;
-  apps.doxygen.enable = true;
-  apps.golang.enable = true;
-  apps.vscode.enable = true;
-  apps.zed.enable = true;
-  apps.javascript-toolchain = {
-    enable = true;
-    node.enable = true;
-    bun.enable = true;
-  };
-  apps.openjdk.enable = true;
-  apps.python.enable = true;
-  apps.php.enable = true;
-  apps.android-studio.enable = true;
-  apps.android-sdk.enable = true;
-  apps.dbeaver.enable = true;
   apps.cursor.enable = false;
   apps.arduino.enable = false;
   apps.affinity.enable = false;
@@ -149,8 +122,6 @@
   apps.winetricks.enable = true;
   apps.mangohud.enable = true;
 
-  apps.google-chrome.enable = true;
-  apps.ungoogled-chromium.enable = true;
   apps.playwright = {
     enable = true;
     browserPackage = pkgs.ungoogled-chromium;
@@ -166,26 +137,7 @@
   apps.cake-wallet.enable = false;
 
   apps.obsidian.enable = true;
-  apps.qbittorrent.enable = true;
-  apps.typst.enable = true;
   apps.qdirstat.enable = true;
 
-  apps.core-packages.enable = true;
   apps.synology-drive.enable = true;
-  apps.ngrok.enable = true;
-
-  apps.opencode.enable = true;
-  apps.agents.enable = true;
-  apps.pi.enable = true;
-  apps.codex.enable = true;
-  apps.claude.enable = true;
-  apps.paseo = {
-    enable = true;
-    tailscale.enable = true;
-  };
-  apps.muse.enable = true;
-  apps.t3-code.enable = true;
-
-  apps.handy.enable = true;
-  apps.vicinae.enable = true;
 }

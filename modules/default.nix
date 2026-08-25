@@ -1,12 +1,22 @@
-# Main modules entry point
-{ ... }:
+# Main modules entry point shared by NixOS and nix-darwin.
+{
+  constants,
+  lib,
+  ...
+}:
 {
   imports = [
     ./apps
     ./core
-    ./hosting
+    ./profiles
     ./scripts
-    ./services
     ../secrets
+  ]
+  ++ lib.optionals constants.isLinux [
+    ./hosting
+    ./services
+  ]
+  ++ lib.optionals constants.isDarwin [
+    ./darwin
   ];
 }

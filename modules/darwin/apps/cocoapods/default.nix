@@ -1,15 +1,27 @@
-# CocoaPods - Dependency manager for Cocoa projects
-# Installed via Homebrew on Darwin
 {
   lib,
   config,
   ...
 }:
 let
-  cfg = config.apps.cocoapods;
+  cfg = config.darwin.apps.cocoapods;
 in
 {
-  options.apps.cocoapods = {
+  imports = [
+    (lib.mkAliasOptionModule
+      [
+        "apps"
+        "cocoapods"
+      ]
+      [
+        "darwin"
+        "apps"
+        "cocoapods"
+      ]
+    )
+  ];
+
+  options.darwin.apps.cocoapods = {
     enable = lib.mkEnableOption "Enable CocoaPods";
   };
 

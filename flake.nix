@@ -209,15 +209,8 @@
                 (import ./packages { inherit inputs; })
               ];
             }
-            # Core modules (cross-platform)
-            ./modules/core
-            ./modules/scripts
-            # App modules (with cross-platform support)
-            ./modules/apps
-            # Darwin-specific modules
-            ./modules/darwin
-            # Secrets management
-            ./secrets
+            # Shared module root
+            ./modules
             # Host-specific configuration
             ./hosts/${hostname}
             # nix-index-database for comma and command-not-found
