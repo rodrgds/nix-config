@@ -51,13 +51,14 @@ let
     # Electron-launched daemons). The shared JavaScript toolchain supplies the
     # npm and Node paths.
     #
-    # pi and codex are `#!/usr/bin/env node` scripts. The Paseo daemon runs
-    # with a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) so `env node`
-    # fails with 127. Invoke via the Nix-managed node explicitly and inject a
+    # Pi is a `#!/usr/bin/env node` script. The Paseo daemon runs with a
+    # minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) so `env node` fails with
+    # 127. Invoke it via the Nix-managed node explicitly and inject a
     # PATH that covers internal `spawn("node", ...)` calls and the NixOS
     # privilege wrappers used by shell commands.
     agents.providers = {
       pi = {
+        enabled = true;
         command = [
           toolchain.node.binPath
           "${toolchain.npm.binDir}/pi"
@@ -65,20 +66,16 @@ let
         env.PATH = providerPath;
       };
       codex = {
-        command = [
-          toolchain.node.binPath
-          "${toolchain.npm.binDir}/codex"
-        ];
-        env.PATH = providerPath;
+        enabled = false;
       };
       claude = {
-        command = [ "${toolchain.npm.binDir}/claude" ];
-        env.PATH = providerPath;
+        enabled = false;
       };
       opencode = {
-        command = [ "${toolchain.npm.binDir}/opencode" ];
-        env.PATH = providerPath;
+        enabled = false;
       };
+      copilot.enabled = false;
+      omp.enabled = false;
     };
   };
 
@@ -97,8 +94,8 @@ let
       ];
 
   # Write the Nix-managed base config and merge daemon.listen from Tailscale.
-  # Preserves any keys the user added at runtime while ensuring Nix-owned
-  # defaults stay in place.
+  # Preserve runtime keys outside the provider catalog, which is fully managed
+  # here so Paseo only offers Pi.
   setPaseoTailscaleListen = pkgs.writeShellApplication {
     name = "set-paseo-tailscale-listen";
     runtimeInputs = [
@@ -120,9 +117,9 @@ let
               cp ${lib.escapeShellArg baseConfigFile} "$cfg_file"
             fi
 
-            # Merge Nix-managed base keys on top of the existing config. Runtime-
-            # added keys survive; Nix-owned keys are updated on rebuild.
-            merged="$(jq -s '.[0] * .[1]' "$cfg_file" ${lib.escapeShellArg baseConfigFile})"
+            # Merge Nix-managed base keys on top of the existing config, then
+            # replace the provider catalog instead of retaining stale entries.
+            merged="$(jq -s '.[1] as $base | (.[0] * $base) | .agents.providers = $base.agents.providers' "$cfg_file" ${lib.escapeShellArg baseConfigFile})"
             umask 077
             printf '%s\n' "$merged" > "$cfg_file.tmp"
             mv -f "$cfg_file.tmp" "$cfg_file"
@@ -141,7 +138,10 @@ let
           exit 0
         fi
 
-        ip="$("$tailscale_bin" ip -4 2>/dev/null | head -n1)"
+        if ! ip="$("$tailscale_bin" ip -4 2>/dev/null | head -n1)"; then
+          echo "paseo: tailscale is not ready; skipping daemon.listen" >&2
+          exit 0
+        fi
         if [ -z "$ip" ]; then
           echo "paseo: tailscale has no IPv4 address yet; skipping daemon.listen" >&2
           exit 0

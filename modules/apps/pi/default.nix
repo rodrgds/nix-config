@@ -29,28 +29,14 @@ let
 
   managedPackages = [
     "npm:pi-web-access"
-    "npm:pi-commandcode-provider"
+    "npm:@howaboua/pi-codex-conversion"
+    "npm:@howaboua/pi-cache-hit-predictor"
     "npm:pi-powerline-footer"
     "npm:pi-copy-all"
     "npm:@narumitw/pi-goal"
     "npm:@narumitw/pi-btw"
     "npm:@agnishc/edb-context-viewer"
-    # Codex-style OpenAI server-side compaction for openai/* and openai-codex/*
-    # models. Experimental; mirrors how codex uses the Responses compaction v2
-    # protocol. Self-updates from repo HEAD via `pi update --extensions`.
-    "git:github.com/algal/pi-openai-server-compaction"
   ];
-
-  # Config for the pi-openai-server-compaction extension. Matches the
-  # extension's documented defaults; kept here so it is tunable in the repo.
-  openaiServerCompactionConfig = builtins.toJSON {
-    enabled = true;
-    includeAzure = false;
-    compactThreshold = 0;
-    thresholdRatio = 0.7;
-    usePreviousResponseId = true;
-    notify = false;
-  };
 in
 {
   options.apps.pi = {
@@ -138,14 +124,10 @@ in
 
           shellPath = "${pkgs.bash}/bin/bash";
 
-          defaultProvider = "opencode-go";
-          defaultModel = "muse-spark-1.2-contributor";
+          defaultProvider = "nine_router";
+          defaultModel = "good";
           defaultThinkingLevel = "high";
-          enabledModels = [
-            "commandcode/xiaomi/mimo-v2.5-pro"
-          ]
-          ++ (map (model: "nine_router/${model.alias}") nineRouterCatalog.models)
-          ++ [
+          enabledModels = (map (model: "nine_router/${model.alias}") nineRouterCatalog.models) ++ [
             "opencode/x-preview-f-free"
             "opencode-go/muse-spark-1.2-contributor"
             "openai-codex/gpt-5.6-luna"
@@ -299,7 +281,6 @@ in
             ".pi/agent/settings.json".text = builtins.toJSON piSettings;
             ".pi/agent/models.json".text = builtins.toJSON piModels;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
-            ".pi/agent/openai-server-compaction.json".text = openaiServerCompactionConfig;
             ".config/pi/web-search.json".text = webSearchConfig;
             ".pi/web-search.json".text = webSearchConfig;
             ".pi/agent/themes/flexoki.json".text = builtins.toJSON (
