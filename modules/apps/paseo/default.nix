@@ -12,12 +12,18 @@ let
   inherit (constants) isDarwin isLinux;
   toolchain = config.apps.javascript-toolchain;
   paseoPkgs = inputs.paseo.packages.${pkgs.stdenv.hostPlatform.system};
+  homeManagerBinDir =
+    if isDarwin then
+      "${constants.homeDir}/.local/state/nix/profiles/home-manager/home-path/bin"
+    else
+      "/etc/profiles/per-user/${username}/bin";
   providerPath = lib.concatStringsSep ":" (
     lib.optionals isLinux [
       "/run/wrappers/bin"
       "/run/current-system/sw/bin"
     ]
     ++ [
+      homeManagerBinDir
       toolchain.node.binDir
       toolchain.npm.binDir
       "/opt/homebrew/bin"
@@ -48,8 +54,8 @@ let
     };
     # Pin provider binaries so the daemon can find them even when its spawned
     # shell does not inherit the user's full login PATH (common on NixOS with
-    # Electron-launched daemons). The shared JavaScript toolchain supplies the
-    # npm and Node paths.
+    # Electron-launched daemons). Include the Home Manager profile for managed
+    # developer tools; the shared JavaScript toolchain supplies npm and Node.
     #
     # Pi is a `#!/usr/bin/env node` script. The Paseo daemon runs with a
     # minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) so `env node` fails with
