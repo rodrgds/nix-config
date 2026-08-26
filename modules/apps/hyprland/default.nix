@@ -10,6 +10,20 @@ let
   cfg = config.apps.hyprland;
   inherit (constants) isLinux;
 
+  hyprlandPackage = config.programs.hyprland.package;
+  hyprlandSessionPath =
+    lib.makeBinPath [ hyprlandPackage ]
+    + ":/run/wrappers/bin:/etc/profiles/per-user/${username}/bin:/run/current-system/sw/bin";
+  hyprlandUWSMLauncher = pkgs.writeShellApplication {
+    name = "Hyprland";
+    text = ''
+      export PATH=${hyprlandSessionPath}:$PATH
+      exec ${lib.getExe' hyprlandPackage "start-hyprland"} \
+        --path ${lib.getExe hyprlandPackage} \
+        -- "$@"
+    '';
+  };
+
   color = name: lib.removePrefix "#" constants.colors.${name};
   hyprlandLua =
     lib.replaceStrings
@@ -103,11 +117,24 @@ in
       withUWSM = true;
       xwayland.enable = true;
     };
+    programs.uwsm.waylandCompositors.hyprland-rgo = {
+      prettyName = "Hyprland";
+      comment = "Hyprland compositor managed by UWSM";
+      binPath = "${hyprlandUWSMLauncher}/bin/Hyprland";
+    };
+
+    # Keep live rebuilds from restarting UWSM lifecycle services. Stopping any
+    # of these triggers a full graphical-session shutdown by design.
+    systemd.user.services = {
+      "wayland-session-bindpid@".restartIfChanged = false;
+      "wayland-wm-env@".restartIfChanged = false;
+      "wayland-wm@".restartIfChanged = false;
+    };
 
     # Keep the greeter on X11 for predictable NVIDIA startup; the desktop
     # session itself is UWSM-managed Hyprland on Wayland.
     services.displayManager = {
-      defaultSession = "hyprland-uwsm";
+      defaultSession = "hyprland-rgo-uwsm";
       sddm = {
         enable = true;
         wayland.enable = false;
