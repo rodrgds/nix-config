@@ -84,14 +84,19 @@
   profiles.agentWorkstation.enable = true;
 
   # Dormant tools kept for intentional, temporary opt-in.
+  apps.claude.enable = false;
   apps.davinci-resolve.enable = false;
   apps.fish.enable = false;
   apps.lamp.enable = false;
   apps.lunarclient.enable = false;
   apps.nushell.enable = false;
+  apps.ollama.enable = false;
+  apps.opencode.enable = false;
+  apps.vscode.enable = false;
   apps.zsh.enable = false;
 
   apps.thunar.enable = true;
+  apps.brave.enable = true;
   apps.cursor.enable = false;
   apps.arduino.enable = false;
   apps.affinity.enable = false;

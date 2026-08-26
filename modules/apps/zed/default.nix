@@ -9,7 +9,32 @@
 }:
 let
   cfg = config.apps.zed;
-  inherit (constants) isDarwin isLinux;
+  inherit (constants) fonts isDarwin isLinux;
+  zedSettings = {
+    auto_install_extensions.flexoki-themes = true;
+    theme = {
+      mode = "dark";
+      dark = "Flexoki Dark";
+      light = "Flexoki Light";
+    };
+    ui_font_family = fonts.ui;
+    ui_font_size = fonts.sizes.normal;
+    buffer_font_family = fonts.primary;
+    buffer_font_size = fonts.sizes.large;
+    buffer_line_height = "standard";
+    autosave = "on_focus_change";
+    format_on_save = "on";
+    features.inline_completion = false;
+    terminal = {
+      font_family = fonts.primary;
+      font_size = fonts.sizes.large;
+      line_height = "standard";
+    };
+    telemetry = {
+      metrics = false;
+      diagnostics = false;
+    };
+  };
 in
 {
   options.apps.zed = {
@@ -28,12 +53,7 @@ in
       })
       {
         home-manager.users.${username} = {
-          xdg.configFile."zed/settings.json".text = builtins.toJSON {
-            theme = "One Dark";
-            features.inline_completion = false;
-            telemetry.metrics = false;
-            telemetry.diagnostics = false;
-          };
+          xdg.configFile."zed/settings.json".text = builtins.toJSON zedSettings;
         };
       }
     ]

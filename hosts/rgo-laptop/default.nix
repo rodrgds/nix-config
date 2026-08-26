@@ -21,12 +21,18 @@
   profiles.development.enable = true;
   profiles.agentWorkstation.enable = true;
 
-  # Dormant shells kept for intentional, temporary opt-in.
+  # Dormant tools kept for intentional, temporary opt-in.
+  apps.claude.enable = false;
   apps.fish.enable = false;
   apps.nushell.enable = false;
+  apps.ollama.enable = false;
+  apps.opencode.enable = false;
+  apps.vscode.enable = false;
   apps.zsh.enable = false;
 
   nixpkgs.config.allowUnfree = true;
+
+  apps.brave.enable = true;
 
   darwin.apps.aerospace.enable = true;
   darwin.apps.jankyborders.enable = true;
@@ -55,7 +61,6 @@
   apps.mpv.enable = true;
   apps.stremio.enable = true;
   apps.cake-wallet.enable = false;
-  apps.ollama.enable = true;
 
   darwin.core.networking.tailscale.enable = true;
   core.docker.enable = true;

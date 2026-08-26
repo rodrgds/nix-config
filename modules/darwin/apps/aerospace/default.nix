@@ -193,6 +193,10 @@ in
           run = 'move-node-to-workspace 2'
 
           [[on-window-detected]]
+          if.app-id = 'com.brave.Browser'
+          run = 'move-node-to-workspace 2'
+
+          [[on-window-detected]]
           if.app-id = 'com.google.Chrome'
           run = 'move-node-to-workspace 2'
 

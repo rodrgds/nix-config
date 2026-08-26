@@ -54,14 +54,14 @@ let
         close_on_focus_loss = true;
         consider_preedit = true;
         favorites = [
-          "@ShyAssassin/vicinae-extension-vscode-recents-0:open-recents"
+          # "@ShyAssassin/vicinae-extension-vscode-recents-0:open-recents"
           "clipboard:history"
           "@nikbpetrov/vicinae-extension-it-tools-0:it-tools-command"
           "@LuggaPugga/vicinae-extension-port-killer-0:port-killer"
           "@marcjulian/store.raycast.obsidian:dailyNoteCommand"
         ];
         pop_to_root_on_close = true;
-        search_files_in_root = true;
+        search_files_in_root = false;
         launcher_window.opacity = constants.display.opacity;
         font.normal = {
           family = constants.fonts.ui;
