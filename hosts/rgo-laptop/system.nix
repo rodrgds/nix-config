@@ -7,7 +7,7 @@
     dock = {
       # Add specific dock items for this host
       persistent-apps = [
-        "/Applications/Google Chrome.app"
+        "/Applications/Brave Browser.app"
         "/Applications/Visual Studio Code.app"
         "/Applications/Ghostty.app"
         "/Applications/Obsidian.app"

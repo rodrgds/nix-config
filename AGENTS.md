@@ -65,4 +65,5 @@ Model preferences are configuration, not rules. The default provider/model and p
 - AeroSpace uses the pinned omacosy split-hint helper for dwindle-like placement. Its two normalization options must stay off or AeroSpace will flatten the split tree.
 - SketchyBar is the shared-token Darwin renderer. Keep workspace and metric state in their single observer scripts instead of adding per-item polling.
 - `darwin.apps.lightweight-borders` builds the pinned omacosy single-layer ring with Apple's Swift compiler. Update the source pin and both helper build IDs together when adopting upstream helper changes.
+- macOS 26 protects the default browser choice from command-line writes. Keep browser activation idempotent and nonfatal, verify the result, and make a changed choice in System Settings under Desktop & Dock.
 - Every successful local laptop rebuild runs `rgo-laptop-health`. Extend that check when a required desktop service, security setting, or launchd label changes.

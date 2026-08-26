@@ -131,7 +131,7 @@ in
 
              # Apps and launcher.
              cmd-ctrl-alt-enter = 'exec-and-forget open -na Ghostty'
-             cmd-ctrl-alt-shift-enter = 'exec-and-forget open -na "Google Chrome"'
+             cmd-ctrl-alt-shift-enter = 'exec-and-forget open -na "Brave Browser"'
              cmd-ctrl-alt-shift-f = 'exec-and-forget open -a Finder'
              cmd-ctrl-alt-space = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
              cmd-ctrl-alt-d = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'

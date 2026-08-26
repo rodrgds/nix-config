@@ -62,6 +62,17 @@ else
   fail "SketchyBar does not answer queries"
 fi
 
+if command -v duti >/dev/null 2>&1; then
+  browser_handler="$(duti -d https 2>/dev/null || true)"
+  if [ "$browser_handler" = "com.brave.Browser" ]; then
+    ok "Brave is the default web browser"
+  else
+    fail "Brave is not the default web browser"
+  fi
+else
+  fail "duti is unavailable, so the default web browser cannot be checked"
+fi
+
 if /opt/homebrew/bin/vicinae ping >/dev/null 2>&1; then
   ok "Vicinae answers ping"
 else
@@ -76,7 +87,7 @@ else
 fi
 
 stealth_state="$(/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode 2>/dev/null || true)"
-if printf '%s\n' "$stealth_state" | grep -Fq 'enabled'; then
+if printf '%s\n' "$stealth_state" | grep -Eq 'enabled|is on'; then
   ok "Firewall stealth mode is enabled"
 else
   fail "Firewall stealth mode is disabled"
