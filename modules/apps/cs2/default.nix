@@ -72,27 +72,25 @@ in
       programs.steam.config = lib.mkIf isLinux {
         enable = true;
         onSteamRunning = "close";
-        apps.cs2-wayland = {
-          id = 730;
-          launchOptions = {
-            wrappers = [
-              (lib.getExe pkgs.gamemode)
-              # (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
-              # (lib.getExe pkgs.mangohud)
-              "${moduleDir}/apps/cs2/wrapper.sh"
-            ];
-            args = [
-              "-novid"
-              "-nojoy"
-              "-fullscreen"
-              "-h"
-              "960"
-              "-w"
-              "1280"
-              "+exec"
-              "autoexec.cfg"
-            ];
-          };
+        apps."730" = {
+          name = "cs2-wayland";
+          wrappers = [
+            (lib.getExe pkgs.gamemode)
+            # (lib.getExe' pkgs.obs-studio-plugins.obs-vkcapture "obs-gamecapture")
+            # (lib.getExe pkgs.mangohud)
+            "${moduleDir}/apps/cs2/wrapper.sh"
+          ];
+          args = [
+            "-novid"
+            "-nojoy"
+            "-fullscreen"
+            "-h"
+            "960"
+            "-w"
+            "1280"
+            "+exec"
+            "autoexec.cfg"
+          ];
         };
       };
     };

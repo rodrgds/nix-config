@@ -15,7 +15,9 @@ let
 
   androidSdk = inputs.android-nixpkgs.sdk.${hostSystem} (
     sdkPkgs: with sdkPkgs; [
-      cmdline-tools-latest
+      # Version 23 adds an unpatched native `android` binary that cannot run
+      # while android-nixpkgs assembles the SDK on NixOS.
+      cmdline-tools-22-0
       build-tools-34-0-0
       platform-tools
       platforms-android-34
