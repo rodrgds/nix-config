@@ -98,6 +98,17 @@ in
              cmd-ctrl-alt-9 = 'workspace 9'
              cmd-ctrl-alt-0 = 'workspace 10'
 
+             alt-1 = 'workspace 1'
+             alt-2 = 'workspace 2'
+             alt-3 = 'workspace 3'
+             alt-4 = 'workspace 4'
+             alt-5 = 'workspace 5'
+             alt-6 = 'workspace 6'
+             alt-7 = 'workspace 7'
+             alt-8 = 'workspace 8'
+             alt-9 = 'workspace 9'
+             alt-0 = 'workspace 10'
+
              cmd-ctrl-alt-shift-1 = 'move-node-to-workspace 1'
              cmd-ctrl-alt-shift-2 = 'move-node-to-workspace 2'
              cmd-ctrl-alt-shift-3 = 'move-node-to-workspace 3'
@@ -109,6 +120,17 @@ in
              cmd-ctrl-alt-shift-9 = 'move-node-to-workspace 9'
              cmd-ctrl-alt-shift-0 = 'move-node-to-workspace 10'
 
+             alt-shift-1 = 'move-node-to-workspace 1'
+             alt-shift-2 = 'move-node-to-workspace 2'
+             alt-shift-3 = 'move-node-to-workspace 3'
+             alt-shift-4 = 'move-node-to-workspace 4'
+             alt-shift-5 = 'move-node-to-workspace 5'
+             alt-shift-6 = 'move-node-to-workspace 6'
+             alt-shift-7 = 'move-node-to-workspace 7'
+             alt-shift-8 = 'move-node-to-workspace 8'
+             alt-shift-9 = 'move-node-to-workspace 9'
+             alt-shift-0 = 'move-node-to-workspace 10'
+
              # Focus and move without taking Option+Arrow away from editors.
              cmd-ctrl-alt-left = 'focus left'
              cmd-ctrl-alt-down = 'focus down'
@@ -118,6 +140,15 @@ in
              cmd-ctrl-alt-shift-down = 'move down'
              cmd-ctrl-alt-shift-up = 'move up'
              cmd-ctrl-alt-shift-right = 'move right'
+
+             alt-h = 'focus left'
+             alt-j = 'focus down'
+             alt-k = 'focus up'
+             alt-l = 'focus right'
+             alt-shift-h = 'move left'
+             alt-shift-j = 'move down'
+             alt-shift-k = 'move up'
+             alt-shift-l = 'move right'
 
              # Window and layout controls.
              cmd-ctrl-alt-w = 'close --quit-if-last-window'
@@ -129,6 +160,14 @@ in
              cmd-ctrl-alt-minus = 'resize smart -50'
              cmd-ctrl-alt-equal = 'resize smart +50'
 
+             alt-q = 'close --quit-if-last-window'
+             alt-f = 'fullscreen'
+             alt-space = 'layout floating tiling'
+             alt-s = 'layout accordion horizontal vertical'
+             alt-g = 'layout tiles horizontal vertical'
+             alt-minus = 'resize smart -50'
+             alt-equal = 'resize smart +50'
+
              # Apps and launcher.
              cmd-ctrl-alt-enter = 'exec-and-forget open -na Ghostty'
              cmd-ctrl-alt-shift-enter = 'exec-and-forget open -na "Brave Browser"'
@@ -137,29 +176,45 @@ in
              cmd-ctrl-alt-d = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
              cmd-ctrl-alt-period = "exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
 
+             alt-enter = 'exec-and-forget open -na Ghostty'
+             alt-w = 'exec-and-forget open -na "Brave Browser"'
+             alt-n = 'exec-and-forget open -a Finder'
+             alt-d = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
+             alt-period = "exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
+
              # Screenshot.
              cmd-ctrl-alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
+             alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
 
                # Match the desktop input-source toggle. Requires the keyboard-layout module.
                ${
                  if config.darwin.apps.keyboard-layout.enable then
-                   "cmd-ctrl-alt-m = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/toggle-keyboard-layout'"
+                   ''
+                     cmd-ctrl-alt-m = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/toggle-keyboard-layout'
+                     alt-m = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/toggle-keyboard-layout'
+                   ''
                  else
-                   "# Super+M: keyboard-layout module is disabled"
+                   "# Super+M and Option+M: keyboard-layout module is disabled"
                }
 
              # Lock and reload.
              cmd-ctrl-alt-shift-l = 'exec-and-forget ${helperBinary} lock'
              cmd-ctrl-alt-shift-c = 'reload-config'
              cmd-ctrl-alt-shift-r = 'reload-config'
+             alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'
+             alt-shift-c = 'reload-config'
+             alt-shift-r = 'reload-config'
 
              # Workspace navigation.
              cmd-ctrl-alt-tab = 'workspace --wrap-around next'
              cmd-ctrl-alt-shift-tab = 'workspace --wrap-around prev'
              cmd-ctrl-alt-b = 'workspace-back-and-forth'
+             alt-tab = 'workspace-back-and-forth'
+             alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
 
              # Service mode.
              cmd-ctrl-alt-shift-semicolon = 'mode service'
+             alt-shift-semicolon = 'mode service'
 
              # Service mode bindings
              [mode.service.binding]
@@ -173,6 +228,10 @@ in
              j = ['join-with down', 'mode main']
              k = ['join-with up', 'mode main']
              l = ['join-with right', 'mode main']
+             alt-shift-h = ['join-with left', 'mode main']
+             alt-shift-j = ['join-with down', 'mode main']
+             alt-shift-k = ['join-with up', 'mode main']
+             alt-shift-l = ['join-with right', 'mode main']
 
             # Window detection callbacks - auto-assign apps to workspaces
             [[on-window-detected]]
