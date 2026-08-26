@@ -33,12 +33,22 @@ in
     lib.mkMerge [
       # Linux: Install via nixpkgs and configure via home-manager
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.ghostty ];
+        environment.systemPackages = [
+          pkgs.ghostty
+          pkgs.xdg-terminal-exec
+        ];
 
         home-manager.users.${username} = _: {
           programs.ghostty = {
             enable = true;
             settings = ghosttySettings;
+          };
+
+          # Use the XDG terminal selector as the single default, then bridge
+          # Xfce's legacy preferred-application API to it for Thunar actions.
+          xdg.configFile = {
+            "xdg-terminals.list".text = "com.mitchellh.ghostty.desktop\n";
+            "xfce4/helpers.rc".text = "TerminalEmulator=${lib.getExe pkgs.xdg-terminal-exec}\n";
           };
         };
       })

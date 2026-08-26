@@ -124,11 +124,22 @@ in
     };
 
     # Keep live rebuilds from restarting UWSM lifecycle services. Stopping any
-    # of these triggers a full graphical-session shutdown by design.
+    # of these triggers a full graphical-session shutdown by design. UWSM also
+    # prepares the graphical-session environment itself, so its units must not
+    # replace the manager's PATH with NixOS's minimal service default.
     systemd.user.services = {
-      "wayland-session-bindpid@".restartIfChanged = false;
-      "wayland-wm-env@".restartIfChanged = false;
-      "wayland-wm@".restartIfChanged = false;
+      "wayland-session-bindpid@" = {
+        enableDefaultPath = false;
+        restartIfChanged = false;
+      };
+      "wayland-wm-env@" = {
+        enableDefaultPath = false;
+        restartIfChanged = false;
+      };
+      "wayland-wm@" = {
+        enableDefaultPath = false;
+        restartIfChanged = false;
+      };
     };
 
     # Keep the greeter on X11 for predictable NVIDIA startup; the desktop
