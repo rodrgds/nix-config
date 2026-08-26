@@ -94,8 +94,8 @@ let
     # Bash aliases
     programs.bash.shellAliases = aliases;
 
-    # Add scripts to PATH
-    home.sessionPath = [ "${homeDir}/.config/home/scripts" ];
+    # home.file installs these executables under ~/scripts.
+    home.sessionPath = [ "${homeDir}/scripts" ];
   };
 in
 {
