@@ -26,6 +26,7 @@ in
           systemd.user.services.solaar = lib.mkIf isLinux {
             Unit = {
               Description = "Solaar Logitech device manager";
+              After = [ "graphical-session.target" ];
               PartOf = [ "graphical-session.target" ];
             };
             Install = {

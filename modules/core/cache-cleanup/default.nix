@@ -50,6 +50,7 @@ let
       esac
 
       home=${lib.escapeShellArg homeDir}
+      xdg_cache_home="''${XDG_CACHE_HOME:-$home/.cache}"
       nix_cache_dir="$home/.cache/nix"
       interval_seconds=${toString cfg.intervalSeconds}
       transient_days=${toString cfg.transientRetentionDays}
@@ -265,7 +266,10 @@ let
         if process_running '(^|/)(bun)( |$).*(install|add|update)'; then
           log "keeping Bun caches while a package operation is active"
         else
-          bun_caches=( "$home/.bun/install/cache" )
+          bun_caches=(
+            "$xdg_cache_home/.bun/install/cache"
+            "$home/.bun/install/cache"
+          )
           bun_caches+=(
       ${lib.concatMapStringsSep "\n" (
         dir: "            ${lib.escapeShellArg dir}"
@@ -462,7 +466,7 @@ in
     bun.extraDirectories = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "Additional reproducible Bun package caches managed like the default cache under `$HOME/.bun`.";
+      description = "Additional reproducible Bun package caches managed like the XDG and legacy caches.";
     };
 
     npm.enable = lib.mkOption {

@@ -67,7 +67,7 @@
   apps.syncthing.enable = true;
   core.printing.enable = true;
   core.docker.enable = true;
-  apps.virtualization.enable = true;
+  apps.virtualization.enable = false;
   core.downloads-cleanup.enable = true;
   core.cache-cleanup = {
     enable = true;

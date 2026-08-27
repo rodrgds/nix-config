@@ -19,6 +19,7 @@ in
       (lib.optionalAttrs isLinux {
         virtualisation.docker = {
           enable = true;
+          enableOnBoot = false;
           package = pkgs.docker_29;
         };
       })

@@ -21,6 +21,8 @@
   profiles.development.enable = true;
   profiles.agentWorkstation.enable = true;
 
+  apps.virtualization.enable = false;
+
   # Dormant tools kept for intentional, temporary opt-in.
   apps.claude.enable = false;
   apps.fish.enable = false;

@@ -68,6 +68,7 @@ let
         ];
         pop_to_root_on_close = true;
         search_files_in_root = false;
+        providers.files.preferences.autoIndexing = false;
         launcher_window.opacity = constants.display.opacity;
         font.normal = {
           family = constants.fonts.ui;
