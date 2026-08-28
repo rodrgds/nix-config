@@ -9,6 +9,10 @@
       "displayName": "good"
     },
     {
+      "alias": "memory",
+      "displayName": "memory"
+    },
+    {
       "alias": "openrouter-free",
       "displayName": "openrouter-free"
     }
