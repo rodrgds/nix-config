@@ -20,6 +20,7 @@ in
         apps.flatpak = {
           enable = true;
           packages = [ "com.surfshark.Surfshark" ];
+          overrides."com.surfshark.Surfshark".Context.sockets = [ "wayland" ];
         };
 
         home-manager.users.${username} = _: {

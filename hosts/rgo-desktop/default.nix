@@ -146,7 +146,7 @@
   apps.anydesk.enable = true;
 
   apps.teamspeak.enable = false;
-  apps.surfshark.enable = false;
+  apps.surfshark.enable = true;
   apps.cake-wallet.enable = false;
 
   apps.obsidian.enable = true;
