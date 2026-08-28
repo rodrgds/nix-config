@@ -2,7 +2,6 @@
   lib,
   config,
   pkgs,
-  username,
   ...
 }:
 let
@@ -14,15 +13,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = [
-      pkgs.xarchiver
-      pkgs.thunar
-      pkgs.tumbler
-      pkgs.thunar-archive-plugin
-    ];
-
-    home-manager.users.${username} = _: {
-      # Thunar is configured through dconf/gsettings
+    programs.thunar = {
+      enable = true;
+      plugins = [ pkgs.thunar-archive-plugin ];
     };
+
+    environment.systemPackages = [
+      pkgs.file-roller
+      pkgs.tumbler
+    ];
   };
 }
