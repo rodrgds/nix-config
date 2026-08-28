@@ -262,6 +262,10 @@ in
           workflow = "none";
           exaApiKey = "!${pkgs.coreutils}/bin/cat ${exaApiKeyPath}";
         };
+
+        codexConversionConfig = builtins.toJSON {
+          voice.serverShortcut = "ctrl+alt+v";
+        };
       in
       lib.mkMerge [
         {
@@ -281,6 +285,7 @@ in
             ".pi/agent/settings.json".text = builtins.toJSON piSettings;
             ".pi/agent/models.json".text = builtins.toJSON piModels;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
+            ".pi/agent/pi-codex-conversion.json".text = codexConversionConfig;
             ".config/pi/web-search.json".text = webSearchConfig;
             ".pi/web-search.json".text = webSearchConfig;
             ".pi/agent/themes/flexoki.json".text = builtins.toJSON (

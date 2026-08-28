@@ -134,7 +134,10 @@ let
           continue
         fi
         echo "podman-image-cleanup: removing unprotected image $image_id ($mode)"
-        podman image rm "$image_id"
+        # An unprotected image can still have several stale tags. Remove the
+        # image and all of its aliases after container and deployment aliases
+        # have been captured in the protected set above.
+        podman image rm --force "$image_id"
         removed=$((removed + 1))
       done < "$candidates"
 

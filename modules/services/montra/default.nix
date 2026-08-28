@@ -17,7 +17,7 @@ let
   # NixOS switch (montra-api uses the same pattern with a bun one-liner).
   pythonHealthCheck =
     url:
-    "--health-cmd=python -c \"import urllib.request,time\nfor i in range(30):\n    try:\n        urllib.request.urlopen('${url}')\n        exit(0)\n    except Exception:\n        time.sleep(1)\nexit(1)\"";
+    "--health-cmd=python -c \"import urllib.request,time\nfor i in range(60):\n    try:\n        urllib.request.urlopen('${url}')\n        exit(0)\n    except Exception:\n        time.sleep(1)\nexit(1)\"";
   montraMaintenance = pkgs.writeShellScriptBin "montra-catalog-maintenance" ''
     set -euo pipefail
     [ "$#" -gt 0 ] || {
@@ -340,7 +340,7 @@ in
           "--pull=never"
           (pythonHealthCheck "http://127.0.0.1:8811/health")
           "--health-interval=30s"
-          "--health-timeout=35s"
+          "--health-timeout=65s"
           "--health-retries=10"
           "--memory=3g"
         ];
@@ -352,7 +352,7 @@ in
           "--pull=never"
           (pythonHealthCheck "http://127.0.0.1:8812/health/ready")
           "--health-interval=30s"
-          "--health-timeout=35s"
+          "--health-timeout=65s"
           "--health-retries=10"
           "--memory=2g"
         ];
