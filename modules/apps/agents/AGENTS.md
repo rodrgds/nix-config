@@ -16,6 +16,7 @@
 * When fixing a bug, first reproduce it at the closest practical end-user boundary. Then add the smallest stable regression test that proves the same behavior, observe it fail for the expected reason, implement the fix, and observe it pass.
 * Write tests that prove observable behavior through stable public interfaces and would fail on a plausible regression; expected results must come from an independent source of truth, and tests must not assert implementation details, mock internal collaborators, or merely restate the implementation.
 * A test is not useful merely because it executes changed code or increases coverage.
+* Tautological tests are considered harmful.
 
 ## Engineering
 
