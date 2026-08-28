@@ -124,8 +124,8 @@ in
 
           shellPath = "${pkgs.bash}/bin/bash";
 
-          defaultProvider = "nine_router";
-          defaultModel = "good";
+          defaultProvider = "openai-codex";
+          defaultModel = "gpt-5.6-sol";
           defaultThinkingLevel = "high";
           enabledModels = (map (model: "nine_router/${model.alias}") nineRouterCatalog.models) ++ [
             "opencode/x-preview-f-free"
