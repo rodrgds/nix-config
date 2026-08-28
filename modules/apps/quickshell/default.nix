@@ -40,6 +40,64 @@ let
   };
 
   vicinaePackage = inputs.vicinae.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  askpass = pkgs.writeShellApplication {
+    name = "rgo-sudo-askpass";
+    text = ''
+      if [[ -z "''${XDG_RUNTIME_DIR:-}" ]]; then
+        echo "rgo-sudo-askpass: XDG_RUNTIME_DIR is not set" >&2
+        exit 1
+      fi
+
+      umask 077
+      request_root="$XDG_RUNTIME_DIR/rgo-sudo-askpass"
+      ${pkgs.coreutils}/bin/mkdir -p "$request_root"
+      ${pkgs.coreutils}/bin/chmod 700 "$request_root"
+      request_dir="$(${pkgs.coreutils}/bin/mktemp -d "$request_root/request.XXXXXX")"
+      socket_path="$request_dir/reply.sock"
+
+      cleanup() {
+        ${pkgs.coreutils}/bin/rm -rf -- "$request_dir"
+      }
+      trap cleanup EXIT HUP INT TERM
+
+      command="$(${pkgs.procps}/bin/ps -o args= -p "$PPID" 2>/dev/null || true)"
+
+      response="$(
+        ${pkgs.socat}/bin/socat -u -T 300 UNIX-LISTEN:"$socket_path",mode=0600 STDOUT &
+        listener_pid=$!
+
+        for _ in {1..100}; do
+          [[ -S "$socket_path" ]] && break
+          ${pkgs.coreutils}/bin/sleep 0.01
+        done
+
+        if [[ ! -S "$socket_path" ]]; then
+          echo "rgo-sudo-askpass: failed to open response socket" >&2
+          kill "$listener_pid" 2>/dev/null || true
+          exit 1
+        fi
+
+        accepted="$(${pkgs.quickshell}/bin/quickshell -c rgo-bar ipc call askpass request \
+          "$socket_path" "$command")" || {
+          kill "$listener_pid" 2>/dev/null || true
+          exit 1
+        }
+
+        if [[ "$accepted" != "true" ]]; then
+          kill "$listener_pid" 2>/dev/null || true
+          exit 1
+        fi
+
+        wait "$listener_pid"
+      )" || exit 1
+
+      if [[ "''${response:0:1}" != "A" ]]; then
+        exit 1
+      fi
+
+      printf '%s\n' "''${response:1}"
+    '';
+  };
   runtimeQml = pkgs.replaceVars ./config/Runtime.qml.in {
     bashPath = lib.getExe pkgs.bash;
     dfPath = lib.getExe' pkgs.coreutils "df";
@@ -82,6 +140,11 @@ in
           enable = true;
           target = "graphical-session.target";
         };
+      };
+
+      home = {
+        packages = [ askpass ];
+        sessionVariables.SUDO_ASKPASS = lib.getExe askpass;
       };
 
       # UWSM exposes graphical-session.target for session-scoped services.

@@ -10,6 +10,7 @@ FORM: First-ranked compact instrument rail, staged as a per-monitor operational 
 */
 
 import Quickshell
+import Quickshell.Io
 import qs
 
 ShellRoot {
@@ -19,6 +20,18 @@ ShellRoot {
         Bar {
             required property var modelData
             screen: modelData
+        }
+    }
+
+    AskpassModal {
+        id: askpassModal
+    }
+
+    IpcHandler {
+        target: "askpass"
+
+        function request(socketPath: string, command: string): bool {
+            return askpassModal.request(socketPath, command);
         }
     }
 }
