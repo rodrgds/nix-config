@@ -182,9 +182,11 @@ in
              alt-d = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
              alt-period = "exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
 
-             # Screenshot.
-             cmd-ctrl-alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
-             alt-shift-s = 'exec-and-forget /Applications/flameshot.app/Contents/MacOS/flameshot gui'
+             # Screenshot annotation and screen color picker.
+             cmd-ctrl-alt-shift-s = 'exec-and-forget /usr/bin/open "shottr://grab/area?then=edit"'
+             alt-shift-s = 'exec-and-forget /usr/bin/open "shottr://grab/area?then=edit"'
+             cmd-ctrl-alt-shift-c = 'exec-and-forget /usr/bin/open "pika://pick/foreground/hex"'
+             alt-shift-c = 'exec-and-forget /usr/bin/open "pika://pick/foreground/hex"'
 
                # Match the desktop input-source toggle. Requires the keyboard-layout module.
                ${
@@ -199,10 +201,8 @@ in
 
              # Lock and reload.
              cmd-ctrl-alt-shift-l = 'exec-and-forget ${helperBinary} lock'
-             cmd-ctrl-alt-shift-c = 'reload-config'
              cmd-ctrl-alt-shift-r = 'reload-config'
              alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'
-             alt-shift-c = 'reload-config'
              alt-shift-r = 'reload-config'
 
              # Workspace navigation.

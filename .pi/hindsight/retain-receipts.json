@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "receipts": [
+    {
+      "createdAt": "2026-08-29T21:34:46.465Z",
+      "bankId": "pi-project-home-1eaafa522ac3",
+      "documentId": "pi-explicit:40639140da6934c9:43a6753556254fc2",
+      "queueJobId": "9b12c7ed-2557-4132-b46f-a6136e5516ea",
+      "updateMode": "replace",
+      "source": "tool",
+      "context": "Verified declarative screenshot and color-picker replacement in the nix-config repository on 2026-08-29. Laptop rebuild and health checks passed, Shottr and Pika are installed, Flameshot is absent, AeroSpace loaded the URL bindings, Pika defaults are active, and desktop evaluation resolves Satty 0.22.0.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-1eaafa522ac3",
+        "session:40639140da6934c9",
+        "project:nix-config"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    }
+  ]
+}

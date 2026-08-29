@@ -124,7 +124,7 @@
   apps.cap.enable = false;
   apps.darktable.enable = false;
   apps.gimp.enable = false;
-  apps.flameshot.enable = false;
+  apps.screenshot-tools.enable = true;
   apps.flatpak.installFlatseal = false;
 
   apps.steam.enable = true;
