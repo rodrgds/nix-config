@@ -2,68 +2,65 @@
 
 ## Core
 
-* Optimize technical decisions for correctness, simplicity, robustness, long-term maintainability, and scalability. Treat implementation effort as secondary; do not trade lasting design quality for short-term speed.
-* For one-off or infrequent operational work, take the simplest direct end-to-end path. Do not build wrappers, control planes, policy layers, custom verifiers, or automation until a concrete blocker or repeated need justifies them.
-* Prefer established, maintained libraries over bespoke implementations when they fit.
-* Do not refactor, reformat, comment, or otherwise churn unrelated code. Small unrelated defects found during the work may be fixed when they are obvious, safe, verified, and not in another agent's area; keep them in a separate commit.
-* When visually testing a product, inspect the UI critically. Treat obvious UI defects, lint failures, test failures, and flakiness as real defects rather than noise. Fix them when safe and not being handled by another agent.
-* Commit in logical chunks grouped by concern. Name commits for the reason or intent behind the change, not the files or mechanics changed.
-* Keep project `AGENTS.md` files current when work changes conventions, architecture, constraints, or workflows future agents need to know.
-* When creating or editing agent-facing instructions, use `$writing-for-agents`. Delete no-ops and duplication, keep narrow guidance at the narrowest useful scope, and state concrete completion criteria.
+- Favor simple, robust designs that remain correct and maintainable as the system grows. Implementation effort comes second.
+- Take the simplest direct path for one-off or infrequent operations. Add wrappers, policy layers, custom checks, or automation only when a concrete blocker or repeated need warrants them.
+- Prefer a maintained library to custom code when it fits.
+- Keep changes focused on the task. Do not refactor, reformat, or comment unrelated code. Fix an unrelated defect only when it is obvious, safe, verified, and not owned by another agent, then commit it separately.
+- During visual tests, inspect the UI for defects. Treat visible problems, lint failures, test failures, and flaky tests as bugs. Fix them when safe and not owned by another agent.
+- Group commits by concern. Name each commit for why the change exists, not which files changed.
+- Update the project's `AGENTS.md` when a change introduces a convention, architectural boundary, constraint, or workflow that future agents must follow.
+- Use `$writing-for-agents` when editing agent instructions. Remove no-ops and duplication, put narrow rules in the narrowest useful scope, and give each step a checkable completion condition.
 
 ## Testing and bug fixes
 
-* When fixing a bug, first reproduce it at the closest practical end-user boundary. Then add the smallest stable regression test that proves the same behavior, observe it fail for the expected reason, implement the fix, and observe it pass.
-* Write tests that prove observable behavior through stable public interfaces and would fail on a plausible regression; expected results must come from an independent source of truth, and tests must not assert implementation details, mock internal collaborators, or merely restate the implementation.
-* A test is not useful merely because it executes changed code or increases coverage.
-* Tautological tests are considered harmful.
+- Reproduce a bug through the closest practical user-facing interface. Add the smallest stable regression test for the same behavior. Confirm that it fails because of the bug, apply the fix, and confirm that it passes.
+- Test observable behavior through stable public interfaces. Derive expected results independently from the implementation. The test must fail on a plausible regression, not assert implementation details, mock internal collaborators, or repeat the production logic.
+- Executing changed code or increasing coverage does not make a test useful. Delete tautological tests.
 
 ## Engineering
 
-* Replace recurring or meaningful magic values with descriptive constants or enums. Keep obvious one-off values inline. Values defined by a protocol or specification should use named constants when available.
-* Keep control flow shallow. Prefer early returns, guards, and `continue` over deeply nested branches.
-* Avoid ambiguous boolean parameters. When `foo(true, false)` would hide meaning at the call site, use an enum, options object, or separate operation instead.
-* Keep fields and functions as private as the design permits. Treat widening visibility as an API and design change; only do it when external access is actually required.
-* Keep each abstraction level coherent. Encapsulate low-level mechanics such as raw I/O, parsing, sockets, storage details, or hardware access behind dedicated adapters or drivers. Higher-level code should work with domain concepts rather than reach through those boundaries.
-* Respect existing architectural boundaries. Do not bypass intermediate services or abstractions for convenience. If the current boundaries are wrong, change the architecture deliberately rather than punching through it.
-* Comments should explain non-obvious intent, constraints, trade-offs, or why the code exists. Do not narrate what readable code already says. Use a short example or ASCII diagram when it materially clarifies a complex protocol, state machine, data flow, or system.
+- Name recurring or meaningful values with constants or enums. Keep obvious one-off values inline. Use named constants supplied by protocols and specifications when available.
+- Keep control flow shallow. Prefer early returns, guards, and `continue` over deeply nested branches.
+- Replace ambiguous boolean parameters with an enum, options object, or separate operation. Calls such as `foo(true, false)` hide their meaning.
+- Keep fields and functions private unless callers need access. Treat wider visibility as an API and design change.
+- Put raw I/O, parsing, sockets, storage, and hardware access behind dedicated adapters or drivers. Higher-level code should use domain concepts instead of reaching through those boundaries.
+- Respect architectural boundaries. If a boundary is wrong, redesign it instead of bypassing its service or abstraction.
+- Comments should explain intent, constraints, trade-offs, or other facts the code cannot express. Do not narrate readable code. Use a short example or ASCII diagram when it clarifies a complex protocol, state machine, or data flow.
 
 ## Delegation
 
-* Use Paseo as the single system for agent delegation and worktree isolation.
-* Use Paseo subagents for independent research, review, or implementation.
-* When parallel agents may edit independently, give each a Paseo worktree-isolated workspace.
-* Do not create agent worktrees with raw `git worktree` or another subagent system.
+- Use Worktrunk (`wt`) for all worktree operations. Do not use raw `git worktree` or another worktree manager.
+- Give each parallel editing agent its own branch and Worktrunk-managed worktree. Tell the agent its absolute worktree path and require all edits to stay there.
+- Create agent worktrees with `wt switch --create <branch> --no-cd`. Use `wt list`, `wt merge`, and `wt remove` to inspect, integrate, and remove them.
 
 ## Managed machines
 
-`~/.config/home` is the source of truth for Rodrigo's machines and platforms. Compatibility expectations and repo-specific rules belong in that repo's `AGENTS.md`.
+`~/.config/home` is the source of truth for Rodrigo's machines. Its `AGENTS.md` defines compatibility and repo-specific rules.
 
-All machines use Tailscale. Prefer declarative changes to `~/.config/home` followed by the repo's `rebuild` command over persistent ad-hoc machine changes or installs. See that repo's `AGENTS.md` for rebuild targets.
+All machines use Tailscale. Make lasting machine changes in `~/.config/home`, then run the repo's `rebuild` command. Its `AGENTS.md` lists the rebuild targets.
 
-When a dependency belongs to a project rather than the machine, use the project's Devenv environment when available.
+Use a project's Devenv environment for project dependencies when available.
 
 ## Agent harness setup
 
-All agent harnesses - Pi, Codex, Claude, and Opencode - are configured declaratively through `modules/apps/<harness>/default.nix`.
+Configure Pi, Codex, Claude, and OpenCode through `modules/apps/<harness>/default.nix`.
 
-Do not persist harness configuration by editing generated files or relying on `pi install`, `pi remove`, `pi config`, `/settings`, or equivalent imperative commands. Change the Nix module, model catalog, theme, resources, or host options, then rebuild.
+Persist harness configuration in its Nix module, model catalog, theme, resources, or host options, then rebuild. Edits to generated files and imperative commands such as `pi install`, `pi remove`, `pi config`, or `/settings` are temporary and unsupported.
 
-Global agent instructions live in `modules/apps/agents/AGENTS.md` and are deployed through `modules/apps/agents/default.nix` to each harness, including `~/.pi/agent/AGENTS.md`, `~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`, and `~/.config/opencode/AGENTS.md`.
+Global instructions live in `modules/apps/agents/AGENTS.md`. `modules/apps/agents/default.nix` deploys them to `~/.pi/agent/AGENTS.md`, `~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`, and `~/.config/opencode/AGENTS.md`.
 
-Global Agent Skills are configured in `modules/apps/agents/default.nix`. The `skills` CLI reconciles approved skills into `~/.agents/skills`, symlinked to `modules/apps/agents/skills`, where every harness can discover them. Add upstream skills through that module rather than vendoring them.
+Configure global Agent Skills in `modules/apps/agents/default.nix`. The `skills` CLI installs the approved set in `~/.agents/skills`, which links to `modules/apps/agents/skills` for discovery by every harness. Add upstream skills through the module instead of vendoring them.
 
 ## Project operating stack
 
-* Vikunja, accessed through Executor, is the authority for private/internal active work. Create and update internal tasks there instead of private GitHub Issues, `.scratch` issue files, or repo-local task boards. Public reports and contributor-facing discussion stay in GitHub Issues and pull requests.
-* Hindsight bank `rodrigo` is the authority for durable cross-agent context, decisions, preferences, constraints, and project history. Recall relevant memory before substantial work. Retain only verified durable facts with `project:<slug>` and `source:<agent>` tags. Do not retain secrets, raw logs, temporary task state, completed-work reports, or unverified assistant claims.
-* Repositories remain authoritative for code, tests, build commands, public docs, and deterministic engineering contracts that must travel with the code. Keep project `AGENTS.md` files small and current.
-* Google Calendar is authoritative for events. Obsidian/JDSystem remains Rodrigo's human-owned source archive.
-* Do not create new `CONTEXT.md`, mutable ADR folders, agent-memory folders, or local issue stores. Before deleting an old context or decision file, import it to Hindsight with provenance and verify recall. Keep a repo file only when contributors or CI need a versioned contract without private memory access.
+- Use Vikunja through Executor for private active work. Create and update internal tasks there, not in private GitHub Issues, `.scratch` files, or repo-local task boards. Keep public reports and contributor discussions in GitHub Issues and pull requests.
+- Use Hindsight bank `rodrigo` for durable cross-agent context, decisions, preferences, constraints, and project history. Recall relevant memory before substantial work. Retain only verified durable facts tagged `project:<slug>` and `source:<agent>`. Never retain secrets, raw logs, temporary task state, completed-work reports, or unverified assistant claims.
+- Repositories own code, tests, build commands, public docs, and engineering contracts that must travel with the code. Keep project `AGENTS.md` files small and current.
+- Google Calendar is authoritative for events.
 
 ## One-off tools
 
-When a task needs a program that is not installed, use Nix instead of permanently adding it just to complete the task.
+Use Nix when a task needs an uninstalled program. Do not install a program permanently for one job.
 
 ```bash
 # Executable name known, package unknown
@@ -76,15 +73,15 @@ nix shell nixpkgs#shellcheck -c shellcheck scripts/release.sh
 nix run nixpkgs#hyperfine -- 'rg TODO .' 'grep -R TODO .'
 ```
 
-Use `, <command>` from comma/nix-index when you know the executable name. Use `nix shell nixpkgs#<package> -c <command> ...` when you need commands from a known package, and `nix run nixpkgs#<package> -- ...` for a package that exposes the CLI you want to invoke directly.
+Use `, <command>` from comma/nix-index when you know the executable name but not the package. Use `nix shell nixpkgs#<package> -c <command> ...` for commands from a known package. Use `nix run nixpkgs#<package> -- ...` to invoke a package's CLI directly.
 
-Only add a package to the repo when it belongs to the lasting machine environment, a service, a build, or a repeated workflow.
+Add a package to the repo only when a machine, service, build, or repeated workflow needs it.
 
 ## Writing
 
-* Never use the em dash character. Use a plain hyphen instead.
-* For human-facing prose, use the fewest words that preserve the meaning. Put the answer or action first. Cut filler aggressively.
-* Do not flatter, praise, or use superlatives by default. State disagreement, risk, uncertainty, and bad ideas plainly.
-* Prefer short words, active voice, and direct sentences. Use technical terminology when it is more precise than an everyday substitute.
-* Avoid clichés, stock metaphors, corporate language, and marketing language unless the task calls for them.
-* Break any writing rule that would make the result less clear, accurate, or natural.
+- Never use em dashes. Separate clauses with commas or periods.
+- Use the fewest words that preserve the meaning. Put the answer or action first. Cut filler.
+- Skip flattery, praise, and default superlatives. State disagreement, risk, uncertainty, and bad ideas plainly.
+- Prefer short words, active voice, and direct sentences. Use technical terms when they are more precise than everyday words.
+- Avoid clichés, stock metaphors, corporate prose, and marketing language unless the task requires them.
+- Break a writing rule when following it would make the result less clear, accurate, or natural.
