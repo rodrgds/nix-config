@@ -182,11 +182,13 @@ in
              alt-d = 'exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher toggle'
              alt-period = "exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
 
-             # Screenshot annotation and screen color picker.
+             # Screenshot annotation, OCR, and screen color picker.
              cmd-ctrl-alt-shift-s = 'exec-and-forget /usr/bin/open "shottr://grab/area?then=edit"'
              alt-shift-s = 'exec-and-forget /usr/bin/open "shottr://grab/area?then=edit"'
              cmd-ctrl-alt-shift-c = 'exec-and-forget /usr/bin/open "pika://pick/foreground/hex"'
              alt-shift-c = 'exec-and-forget /usr/bin/open "pika://pick/foreground/hex"'
+             cmd-ctrl-alt-shift-t = 'exec-and-forget /usr/bin/open "shottr://ocr"'
+             alt-shift-t = 'exec-and-forget /usr/bin/open "shottr://ocr"'
 
                # Match the desktop input-source toggle. Requires the keyboard-layout module.
                ${

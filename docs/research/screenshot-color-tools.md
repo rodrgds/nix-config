@@ -15,10 +15,12 @@ This gives each shortcut a direct command and uses the platform-native capture p
 |---|---|---|
 | Option+Shift+S | macOS | `open 'shottr://grab/area?then=edit'` |
 | Option+Shift+C | macOS | `open 'pika://pick/foreground/hex'` |
+| Option+Shift+T | macOS | `open 'shottr://ocr'` |
 | Super+Shift+S | Hyprland | `grim -g "$(slurp)" -t ppm - \| satty --filename - --fullscreen --copy-command wl-copy` |
 | Super+Shift+C | Hyprland | `hyprpicker --autocopy --format hex` |
+| Super+Shift+T | Hyprland | `normcap -l por` |
 
-Shottr documents the `then=edit` action in its [URL scheme reference](https://shottr.cc/kb/urlschemes). Pika documents its picker URL in its [URL trigger reference](https://superhighfives.com/pika/help). Satty documents the `grim`, `slurp`, and Satty pipeline in its [README](https://github.com/Satty-org/Satty). Hyprpicker documents automatic clipboard copy in the [Hyprland reference](https://wiki.hypr.land/Hypr-Ecosystem/hyprpicker/).
+Shottr documents the `then=edit` action and `shottr://ocr` command in its [URL scheme reference](https://shottr.cc/kb/urlschemes). Pika documents its picker URL in its [URL trigger reference](https://superhighfives.com/pika/help). Satty documents the `grim`, `slurp`, and Satty pipeline in its [README](https://github.com/Satty-org/Satty). Hyprpicker documents automatic clipboard copy in the [Hyprland reference](https://wiki.hypr.land/Hypr-Ecosystem/hyprpicker/). NormCap documents automatic clipboard output in its [repository](https://github.com/dynobo/normcap).
 
 ## Why these tools
 
