@@ -68,7 +68,12 @@ in
 
     keybindings = lib.mkOption {
       type = lib.types.attrs;
-      default = { };
+      default = lib.optionalAttrs isDarwin {
+        "app.clipboard.pasteImage" = [
+          "ctrl+v"
+          "super+v"
+        ];
+      };
       description = "Declarative Pi keybindings.";
     };
   };

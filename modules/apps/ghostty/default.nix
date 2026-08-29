@@ -21,6 +21,7 @@ let
     shell-integration-features = "cursor,sudo,title";
     clipboard-paste-protection = false;
     confirm-close-surface = false;
+    keybind = lib.optionals isDarwin [ "performable:super+v=paste_from_clipboard" ];
   };
 in
 {
