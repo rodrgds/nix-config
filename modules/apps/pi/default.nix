@@ -11,6 +11,7 @@ let
   inherit (constants) isDarwin isLinux;
   toolchain = config.apps.javascript-toolchain;
   packageName = "@earendil-works/pi-coding-agent";
+  piLauncherPath = "${constants.homeDir}/.local/bin/pi";
 
   nineRouterCatalog = import ../../shared/9router.nix;
 
@@ -18,7 +19,7 @@ let
     agent: pi
 
     agentPathOverride:
-      pi: ${toolchain.npm.binDir}/pi
+      pi: ${piLauncherPath}
 
     commitMessage:
       preset: conventional
@@ -36,6 +37,8 @@ let
     "npm:@narumitw/pi-goal"
     "npm:@narumitw/pi-btw"
     "npm:@agnishc/edb-context-viewer"
+    "npm:@luxusai/pi-hindsight"
+    "npm:pi-mcp-adapter"
   ];
 in
 {
@@ -114,6 +117,7 @@ in
         nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
         exaApiKeyPath = config.sops.secrets.exa_api_key.path;
         opencodeGoApiKeyPath = config.sops.secrets.opencode_go_api_key.path;
+        hindsightApiTokenPath = config.sops.secrets.hindsight_api_token.path;
 
         piSettings = lib.recursiveUpdate {
           # Plain npm. The global prefix comes from the managed ~/.npmrc so
@@ -263,6 +267,67 @@ in
           exaApiKey = "!${pkgs.coreutils}/bin/cat ${exaApiKeyPath}";
         };
 
+        hindsightConfig = builtins.toJSON {
+          enabled = true;
+          setupComplete = true;
+          agentUse = "coding";
+          hindsight = {
+            baseUrl = "http://rgo-nas:8888";
+            apiKey = {
+              source = "env";
+              name = "HINDSIGHT_API_TOKEN";
+            };
+            timeoutMs = 40000;
+          };
+          banks = {
+            project = {
+              enabled = false;
+              derive = "manual";
+            };
+            user = {
+              enabled = true;
+              bankId = "rodrigo";
+            };
+          };
+          recall = {
+            enabled = true;
+            budget = "mid";
+            maxTokens = 1200;
+            userMaxTokens = 1200;
+            types = [
+              "observation"
+              "world"
+              "experience"
+            ];
+            includeSourceFacts = false;
+            includeRepoHintsInQuery = true;
+            preferObservations = true;
+          };
+          retain.enabled = false;
+          userRetain.mode = "explicit-only";
+          notifications = {
+            startup = true;
+            recall = false;
+            retain = false;
+          };
+        };
+
+        mcpConfig = builtins.toJSON {
+          settings = {
+            toolPrefix = "short";
+            hostConfigDiscovery = "off";
+            notifyOnStartupConnect = false;
+            mcpFooterStatus = "compact";
+          };
+          mcpServers.executor = {
+            url = "https://executor.sh/rodrigo-dias/mcp";
+            auth = "oauth";
+            lifecycle = "lazy-keep-alive";
+            directTools = true;
+            protocolVersion = "legacy";
+          };
+        };
+
         codexConversionConfig = builtins.toJSON {
           voice.serverShortcut = "ctrl+alt+v";
         };
@@ -273,6 +338,7 @@ in
             nine_router_api_key = { };
             exa_api_key = { };
             opencode_go_api_key = { };
+            hindsight_api_token.sopsFile = ../../../secrets/hindsight-secrets.yaml;
           };
 
           home.packages = [
@@ -284,10 +350,21 @@ in
             ".gnhf/config.yml".text = gnhfConfig;
             ".pi/agent/settings.json".text = builtins.toJSON piSettings;
             ".pi/agent/models.json".text = builtins.toJSON piModels;
+            ".pi/agent/hindsight.json".text = hindsightConfig;
+            ".pi/agent/mcp.json".text = mcpConfig;
             ".pi/agent/keybindings.json".text = builtins.toJSON cfg.keybindings;
             ".pi/agent/pi-codex-conversion.json".text = codexConversionConfig;
             ".config/pi/web-search.json".text = webSearchConfig;
             ".pi/web-search.json".text = webSearchConfig;
+            ".local/bin/pi" = {
+              executable = true;
+              text = ''
+                #!${pkgs.bash}/bin/bash
+                set -euo pipefail
+                export HINDSIGHT_API_TOKEN="$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg hindsightApiTokenPath})"
+                exec ${lib.escapeShellArg "${toolchain.npm.binDir}/pi"} "$@"
+              '';
+            };
             ".pi/agent/themes/flexoki.json".text = builtins.toJSON (
               import ./_data/flexoki-theme.nix {
                 inherit (constants) colors;

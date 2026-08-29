@@ -53,6 +53,14 @@ Global agent instructions live in `modules/apps/agents/AGENTS.md` and are deploy
 
 Global Agent Skills are configured in `modules/apps/agents/default.nix`. The `skills` CLI reconciles approved skills into `~/.agents/skills`, symlinked to `modules/apps/agents/skills`, where every harness can discover them. Add upstream skills through that module rather than vendoring them.
 
+## Project operating stack
+
+* Vikunja, accessed through Executor, is the authority for private/internal active work. Create and update internal tasks there instead of private GitHub Issues, `.scratch` issue files, or repo-local task boards. Public reports and contributor-facing discussion stay in GitHub Issues and pull requests.
+* Hindsight bank `rodrigo` is the authority for durable cross-agent context, decisions, preferences, constraints, and project history. Recall relevant memory before substantial work. Retain only verified durable facts with `project:<slug>` and `source:<agent>` tags. Do not retain secrets, raw logs, temporary task state, completed-work reports, or unverified assistant claims.
+* Repositories remain authoritative for code, tests, build commands, public docs, and deterministic engineering contracts that must travel with the code. Keep project `AGENTS.md` files small and current.
+* Google Calendar is authoritative for events. Obsidian/JDSystem remains Rodrigo's human-owned source archive.
+* Do not create new `CONTEXT.md`, mutable ADR folders, agent-memory folders, or local issue stores. Before deleting an old context or decision file, import it to Hindsight with provenance and verify recall. Keep a repo file only when contributors or CI need a versioned contract without private memory access.
+
 ## One-off tools
 
 When a task needs a program that is not installed, use Nix instead of permanently adding it just to complete the task.

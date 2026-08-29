@@ -7,7 +7,7 @@ description: Diagnosis loop for hard bugs and performance regressions. Use when 
 
 A discipline for hard bugs. Skip phases only when explicitly justified.
 
-When exploring the codebase, read `CONTEXT.md` (if it exists) to get a clear mental model of the relevant modules, and check ADRs in the area you're touching.
+Before forming hypotheses, recall Hindsight for the project, affected symbols and prior incidents, then verify that context against current code and live evidence. Legacy context/ADR files are historical evidence only.
 
 ## Redact
 

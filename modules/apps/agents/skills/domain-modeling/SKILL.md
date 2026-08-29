@@ -1,74 +1,36 @@
 ---
 name: domain-modeling
-description: Build and sharpen a project's domain model. Use when discussing codebase terminology, writing or editing a CONTEXT.md, or recording or editing an ADR.
+description: Build and maintain precise project language and hard-to-reverse decisions in Hindsight.
 ---
 
-# Domain Modeling
+# Domain modeling
 
-Actively build and sharpen the project's domain model as you design. This is the *active* discipline: challenging terms, inventing edge-case scenarios, and writing the glossary and decisions down the moment they crystallise. (Merely *reading* `CONTEXT.md` for vocabulary is not this skill: that's a one-line habit any skill can do. This skill is for when you're changing the model, not just consuming it.)
+Use precise domain language to reduce ambiguity in code, specs and discussion. The live code remains authoritative for implemented behavior; Hindsight bank `rodrigo` stores the durable cross-agent model of why terms and decisions mean what they do.
 
-## File structure
+## Start
 
-Most repos have a single context:
+1. Read the relevant code, public docs and the repo's `AGENTS.md`.
+2. Recall Hindsight using the project name, repository URL, target symbols and the user's question.
+3. Treat recalled material as historical evidence, not proof of current code. Verify claims against the repository or live system when possible.
 
-```
-/
-├── CONTEXT.md
-├── docs/
-│   └── adr/
-│       ├── 0001-event-sourced-orders.md
-│       └── 0002-postgres-for-write-model.md
-└── src/
-```
+## Model the domain
 
-If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts. The map points to where each one lives:
+- Identify actors, entities, value objects, events, commands, states, invariants and boundaries.
+- Challenge overloaded or vague terms. Prefer one term per concept and one concept per term.
+- Use examples and counterexamples to test definitions.
+- Separate domain facts from implementation choices.
+- Identify hard-to-reverse decisions, rejected alternatives and the evidence behind them.
 
-```
-/
-├── CONTEXT-MAP.md
-├── docs/
-│   └── adr/                          ← system-wide decisions
-├── src/
-│   ├── ordering/
-│   │   ├── CONTEXT.md
-│   │   └── docs/adr/                 ← context-specific decisions
-│   └── billing/
-│       ├── CONTEXT.md
-│       └── docs/adr/
-```
+## Persist
 
-Create files lazily: only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. If no `docs/adr/` exists, create it when the first ADR is needed.
+Retain concise atomic memories in Hindsight:
 
-## During the session
+- term definitions and aliases;
+- invariants and lifecycle rules;
+- boundary decisions;
+- accepted/rejected alternatives with reasons;
+- stable links to source commits, PRs, public issues, docs or live systems.
 
-### Challenge against the glossary
+Use tags `project:<slug>`, `source:<agent>`, and one of `kind:domain`, `kind:decision`, or `kind:constraint`. State confidence and source type in the content or metadata. Replace/correct superseded memories instead of adding contradictory duplicates.
 
-When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately. "Your glossary defines 'cancellation' as X, but you seem to mean Y. Which is it?"
-
-### Sharpen fuzzy language
-
-When the user uses vague or overloaded terms, propose a precise canonical term. "You're saying 'account': do you mean the Customer or the User? Those are different things."
-
-### Discuss concrete scenarios
-
-When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
-
-### Cross-reference with code
-
-When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: "Your code cancels entire Orders, but you just said partial cancellation is possible. Which is right?"
-
-### Update CONTEXT.md inline
-
-When a term is resolved, update `CONTEXT.md` right there. Don't batch these up: capture them as they happen. Use the format in [CONTEXT-FORMAT.md](./CONTEXT-FORMAT.md).
-
-`CONTEXT.md` should be totally devoid of implementation details. Do not treat `CONTEXT.md` as a spec, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
-
-### Offer ADRs sparingly
-
-Only offer to create an ADR when all three are true:
-
-1. **Hard to reverse**: the cost of changing your mind later is meaningful
-2. **Surprising without context**: a future reader will wonder "why did they do it this way?"
-3. **The result of a real trade-off**: there were genuine alternatives and you picked one for specific reasons
-
-If any of the three is missing, skip the ADR. Use the format in [ADR-FORMAT.md](./ADR-FORMAT.md).
+Do not create or update `CONTEXT.md`, ADR files, decision folders or agent-memory files. Keep a repository document only when contributors or CI need a deterministic versioned contract without private Hindsight access.
