@@ -11,7 +11,7 @@ let
   homeDir = "/Users/${username}";
   source = "${inputs.omacosy}/helper/borders.swift";
   sourceRevision = inputs.omacosy.rev or "9e60b396b5e48a862bcb46bca5f2b13a63a822aa";
-  borderBuildId = builtins.hashString "sha256" "${sourceRevision}:rgo-borders-v1";
+  borderBuildId = builtins.hashString "sha256" "${sourceRevision}:rgo-borders-v2";
   binary = "${homeDir}/.local/libexec/rgo-borders";
   toBorderColor = hex: "0xff${lib.removePrefix "#" hex}";
 in
@@ -30,7 +30,8 @@ in
 
     # omacosy's focused-window ring uses one CAShapeLayer instead of a large
     # backing surface per window. Keep the tested upstream source pinned, then
-    # change only its local file paths before compiling it with Apple's SDK.
+    # adapt its local paths and fullscreen detection before compiling it with
+    # Apple's SDK.
     home-manager.users.${username} =
       { lib, ... }:
       {
@@ -61,7 +62,15 @@ in
                 -e 's|.config/omarchy/current/theme/borders.sh|.config/rgo-desktop/borders-theme.sh|g' \
                 -e 's|.config/omarchy/current|.config/rgo-desktop|g' \
                 -e 's|/tmp/omacosy-ws-switch|/tmp/rgo-aerospace-ws-switch|g' \
+                -e 's|if isFullscreen(f) {|if isFullscreen(f), abs(f.width - CGDisplayBounds(displayOf(f)).width) < 2 {|g' \
                 ${source} > "$build_dir/borders.swift"
+
+              # A zero AeroSpace top gap makes ordinary full-height tiles share
+              # fullscreen's vertical geometry. Only a full-display-width frame
+              # may activate the black notch shroud above SketchyBar.
+              /usr/bin/grep -Fq \
+                'if isFullscreen(f), abs(f.width - CGDisplayBounds(displayOf(f)).width) < 2 {' \
+                "$build_dir/borders.swift"
 
               /usr/bin/xcrun swiftc -O \
                 -F /System/Library/PrivateFrameworks \
