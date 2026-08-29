@@ -334,6 +334,11 @@ in
       in
       lib.mkMerge [
         {
+          # The shared npm prefix also contains an unwrapped `pi` binary. Keep
+          # this directory first so interactive shells use the launcher below,
+          # which loads runtime-only secrets before handing off to npm.
+          home.sessionPath = lib.mkBefore [ "${constants.homeDir}/.local/bin" ];
+
           sops.secrets = {
             nine_router_api_key = { };
             exa_api_key = { };
