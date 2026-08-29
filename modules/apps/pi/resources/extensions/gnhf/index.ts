@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import { readFile, readdir, stat } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
@@ -14,6 +13,14 @@ const POLL_INTERVAL_MS = 1500;
 interface WorktreeEntry {
   branch: string | undefined;
   path: string | undefined;
+}
+
+interface WorktreeListItem {
+  branch?: string;
+  path?: string;
+  worktree?: {
+    path?: string;
+  };
 }
 
 interface RunState {
@@ -34,30 +41,11 @@ function slugify(input: string): string {
     .slice(0, 50);
 }
 
-function expandHome(path: string): string {
-  if (path === "~") return homedir();
-  if (path.startsWith("~/")) return join(homedir(), path.slice(2));
-  return path;
-}
-
 function findWorktree(
   entries: WorktreeEntry[],
   branch: string,
 ): WorktreeEntry | undefined {
   return entries.find((entry) => entry.branch === branch);
-}
-
-/** Detect a Paseo daemon-down error in raw CLI output. */
-function daemonDownMessage(raw: string): string | null {
-  try {
-    const parsed = JSON.parse(raw) as { error?: { code?: string } };
-    if (parsed.error?.code === "DAEMON_NOT_RUNNING") {
-      return "the Paseo daemon is not running. Start it with the Paseo desktop app (or `paseo daemon start`), then retry.";
-    }
-  } catch {
-    // Not JSON; fall through to generic handling.
-  }
-  return null;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -76,35 +64,36 @@ export default function (pi: ExtensionAPI) {
 
   async function runWorktreeList(cwd: string): Promise<{
     entries: WorktreeEntry[];
-    daemonDown: string | null;
+    error: string | null;
   }> {
-    const result = await pi.exec("paseo", ["worktree", "ls", "--json"], {
+    const result = await pi.exec("wt", ["list", "--format=json"], {
       cwd,
     });
 
     if (result.code !== 0) {
-      const raw = `${result.stdout}\n${result.stderr}`;
-      return { entries: [], daemonDown: daemonDownMessage(raw) };
+      const message =
+        stripAnsi(result.stderr.trim()) || stripAnsi(result.stdout.trim());
+      return { entries: [], error: message.slice(0, 300) };
     }
 
     try {
-      const items = JSON.parse(result.stdout) as Array<{
-        branch?: string;
-        cwd?: string;
-      }>;
-      const entries = (Array.isArray(items) ? items : [])
+      const parsed = JSON.parse(result.stdout) as
+        | WorktreeListItem[]
+        | { items?: WorktreeListItem[] };
+      const items = Array.isArray(parsed) ? parsed : (parsed.items ?? []);
+      const entries = items
         .map((item) => ({
           branch:
             item.branch && item.branch !== "-" ? item.branch : undefined,
-          path: typeof item.cwd === "string" ? expandHome(item.cwd) : undefined,
+          path: item.worktree?.path ?? item.path,
         }))
         .filter(
           (entry): entry is WorktreeEntry =>
             typeof entry.path === "string" && entry.path.length > 0,
         );
-      return { entries, daemonDown: null };
+      return { entries, error: null };
     } catch {
-      return { entries: [], daemonDown: null };
+      return { entries: [], error: "Could not parse Worktrunk list output." };
     }
   }
 
@@ -113,49 +102,36 @@ export default function (pi: ExtensionAPI) {
     branch: string,
     baseRef: string,
   ): Promise<{ path?: string; error?: string }> {
-    const args = [
-      "worktree",
-      "create",
-      "--mode",
-      "branch-off",
-      "--new-branch",
-      branch,
-      "--cwd",
-      repoRoot,
-      "--json",
-    ];
-    if (baseRef) {
+    const branchResult = await pi.exec(
+      "git",
+      ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`],
+      { cwd: repoRoot },
+    );
+    const branchExists = branchResult.code === 0;
+    const args = ["switch"];
+    if (!branchExists) args.push("--create");
+    args.push(branch, "--no-cd", "--format=json");
+    if (!branchExists && baseRef) {
       args.push("--base", baseRef);
     }
 
-    const created = await pi.exec("paseo", args, { cwd: repoRoot });
+    const created = await pi.exec("wt", args, { cwd: repoRoot });
     if (created.code !== 0) {
-      const raw = `${created.stdout}\n${created.stderr}`;
-      const down = daemonDownMessage(raw);
-      let message =
+      const message =
         stripAnsi(created.stderr.trim()) || stripAnsi(created.stdout.trim());
-      try {
-        const parsed = JSON.parse(raw) as { error?: { message?: string } };
-        message = parsed.error?.message ?? message;
-      } catch {
-        // Human-readable fallback kept.
-      }
-      return { error: (down ?? message).slice(0, 300) };
+      return { error: message.slice(0, 300) };
     }
 
     try {
       const parsed = JSON.parse(created.stdout) as {
-        worktreePath?: string;
+        path?: string;
       };
-      if (
-        typeof parsed.worktreePath !== "string" ||
-        parsed.worktreePath.length === 0
-      ) {
-        return { error: "Paseo did not report a worktree path." };
+      if (typeof parsed.path !== "string" || parsed.path.length === 0) {
+        return { error: "Worktrunk did not report a worktree path." };
       }
-      return { path: parsed.worktreePath };
+      return { path: parsed.path };
     } catch {
-      return { error: "Could not parse Paseo worktree create output." };
+      return { error: "Could not parse Worktrunk switch output." };
     }
   }
 
@@ -282,7 +258,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("gnhf", {
     description:
-      "Run an autonomous GNHF coding loop in a Paseo-isolated worktree",
+      "Run an autonomous GNHF coding loop in a Worktrunk-managed worktree",
     async handler(args, ctx) {
       const objective = args.trim();
       if (!objective) {
@@ -319,16 +295,16 @@ export default function (pi: ExtensionAPI) {
       }
 
       const useMain = baseChoice.startsWith("main");
-      // Paseo defaults to the repository default branch when --base is
+      // Worktrunk defaults to the repository default branch when --base is
       // omitted; for the current worktree, branch off its tip.
       const baseRef = useMain ? "" : (currentBranch || "HEAD");
 
       const branch = `gnhf/${slugify(objective)}`;
 
-      const { entries, daemonDown } = await runWorktreeList(repoRoot);
-      if (daemonDown) {
+      const { entries, error: listError } = await runWorktreeList(repoRoot);
+      if (listError) {
         ctx.ui.setStatus(STATUS_KEY, undefined);
-        ctx.ui.notify(`GNHF setup failed: ${daemonDown}`, "error");
+        ctx.ui.notify(`GNHF setup failed: ${listError}`, "error");
         return;
       }
 
@@ -342,7 +318,7 @@ export default function (pi: ExtensionAPI) {
         if (created.error) {
           ctx.ui.setStatus(STATUS_KEY, undefined);
           ctx.ui.notify(
-            `Paseo failed to create ${branch}: ${created.error}`,
+            `Worktrunk failed to create ${branch}: ${created.error}`,
             "error",
           );
           return;
@@ -405,7 +381,7 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  pi.registerShortcut("ctrl+alt+g", {
+  pi.registerShortcut("ctrl+alt+k", {
     description: "Interrupt the running /gnhf loop",
     handler: async (ctx) => {
       if (!state.child?.pid) {

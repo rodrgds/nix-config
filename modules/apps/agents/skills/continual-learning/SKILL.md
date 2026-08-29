@@ -19,7 +19,7 @@ Use when the user asks to mine prior chats, maintain `AGENTS.md`, or run the con
 2. Load the incremental index if present (`.continual-learning-index.json` in the repo root).
 3. Look for transcript or conversation logs. Check common locations:
    - `agent-transcripts/` directories
-   - `.pi/` or `.paseo/` directories
+   - Harness-specific transcript directories such as `.pi/`
    - Any `.jsonl` or `.md` conversation exports
    - Files newer than the index timestamp
 4. Pull out only durable, reusable items:

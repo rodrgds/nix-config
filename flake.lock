@@ -925,22 +925,6 @@
         "type": "github"
       }
     },
-    "nixpkgs_6": {
-      "locked": {
-        "lastModified": 1772963539,
-        "narHash": "sha256-9jVDGZnvCckTGdYT53d/EfznygLskyLQXYwJLKMPsZs=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "9dcb002ca1690658be4a04645215baea8b95f31d",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "nixpkgs_7": {
       "locked": {
         "lastModified": 1772542754,
@@ -1012,24 +996,6 @@
         "type": "github"
       }
     },
-    "paseo": {
-      "inputs": {
-        "nixpkgs": "nixpkgs_6"
-      },
-      "locked": {
-        "lastModified": 1787684105,
-        "narHash": "sha256-dVD35FdQt/uhKL4i+iJclBuHpKQAii4oW65Go/gLNCc=",
-        "owner": "getpaseo",
-        "repo": "paseo",
-        "rev": "4bfb682cd9c15ad63e2ecaa367438b0a90a39cb3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "getpaseo",
-        "repo": "paseo",
-        "type": "github"
-      }
-    },
     "plugin-loader-src": {
       "flake": false,
       "locked": {
@@ -1066,7 +1032,6 @@
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "omacosy": "omacosy",
-        "paseo": "paseo",
         "sops-nix": "sops-nix",
         "steam-config-nix": "steam-config-nix",
         "vicinae": "vicinae",

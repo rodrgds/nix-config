@@ -90,11 +90,7 @@ in
       apps.claude.enable = lib.mkDefault true;
       apps.muse.enable = lib.mkDefault true;
       apps.t3-code.enable = lib.mkDefault true;
-
-      apps.paseo = {
-        enable = lib.mkDefault true;
-        tailscale.enable = lib.mkDefault true;
-      };
+      apps.worktrunk.enable = lib.mkDefault true;
     })
 
     (lib.optionalAttrs isDarwin (
