@@ -57,18 +57,12 @@ let
     # Electron-launched daemons). Include the Home Manager profile for managed
     # developer tools; the shared JavaScript toolchain supplies npm and Node.
     #
-    # Pi is a `#!/usr/bin/env node` script. The Paseo daemon runs with a
-    # minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) so `env node` fails with
-    # 127. Invoke it via the Nix-managed node explicitly and inject a
-    # PATH that covers internal `spawn("node", ...)` calls and the NixOS
-    # privilege wrappers used by shell commands.
+    # Pi goes through the Nix-managed launcher so Paseo receives the SOPS
+    # Hindsight token before executing the shared npm binary.
     agents.providers = {
       pi = {
         enabled = true;
-        command = [
-          toolchain.node.binPath
-          "${toolchain.npm.binDir}/pi"
-        ];
+        command = [ "${constants.homeDir}/.local/bin/pi" ];
         env.PATH = providerPath;
       };
       codex = {

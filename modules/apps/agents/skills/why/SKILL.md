@@ -11,7 +11,7 @@ Companion to the `how` skill. `how` answers what the code does and how it works.
 
 ## How this skill works
 
-Historical context spreads across evidence categories: source control history, issue or ticket tracking, long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics. You cannot predict from the question alone which one holds the answer, so the skill queries all available categories in parallel, then synthesizes with explicit confidence calibration. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings. The default is coverage, not minimalism.
+Historical context spreads across evidence categories: Hindsight, Vikunja, source control history, public issue tracking, legacy long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics. You cannot predict from the question alone which one holds the answer, so the skill queries all available categories in parallel, then synthesizes with explicit confidence calibration. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings. The default is coverage, not minimalism.
 
 ## Operating Posture
 
@@ -99,13 +99,15 @@ Capture this as seed context (file paths, symbols, commits, PR numbers, linked t
 
 Source control is always available through git and `gh`. For the other categories, use whatever tools, MCPs, or integrations are available in your environment. Map what you have access to:
 
-1. **Source control history** - always available via git and `gh`
-2. **Issue / ticket tracker** - GitHub Issues, Linear, Jira, or whatever the project uses
-3. **Long-form documents** - ADRs, design docs, specs, READMEs, wikis
-4. **Real-time team chat** - Slack, Discord, etc. if accessible
-5. **Infrastructure observability** - Datadog, Grafana, etc. if accessible
-6. **Error / exception tracking** - Sentry, Bugsnag, etc. if accessible
-7. **Product analytics** - warehouses, dashboards, etc. if accessible
+1. **Hindsight durable context** - project decisions, constraints, domain language and source-linked history
+2. **Vikunja internal work** - accepted specs, tasks, comments and execution history
+3. **Source control history** - always available via git and `gh`
+4. **Public issue / contributor tracking** - GitHub Issues and PR discussion
+5. **Legacy long-form documents** - historical ADRs, design docs, specs, READMEs and wikis
+6. **Real-time team chat** - Slack, Discord, etc. if accessible
+7. **Infrastructure observability** - Datadog, Grafana, etc. if accessible
+8. **Error / exception tracking** - Sentry, Bugsnag, etc. if accessible
+9. **Product analytics** - warehouses, dashboards, etc. if accessible
 
 Aim for a complete **coverage map**, not a minimal one. A null result from an issue tracker is evidence the decision was not ticketed, a useful fact in itself. Document the null, don't skip the search.
 

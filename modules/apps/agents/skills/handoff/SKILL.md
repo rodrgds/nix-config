@@ -1,16 +1,19 @@
 ---
 name: handoff
-description: Compact the current conversation into a handoff document for another agent to pick up.
+description: Save a concise source-linked handoff to Hindsight for another agent or session.
 argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
 ---
 
-Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save to the temporary directory of the user's OS - not the current workspace.
+# Handoff
 
-Include a "suggested skills" section in the document, naming which skills the next agent should call the Skill tool for.
+Default to Hindsight, not a temporary Markdown file.
 
-Do not duplicate content already captured in other artifacts (specs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.
+1. Identify the project and the next session's purpose.
+2. Summarize only unresolved context: current objective, verified state, key decisions, blockers, exact source links and the next useful action.
+3. Link to Vikunja tasks, commits, PRs, public issues and deterministic repo docs instead of duplicating them.
+4. Redact secrets and omit raw logs, temporary chatter and completed-work narration.
+5. Retain the handoff in bank `rodrigo` with `project:<slug>`, `source:<agent>`, `kind:handoff`, and a stable document ID when updating an existing handoff.
+6. Recall it once and verify the next agent can recover the objective, blockers and source links.
 
-Redact any sensitive information, such as API keys, passwords, or personally identifiable information.
-
-If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
+Write a temporary portable Markdown handoff only when the target harness cannot access Hindsight or the user explicitly asks for a file. Never create a repo-local handoff/context store by default.
