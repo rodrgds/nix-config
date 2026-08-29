@@ -290,6 +290,9 @@
             '';
       };
 
+      checks.aarch64-darwin.rgo-laptop =
+        self.darwinConfigurations.rgo-laptop.config.system.build.toplevel;
+
       # Darwin configurations
       darwinConfigurations.rgo-laptop = mkDarwinSystem {
         system = "aarch64-darwin";
