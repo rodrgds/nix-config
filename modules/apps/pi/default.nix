@@ -34,11 +34,14 @@ let
     "npm:@howaboua/pi-cache-hit-predictor"
     "npm:pi-powerline-footer"
     "npm:pi-copy-all"
-    "npm:@narumitw/pi-goal"
+    "npm:pi-codex-goal"
     "npm:@narumitw/pi-btw"
     "npm:@agnishc/edb-context-viewer"
     "npm:@luxusai/pi-hindsight"
     "npm:pi-mcp-adapter"
+    "npm:pi-annotate"
+    "npm:pi-image-paste"
+    "npm:pi-subagents"
   ];
 in
 {
