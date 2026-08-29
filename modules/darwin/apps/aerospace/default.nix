@@ -81,7 +81,7 @@ in
             outer.left = 3
             outer.bottom = 3
             # macOS already reserves the top region for the menu bar or SketchyBar.
-            outer.top = 3
+            outer.top = 0
             outer.right = 3
 
              # Main binding mode. Super is Caps Lock held through Karabiner.

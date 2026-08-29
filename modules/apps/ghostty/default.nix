@@ -14,7 +14,6 @@ let
     theme = "Flexoki Dark";
     font-family = constants.fonts.primary;
     font-size = constants.fonts.sizes.large;
-    window-decoration = false;
     background-opacity = constants.display.opacity;
     window-padding-x = 5;
     window-padding-y = 5;
@@ -41,7 +40,9 @@ in
         home-manager.users.${username} = _: {
           programs.ghostty = {
             enable = true;
-            settings = ghosttySettings;
+            settings = ghosttySettings // {
+              window-decoration = false;
+            };
           };
 
           # Use the XDG terminal selector as the single default, then bridge
@@ -60,7 +61,12 @@ in
           programs.ghostty = {
             enable = true;
             package = null;
-            settings = ghosttySettings;
+            settings = ghosttySettings // {
+              # Keep the native frame so macOS clips the window to its rounded
+              # corners, while hiding the title bar and traffic lights.
+              window-decoration = "auto";
+              macos-titlebar-style = "hidden";
+            };
           };
         };
       })
