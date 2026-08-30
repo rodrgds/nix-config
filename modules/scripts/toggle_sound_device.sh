@@ -1,17 +1,25 @@
 #!/usr/bin/env bash
-
-# run this to see available sinks: pactl list short sinks
+set -euo pipefail
 
 headset="alsa_output.usb-Logitech_G522_LIGHTSPEED_-_Wireless_Mode_0000000000000000-00.analog-stereo"
 speakers="alsa_output.pci-0000_0b_00.4.analog-stereo"
-current_sink=$(pactl get-default-sink)
-next_sink=""
-next_label=""
 
-if [ "$current_sink" == "$headset" ]; then
+sink_name() {
+  wpctl inspect "$1" | sed -n 's/^  \* node.name = "\(.*\)"/\1/p'
+}
+
+sink_id() {
+  wpctl status -n \
+    | grep -F ". $1 " \
+    | sed -E 's/^[^0-9]*([0-9]+)\..*/\1/'
+}
+
+current_sink=$(sink_name @DEFAULT_AUDIO_SINK@)
+
+if [ "$current_sink" = "$headset" ]; then
   next_sink="$speakers"
   next_label="Speakers"
-elif [ "$current_sink" == "$speakers" ]; then
+elif [ "$current_sink" = "$speakers" ]; then
   next_sink="$headset"
   next_label="Headset"
 else
@@ -19,12 +27,11 @@ else
   exit 1
 fi
 
-pactl set-default-sink "$next_sink"
+next_id=$(sink_id "$next_sink")
+if [ -z "$next_id" ]; then
+  notify-send "Audio Output Error" "$next_label is unavailable"
+  exit 1
+fi
 
-# Move existing streams too; changing only the default sink affects new audio
-# streams and makes the bar action appear to do nothing for running apps.
-while read -r input_id _; do
-  [ -n "$input_id" ] && pactl move-sink-input "$input_id" "$next_sink"
-done < <(pactl list short sink-inputs)
-
+wpctl set-default "$next_id"
 notify-send "Audio Output Changed" "Switched to $next_label"
