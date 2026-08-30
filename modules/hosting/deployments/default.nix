@@ -83,14 +83,16 @@ let
       echo "previous OpenPost image has an invalid version label" >&2
       exit 1
     }
-    running_image="$(podman inspect openpost --format '{{.Image}}')" || {
-      echo "cannot inspect the running OpenPost container" >&2
-      exit 1
-    }
-    [ "$running_image" = "$previous_image" ] || {
-      echo "running OpenPost image $running_image differs from rollback target $previous_image" >&2
-      exit 1
-    }
+    for container in openpost openpost-worker; do
+      running_image="$(podman inspect "$container" --format '{{.Image}}')" || {
+        echo "cannot inspect the running $container container" >&2
+        exit 1
+      }
+      [ "$running_image" = "$previous_image" ] || {
+        echo "running $container image $running_image differs from rollback target $previous_image" >&2
+        exit 1
+      }
+    done
 
     podman pull "$candidate"
 
@@ -150,8 +152,15 @@ let
       curl -fsS http://127.0.0.1:8090/api/v1/health >/dev/null || return 1
       curl -fsS http://127.0.0.1:8090/api/v1/ready >/dev/null || return 1
       systemctl is-active --quiet podman-openpost.service || return 1
-      running_image="$(podman inspect openpost --format '{{.Image}}')" || return 1
-      [ "$running_image" = "$expected_image" ] || return 1
+      systemctl is-active --quiet podman-openpost-worker.service || return 1
+      web_image="$(podman inspect openpost --format '{{.Image}}')" || return 1
+      worker_image="$(podman inspect openpost-worker --format '{{.Image}}')" || return 1
+      [ "$web_image" = "$expected_image" ] || return 1
+      [ "$worker_image" = "$expected_image" ] || return 1
+      podman inspect openpost | jq -e '.[0].Config.Cmd == ["./openpost", "web"]' >/dev/null || return 1
+      podman inspect openpost-worker | jq -e '.[0].Config.Cmd == ["./openpost", "worker"]' >/dev/null || return 1
+      [ "$(podman inspect openpost --format '{{.State.Health.Status}}')" = healthy ] || return 1
+      [ "$(podman inspect openpost-worker --format '{{.State.Health.Status}}')" = healthy ] || return 1
     }
 
     rollback_application() {
@@ -159,6 +168,7 @@ let
       podman tag "$previous_image" "$image_name:latest" || return 1
       restored_image="$(podman image inspect "$image_name:latest" --format '{{.Id}}')" || return 1
       [ "$restored_image" = "$previous_image" ] || return 1
+      systemctl restart podman-openpost-worker.service || return 1
       systemctl restart podman-openpost.service || return 1
       for _attempt in $(seq 1 30); do
         if verify_running_revision "$previous_revision" "$previous_version" "$previous_image"; then
@@ -169,7 +179,7 @@ let
         fi
         sleep 2
       done
-      journalctl -u podman-openpost.service -n 160 --no-pager >&2
+      journalctl -u podman-openpost.service -u podman-openpost-worker.service -n 160 --no-pager >&2
       return 1
     }
 
@@ -186,8 +196,12 @@ let
 
     podman tag "$previous_image" "$image_name:rollback"
     podman tag "$candidate" "$image_name:latest"
+    if ! systemctl restart podman-openpost-worker.service; then
+      fail_with_rollback "OpenPost candidate worker restart failed"
+      exit 1
+    fi
     if ! systemctl restart podman-openpost.service; then
-      fail_with_rollback "OpenPost candidate service restart failed"
+      fail_with_rollback "OpenPost candidate web restart failed"
       exit 1
     fi
 
@@ -196,7 +210,7 @@ let
         break
       fi
       if [ "$attempt" = 60 ]; then
-        journalctl -u podman-openpost.service -n 120 --no-pager >&2
+        journalctl -u podman-openpost.service -u podman-openpost-worker.service -n 120 --no-pager >&2
         fail_with_rollback "OpenPost candidate did not become ready at the exact image and revision"
         exit 1
       fi

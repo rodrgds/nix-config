@@ -26,6 +26,10 @@ let
   openpostPostgresDatabase = "openpost";
   openpostPostgresImage = "docker.io/library/postgres:17-alpine@sha256:0a8a1e76503c091f0feb387d51b10fcd746c2d61cf6cdd6e8356973a45e40a0f";
   openpostImageRepository = lib.removeSuffix ":latest" cfg.image;
+  openpostApplicationUnits = [
+    "podman-openpost.service"
+  ]
+  ++ lib.optional isCloud "podman-openpost-worker.service";
 
   openpostFileSecrets = [
     {
@@ -156,7 +160,7 @@ let
         uid = openpostHostUid;
         gid = openpostHostGid;
         mode = "0400";
-        restartUnits = [ "podman-openpost.service" ];
+        restartUnits = openpostApplicationUnits;
       }
     ) openpostFileSecrets
   );
@@ -168,6 +172,52 @@ let
     in
     "--mount=type=bind,source=${config.sops.templates.${templateName}.path},target=${secret.target},ro"
   ) openpostFileSecrets;
+
+  openpostApplicationEnvironment = {
+    OPENPOST_PORT = toString openpostContainerPort;
+    OPENPOST_EDITION = cfg.edition;
+    OPENPOST_APP_URL = "https://${cfg.domain}";
+    OPENPOST_PUBLIC_URL = "https://${cfg.domain}";
+    OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain}";
+    OPENPOST_DISABLE_REGISTRATIONS = "false";
+    OPENPOST_STOCK_MEDIA_ENABLED = "true";
+    LINKEDIN_DISABLE_THREAD_REPLIES = "true";
+    X_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/x/callback";
+    LINKEDIN_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/linkedin/callback";
+    THREADS_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/threads/callback";
+    MASTODON_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/mastodon/callback";
+    TZ = cfg.timezone;
+  }
+  // openpostFileSecretEnvironment
+  // (
+    if isCloud then
+      {
+        OPENPOST_DATABASE_DRIVER = "postgres";
+        OPENPOST_STORAGE_DRIVER = "s3";
+      }
+    else
+      {
+        OPENPOST_DATABASE_DRIVER = "sqlite";
+        OPENPOST_DATABASE_PATH = "/data/db/openpost.db";
+        OPENPOST_STORAGE_DRIVER = "local";
+        OPENPOST_MEDIA_PATH = "/data/media";
+        OPENPOST_MEDIA_URL = "https://${cfg.domain}/media";
+      }
+  )
+  // cfg.extraEnvironment;
+
+  openpostApplicationEnvironmentFiles =
+    cfg.extraEnvironmentFiles
+    ++ lib.optionals isCloud [
+      config.sops.templates.openpost-cloud-env.path
+    ];
+
+  openpostApplicationOptions = [
+    "--network=podman"
+    "--uidmap=0:${toString openpostHostIdBase}:65536"
+    "--gidmap=0:${toString openpostHostIdBase}:65536"
+    "--pull=${cfg.pullPolicy}"
+  ];
 
   openpostOpsAlert = pkgs.writeShellScript "openpost-ops-alert" ''
     set -euo pipefail
@@ -362,49 +412,18 @@ in
       }
     ];
 
-    # OpenPost application
+    # OpenPost HTTP application. Hosted workers run in a separate container so
+    # web traffic and durable job throughput can scale and fail independently.
     virtualisation.oci-containers.containers.openpost = {
       inherit (cfg) image;
       user = "${toString openpostContainerUid}:${toString openpostContainerGid}";
+      cmd = [
+        "./openpost"
+        (if isCloud then "web" else "all")
+      ];
 
-      environment = {
-        OPENPOST_PORT = toString openpostContainerPort;
-        OPENPOST_EDITION = cfg.edition;
-        OPENPOST_APP_URL = "https://${cfg.domain}";
-        OPENPOST_PUBLIC_URL = "https://${cfg.domain}";
-        OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain}";
-        OPENPOST_DISABLE_REGISTRATIONS = "false";
-        OPENPOST_STOCK_MEDIA_ENABLED = "true";
-        LINKEDIN_DISABLE_THREAD_REPLIES = "true";
-        X_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/x/callback";
-        LINKEDIN_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/linkedin/callback";
-        THREADS_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/threads/callback";
-        MASTODON_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/mastodon/callback";
-        TZ = cfg.timezone;
-      }
-      // openpostFileSecretEnvironment
-      // (
-        if isCloud then
-          {
-            OPENPOST_DATABASE_DRIVER = "postgres";
-            OPENPOST_STORAGE_DRIVER = "s3";
-          }
-        else
-          {
-            OPENPOST_DATABASE_DRIVER = "sqlite";
-            OPENPOST_DATABASE_PATH = "/data/db/openpost.db";
-            OPENPOST_STORAGE_DRIVER = "local";
-            OPENPOST_MEDIA_PATH = "/data/media";
-            OPENPOST_MEDIA_URL = "https://${cfg.domain}/media";
-          }
-      )
-      // cfg.extraEnvironment;
-
-      environmentFiles =
-        cfg.extraEnvironmentFiles
-        ++ lib.optionals isCloud [
-          config.sops.templates.openpost-cloud-env.path
-        ];
+      environment = openpostApplicationEnvironment;
+      environmentFiles = openpostApplicationEnvironmentFiles;
 
       volumes = lib.optionals (!isCloud) [
         "/var/lib/openpost/data:/data"
@@ -416,24 +435,52 @@ in
         "127.0.0.1:${toString openpostHostPort}:${toString openpostContainerPort}"
       ];
 
-      extraOptions = [
-        "--network=podman"
-        "--uidmap=0:${toString openpostHostIdBase}:65536"
-        "--gidmap=0:${toString openpostHostIdBase}:65536"
-        "--pull=${cfg.pullPolicy}"
-        "--health-cmd=sh -ec 'attempt=0; until wget --spider http://localhost:${toString openpostContainerPort}/api/v1/health; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
-        "--health-interval=30s"
-        "--health-timeout=75s"
-        "--health-retries=3"
-        "--health-start-period=60s"
-        "--memory=2g"
-        "--memory-reservation=256m"
-        "--memory-swap=2g"
-        "--cpus=2.5"
-        "--pids-limit=512"
-      ]
-      ++ openpostFileSecretMounts
-      ++ cfg.extraOptions;
+      extraOptions =
+        openpostApplicationOptions
+        ++ [
+          "--health-cmd=sh -ec 'attempt=0; until wget --spider http://localhost:${toString openpostContainerPort}/api/v1/health; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
+          "--health-interval=30s"
+          "--health-timeout=75s"
+          "--health-retries=3"
+          "--health-start-period=60s"
+          "--memory=1536m"
+          "--memory-reservation=256m"
+          "--memory-swap=1536m"
+          "--cpus=1.5"
+          "--pids-limit=512"
+        ]
+        ++ openpostFileSecretMounts
+        ++ cfg.extraOptions;
+    };
+
+    virtualisation.oci-containers.containers.openpost-worker = lib.mkIf isCloud {
+      inherit (cfg) image;
+      user = "${toString openpostContainerUid}:${toString openpostContainerGid}";
+      cmd = [
+        "./openpost"
+        "worker"
+      ];
+
+      environment = openpostApplicationEnvironment;
+      environmentFiles = openpostApplicationEnvironmentFiles;
+      dependsOn = [ "openpost-postgres" ];
+
+      extraOptions =
+        openpostApplicationOptions
+        ++ [
+          "--health-cmd=sh -ec 'kill -0 1'"
+          "--health-interval=30s"
+          "--health-timeout=3s"
+          "--health-retries=3"
+          "--health-start-period=5s"
+          "--memory=1024m"
+          "--memory-reservation=256m"
+          "--memory-swap=1024m"
+          "--cpus=1.0"
+          "--pids-limit=512"
+        ]
+        ++ openpostFileSecretMounts
+        ++ cfg.extraOptions;
     };
 
     virtualisation.oci-containers.containers.openpost-postgres = lib.mkIf isCloud {
@@ -475,8 +522,8 @@ in
           restartUnits = [
             "podman-openpost-postgres.service"
             "openpost-postgres-credential-reconcile.service"
-            "podman-openpost.service"
-          ];
+          ]
+          ++ openpostApplicationUnits;
         };
         "openpost-cloud-env" = {
           content = ''
@@ -526,7 +573,7 @@ in
             OPENPOST_PADDLE_AGENCY_ANNUAL_PRICE_ID=pri_01kz8y7cy4bjsmtdtjwpwns4wf
           '';
           mode = "0400";
-          restartUnits = [ "podman-openpost.service" ];
+          restartUnits = openpostApplicationUnits;
         };
         "openpost-backup-env" = {
           content = ''
@@ -556,8 +603,8 @@ in
 
     systemd.services.openpost-image-bootstrap = lib.mkIf (cfg.bootstrapDigest != null) {
       description = "Seed the exact OpenPost image on a clean host";
-      before = [ "podman-openpost.service" ];
-      requiredBy = [ "podman-openpost.service" ];
+      before = openpostApplicationUnits;
+      requiredBy = openpostApplicationUnits;
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
@@ -597,7 +644,7 @@ in
       description = "Reconcile the authoritative OpenPost PostgreSQL credential";
       after = [ "podman-openpost-postgres.service" ];
       requires = [ "podman-openpost-postgres.service" ];
-      before = [ "podman-openpost.service" ];
+      before = openpostApplicationUnits;
       unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
       serviceConfig = {
         Type = "oneshot";
@@ -631,6 +678,13 @@ in
     systemd.services.podman-openpost = {
       after = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
       requires = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
+      serviceConfig.TimeoutStopSec = lib.mkForce 120;
+      unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
+    };
+
+    systemd.services.podman-openpost-worker = lib.mkIf isCloud {
+      after = [ "openpost-postgres-credential-reconcile.service" ];
+      requires = [ "openpost-postgres-credential-reconcile.service" ];
       serviceConfig.TimeoutStopSec = lib.mkForce 120;
       unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
     };
@@ -754,6 +808,7 @@ in
             --since '25 hours ago' \
             --output=json \
             --unit=podman-openpost.service \
+            --unit=podman-openpost-worker.service \
             --unit=podman-openpost-postgres.service \
             --unit=openpost-postgres-backup.service \
             --unit=openpost-media-backup.service \
