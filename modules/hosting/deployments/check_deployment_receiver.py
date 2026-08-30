@@ -175,7 +175,15 @@ class DeploymentReceiverTests(unittest.TestCase):
                 server.server_close()
                 server_thread.join(timeout=2)
 
-    def test_dispatch_timeout_retains_replay_claim(self):
+    def test_dispatch_failure_retains_replay_claim(self):
+        for dispatch_error in (
+            subprocess.TimeoutExpired("systemd-run", 3660),
+            subprocess.CalledProcessError(1, "systemd-run"),
+        ):
+            with self.subTest(error=type(dispatch_error).__name__):
+                self.assert_dispatch_failure_consumes_delivery(dispatch_error)
+
+    def assert_dispatch_failure_consumes_delivery(self, dispatch_error):
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary_root = Path(temporary_directory)
             secret_path = temporary_root / "secret"
@@ -187,11 +195,11 @@ class DeploymentReceiverTests(unittest.TestCase):
                 handler=temporary_root / "handler",
             )
 
-            class TimeoutServer(receiver.DeploymentServer):
+            class FailingServer(receiver.DeploymentServer):
                 def dispatch(self, route, delivery_id, payload_path):
-                    raise subprocess.TimeoutExpired("systemd-run", 3660)
+                    raise dispatch_error
 
-            server = TimeoutServer(
+            server = FailingServer(
                 ("127.0.0.1", 0),
                 temporary_root / "state",
                 Path("/bin/false"),

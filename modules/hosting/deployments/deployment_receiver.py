@@ -141,10 +141,6 @@ def claim_delivery(
     return payload_path
 
 
-def release_delivery(payload_path: Path) -> None:
-    shutil.rmtree(payload_path.parent, ignore_errors=True)
-
-
 def prune_deliveries(state_root: Path, now: int) -> None:
     cutoff = now - REPLAY_RETENTION_SECONDS
     if not state_root.exists():
@@ -282,7 +278,6 @@ class DeploymentRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         request_path = urlsplit(self.path).path
         route = self.server.routes.get(request_path)
-        payload_path: Path | None = None
         try:
             if route is None or self.path != request_path:
                 raise RejectedRequest("unknown route")
@@ -319,8 +314,9 @@ class DeploymentRequestHandler(BaseHTTPRequestHandler):
             self.respond(503, FAILED_RESPONSE)
             return
         except (ConfigurationError, OSError, subprocess.SubprocessError):
-            if payload_path is not None:
-                release_delivery(payload_path)
+            # An authenticated delivery is single-use once its claim is
+            # durable, even when dispatch fails. Workflow reruns use a new
+            # delivery ID, while replaying this signed request must stay inert.
             self.respond(503, FAILED_RESPONSE)
             return
         self.respond(200, ACCEPTED_RESPONSE)
