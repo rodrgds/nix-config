@@ -41,6 +41,7 @@ let
     "npm:pi-mcp-adapter"
     "npm:pi-annotate"
     "npm:pi-image-paste"
+    "npm:@saadjs/pi-stash"
     "npm:pi-subagents"
   ];
 in
