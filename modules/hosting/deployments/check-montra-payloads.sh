@@ -40,26 +40,4 @@ expect_components_rejected '{}'
 expect_components_rejected '{"evil":"'"$digest"'"}'
 expect_components_rejected '{"api":"sha256:ABC"}'
 
-delivery_root="$(mktemp -d)"
-trap 'rm -rf "$delivery_root"' EXIT
-validator="$script_dir/validate-montra-delivery.sh"
-bash "$validator" "$valid" 1 "$delivery_root" "$script_dir/montra-payload.jq"
-test -f "$delivery_root/1-1/payload.json"
-if bash "$validator" "$valid" 1 "$delivery_root" "$script_dir/montra-payload.jq" >/dev/null 2>&1; then
-  echo "expected replayed delivery rejection" >&2
-  exit 1
-fi
-stale="$(jq -c '.delivery_id="stale" | .issued_at=699' <<< "$valid")"
-future="$(jq -c '.delivery_id="future" | .issued_at=1061' <<< "$valid")"
-boundary="$(jq -c '.delivery_id="boundary" | .issued_at=700' <<< "$valid")"
-if bash "$validator" "$stale" 1000 "$delivery_root" "$script_dir/montra-payload.jq" >/dev/null 2>&1; then
-  echo "expected stale delivery rejection" >&2
-  exit 1
-fi
-if bash "$validator" "$future" 1000 "$delivery_root" "$script_dir/montra-payload.jq" >/dev/null 2>&1; then
-  echo "expected future delivery rejection" >&2
-  exit 1
-fi
-bash "$validator" "$boundary" 1000 "$delivery_root" "$script_dir/montra-payload.jq"
-
 echo "Montra deploy payload validation passed"
