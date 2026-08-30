@@ -24,7 +24,7 @@ Item {
         Text {
             text: root.title
             color: Theme.fgMuted
-            font.family: Theme.primaryFont
+            font.family: Theme.uiFont
             font.pixelSize: Theme.textSize
             renderType: Text.NativeRendering
         }
@@ -32,7 +32,7 @@ Item {
         Text {
             text: root.value
             color: Theme.fg0
-            font.family: Theme.primaryFont
+            font.family: Theme.uiFont
             font.pixelSize: Theme.textSize
             renderType: Text.NativeRendering
         }

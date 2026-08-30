@@ -59,7 +59,7 @@ Rectangle {
         anchors.centerIn: parent
         text: (root.urgent ? "!" : "") + (root.icon !== "" ? root.icon : root.workspaceId)
         color: root.urgent ? Theme.fg0 : root.focused ? Theme.bg0 : root.active ? Theme.fg0 : Theme.fgMuted
-        font.family: Theme.primaryFont
+        font.family: Theme.monoFont
         font.pixelSize: Theme.textSize
         renderType: Text.NativeRendering
     }

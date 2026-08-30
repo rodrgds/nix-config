@@ -52,7 +52,7 @@ Item {
         visible: root.item.icon === "" || trayIcon.status === Image.Error
         text: "•"
         color: root.needsAttention ? Theme.redBright : Theme.fgMuted
-        font.family: Theme.primaryFont
+        font.family: Theme.uiFont
         font.pixelSize: Theme.iconSize
     }
 

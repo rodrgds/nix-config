@@ -6,6 +6,7 @@ Rectangle {
 
     property string label: ""
     property string tooltipText: ""
+    property string fontFamily: Theme.uiFont
     property bool danger: false
     readonly property bool hovered: pointer.containsMouse
 
@@ -36,7 +37,7 @@ Rectangle {
         anchors.centerIn: parent
         text: root.label
         color: pointer.pressed && !root.danger ? Theme.bg0 : Theme.fg0
-        font.family: Theme.primaryFont
+        font.family: root.fontFamily
         font.pixelSize: Theme.textSize
         renderType: Text.NativeRendering
     }

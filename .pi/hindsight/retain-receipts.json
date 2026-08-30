@@ -2,6 +2,27 @@
   "version": 1,
   "receipts": [
     {
+      "createdAt": "2026-08-30T18:20:50.887Z",
+      "bankId": "rodrigo",
+      "documentId": "pi-explicit:471ba4180e9b8dd8:ab8a123ebdd2fcbb",
+      "queueJobId": "84daedc7-a081-4ee1-8c01-6b326f9f8f48",
+      "updateMode": "replace",
+      "source": "tool",
+      "context": "Verified implementation decision from the shared font-role migration in /home/rgo/.config/home.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-409eb669ba7f",
+        "session:471ba4180e9b8dd8",
+        "project:home"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    },
+    {
       "createdAt": "2026-08-29T21:34:46.465Z",
       "bankId": "pi-project-home-1eaafa522ac3",
       "documentId": "pi-explicit:40639140da6934c9:43a6753556254fc2",
