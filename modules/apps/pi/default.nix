@@ -11,7 +11,11 @@ let
   inherit (constants) isDarwin isLinux;
   toolchain = config.apps.javascript-toolchain;
   packageName = "@earendil-works/pi-coding-agent";
-  piLauncherPath = "${constants.homeDir}/.local/bin/pi";
+  piLauncherDir = "${constants.homeDir}/.local/libexec/pi/bin";
+  piLauncherPath = "${piLauncherDir}/pi";
+  piPathShim = pkgs.writeShellScriptBin "pi" ''
+    exec ${lib.escapeShellArg piLauncherPath} "$@"
+  '';
 
   nineRouterCatalog = import ../../shared/9router.nix;
 
@@ -124,6 +128,7 @@ in
       let
         nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
         exaApiKeyPath = config.sops.secrets.exa_api_key.path;
+        firecrawlApiKeyPath = config.sops.secrets.firecrawl_api_key.path;
         opencodeGoApiKeyPath = config.sops.secrets.opencode_go_api_key.path;
         hindsightApiTokenPath = config.sops.secrets.hindsight_api_token.path;
 
@@ -265,7 +270,7 @@ in
         # pi-web-access resolves its web-search config to
         # $XDG_CONFIG_HOME/pi/web-search.json (Linux, where XDG_CONFIG_HOME
         # is set) or ~/.pi/web-search.json (Darwin fallback). Manage both so
-        # the Exa key is found regardless of the runtime environment.
+        # provider keys are found regardless of the runtime environment.
         webSearchConfig = builtins.toJSON {
           provider = "exa";
           # Return results to the agent directly instead of opening the
@@ -273,6 +278,9 @@ in
           # (curator, default) or "auto-summary" (AI summary, no browser).
           workflow = "none";
           exaApiKey = "!${pkgs.coreutils}/bin/cat ${exaApiKeyPath}";
+          firecrawlBaseUrl = "https://api.firecrawl.dev";
+          firecrawlApiKey = "!${pkgs.coreutils}/bin/cat ${firecrawlApiKeyPath}";
+          firecrawlFreshScrape = true;
         };
 
         hindsightConfig = builtins.toJSON {
@@ -342,14 +350,15 @@ in
       in
       lib.mkMerge [
         {
-          # The shared npm prefix also contains an unwrapped `pi` binary. Keep
-          # this directory first so interactive shells use the launcher below,
-          # which loads runtime-only secrets before handing off to npm.
-          home.sessionPath = lib.mkBefore [ "${constants.homeDir}/.local/bin" ];
+          # The shared npm prefix also contains an unwrapped `pi` binary. Use a
+          # dedicated path so UWSM's path deduplication cannot move this
+          # secret-loading launcher behind the npm prefix.
+          home.sessionPath = lib.mkBefore [ piLauncherDir ];
 
           sops.secrets = {
             nine_router_api_key = { };
             exa_api_key = { };
+            firecrawl_api_key = { };
             opencode_go_api_key = { };
             hindsight_api_token.sopsFile = ../../../secrets/hindsight-secrets.yaml;
           };
@@ -357,6 +366,7 @@ in
           home.packages = [
             pkgs.ripgrep
             pkgs.fd
+            piPathShim
           ];
 
           home.file = {
@@ -369,7 +379,7 @@ in
             ".pi/agent/pi-codex-conversion.json".text = codexConversionConfig;
             ".config/pi/web-search.json".text = webSearchConfig;
             ".pi/web-search.json".text = webSearchConfig;
-            ".local/bin/pi" = {
+            ".local/libexec/pi/bin/pi" = {
               executable = true;
               text = ''
                 #!${pkgs.bash}/bin/bash
