@@ -449,10 +449,11 @@ in
 
       extraOptions = [
         "--network=podman"
-        "--health-cmd=pg_isready -U ${openpostPostgresUser} -d ${openpostPostgresDatabase}"
+        "--health-cmd=sh -ec 'attempt=0; until pg_isready -U ${openpostPostgresUser} -d ${openpostPostgresDatabase}; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
         "--health-interval=10s"
-        "--health-timeout=5s"
+        "--health-timeout=75s"
         "--health-retries=12"
+        "--health-start-period=60s"
         "--memory=1536m"
         "--memory-reservation=256m"
         "--memory-swap=1536m"

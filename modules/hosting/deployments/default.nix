@@ -838,8 +838,6 @@ in
 
     systemd.services.webhook-deploy = {
       description = "Authenticated deployment receiver";
-      after = [ "sops-nix.service" ];
-      requires = [ "sops-nix.service" ];
       unitConfig.OnFailure = lib.optionals config.vps.openpost.enable [
         "openpost-ops-alert@%n.service"
       ];
