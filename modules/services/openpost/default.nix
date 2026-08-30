@@ -868,46 +868,63 @@ in
       };
     };
 
-    systemd.services.openpost-restore-drill = lib.mkIf (isCloud && cfg.offsiteBackup.enable) {
-      description = "Restore and validate the latest encrypted off-host OpenPost backup";
+    systemd.services.openpost-restore-drill = lib.mkIf isCloud {
+      description =
+        if cfg.offsiteBackup.enable then
+          "Restore and validate the latest encrypted off-host OpenPost backup"
+        else
+          "Restore and validate the latest local OpenPost backup";
       unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
       after = [
         "podman-openpost-postgres.service"
-        "openpost-offsite-backup.service"
-      ];
+      ]
+      ++ lib.optional cfg.offsiteBackup.enable "openpost-offsite-backup.service";
       requires = [
         "podman-openpost-postgres.service"
-        "openpost-offsite-backup.service"
-      ];
+      ]
+      ++ lib.optional cfg.offsiteBackup.enable "openpost-offsite-backup.service";
       serviceConfig = {
         Type = "oneshot";
         UMask = "0077";
-        EnvironmentFile = config.sops.templates."openpost-offsite-backup-env".path;
-        CacheDirectory = "openpost-restic";
         RuntimeDirectory = "openpost-restore-drill";
         ExecStart = pkgs.writeShellScript "openpost-restore-drill" ''
           set -euo pipefail
           backup_root=/var/backup/openpost
-          offsite_restore_root="$(${pkgs.coreutils}/bin/mktemp -d /run/openpost-restore-drill/offsite.XXXXXX)"
+          offsite_restore_root=""
           database_created=false
           cleanup() {
             if [ "$database_created" = true ]; then
               ${pkgs.podman}/bin/podman exec openpost-postgres dropdb \
                 --if-exists -U ${openpostPostgresUser} "$restore_database" >/dev/null
             fi
-            ${pkgs.coreutils}/bin/rm -rf -- "$offsite_restore_root"
+            ${lib.optionalString cfg.offsiteBackup.enable ''
+              if [ -n "$offsite_restore_root" ]; then
+                ${pkgs.coreutils}/bin/rm -rf -- "$offsite_restore_root"
+              fi
+            ''}
           }
           trap cleanup EXIT
 
-          ${pkgs.restic}/bin/restic restore latest \
-            --host rgo-vps \
-            --tag openpost \
-            --target "$offsite_restore_root" \
-            --include '/var/backup/openpost/openpost_*.sql.gz' \
-            --include '/var/backup/openpost/media-current/**'
-          latest_backup=$(${pkgs.findutils}/bin/find "$offsite_restore_root/var/backup/openpost" -maxdepth 1 -type f -name 'openpost_*.sql.gz' -printf '%T@ %p\n' | ${pkgs.coreutils}/bin/sort -nr | ${pkgs.gawk}/bin/awk 'NR == 1 { print $2 }')
+          ${
+            if cfg.offsiteBackup.enable then
+              ''
+                offsite_restore_root="$(${pkgs.coreutils}/bin/mktemp -d /run/openpost-restore-drill/offsite.XXXXXX)"
+                ${pkgs.restic}/bin/restic restore latest \
+                  --host rgo-vps \
+                  --tag openpost \
+                  --target "$offsite_restore_root" \
+                  --include '/var/backup/openpost/openpost_*.sql.gz' \
+                  --include '/var/backup/openpost/media-current/**'
+                backup_source_root="$offsite_restore_root/var/backup/openpost"
+              ''
+            else
+              ''
+                backup_source_root="$backup_root"
+              ''
+          }
+          latest_backup=$(${pkgs.findutils}/bin/find "$backup_source_root" -maxdepth 1 -type f -name 'openpost_*.sql.gz' -printf '%T@ %p\n' | ${pkgs.coreutils}/bin/sort -nr | ${pkgs.gawk}/bin/awk 'NR == 1 { print $2 }')
           if [ -z "$latest_backup" ]; then
-            echo "No OpenPost database backup was restored from off host" >&2
+            echo "No OpenPost database backup is available for the restore drill" >&2
             exit 1
           fi
 
@@ -932,7 +949,7 @@ in
             "SELECT count(*) FROM posts" -U ${openpostPostgresUser} -d "$restore_database")
           database_media_count=$(${pkgs.podman}/bin/podman exec openpost-postgres psql -Atqc \
             "SELECT count(*) FROM media_attachments" -U ${openpostPostgresUser} -d "$restore_database")
-          restored_media_root="$offsite_restore_root/var/backup/openpost/media-current"
+          restored_media_root="$backup_source_root/media-current"
           if [ -d "$restored_media_root" ]; then
             media_file_count=$(${pkgs.findutils}/bin/find "$restored_media_root" -type f | ${pkgs.coreutils}/bin/wc -l)
           else
@@ -969,10 +986,14 @@ in
           ${pkgs.coreutils}/bin/chmod 0600 "$evidence_tmp"
           ${pkgs.coreutils}/bin/mv "$evidence_tmp" "$backup_root/restore-drill-latest.json"
         '';
+      }
+      // lib.optionalAttrs cfg.offsiteBackup.enable {
+        EnvironmentFile = config.sops.templates."openpost-offsite-backup-env".path;
+        CacheDirectory = "openpost-restic";
       };
     };
 
-    systemd.timers.openpost-restore-drill = lib.mkIf (isCloud && cfg.offsiteBackup.enable) {
+    systemd.timers.openpost-restore-drill = lib.mkIf isCloud {
       description = "Weekly OpenPost restore drill";
       wantedBy = [ "timers.target" ];
       timerConfig = {
