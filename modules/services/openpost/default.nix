@@ -14,6 +14,9 @@ let
   openpostHostPort = 8090;
   # Container port (internal) - OpenPost listens on 8080 inside container
   openpostContainerPort = 8080;
+  # Keep SOPS file ownership aligned with the image user through Podman's host UID mapping.
+  openpostContainerUid = 1000;
+  openpostContainerGid = 1000;
   openpostPostgresUser = "openpost";
   openpostPostgresDatabase = "openpost";
 
@@ -143,7 +146,9 @@ let
       secret:
       lib.nameValuePair "openpost-${secret.name}" {
         content = secret.value;
-        mode = "0444";
+        uid = openpostContainerUid;
+        gid = openpostContainerGid;
+        mode = "0400";
       }
     ) openpostFileSecrets
   );
@@ -291,6 +296,7 @@ in
     # OpenPost application
     virtualisation.oci-containers.containers.openpost = {
       inherit (cfg) image;
+      user = "${toString openpostContainerUid}:${toString openpostContainerGid}";
 
       environment = {
         OPENPOST_PORT = toString openpostContainerPort;
@@ -343,6 +349,7 @@ in
 
       extraOptions = [
         "--network=podman"
+        "--userns=host"
         "--pull=${cfg.pullPolicy}"
         "--health-cmd=sh -ec 'attempt=0; until wget --spider http://localhost:${toString openpostContainerPort}/api/v1/ready; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
         "--health-interval=30s"
@@ -383,7 +390,7 @@ in
             POSTGRES_DB=${openpostPostgresDatabase}
             POSTGRES_PASSWORD=${config.sops.placeholder.openpost_postgres_password}
           '';
-          mode = "0444";
+          mode = "0400";
         };
         "openpost-cloud-env" = {
           content = ''
@@ -432,7 +439,7 @@ in
             OPENPOST_PADDLE_AGENCY_MONTHLY_PRICE_ID=pri_01kz8y7ccz8ve0gp2erm4yvssw
             OPENPOST_PADDLE_AGENCY_ANNUAL_PRICE_ID=pri_01kz8y7cy4bjsmtdtjwpwns4wf
           '';
-          mode = "0444";
+          mode = "0400";
         };
         "openpost-backup-env" = {
           content = ''
