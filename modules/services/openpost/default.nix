@@ -224,10 +224,27 @@ let
     pkgs.writeShellScript "stop-${name}" ''
       set -euo pipefail
       if ${pkgs.podman}/bin/podman container exists ${lib.escapeShellArg name}; then
-        # Podman schedules health checks as transient systemd units. Disable
-        # the old container's timer before replacement so it cannot fire after
-        # the container has stopped and make the NixOS switch look degraded.
+        # Podman 5.8 can leave its transient systemd timer loaded after this
+        # update. Quiesce the container-ID-specific timer and any active probe
+        # before replacement so neither can fail after the container is gone.
         ${pkgs.podman}/bin/podman update --health-interval=disable ${lib.escapeShellArg name} >/dev/null
+        read -r container_id < /run/${name}/ctr-id
+        [[ "$container_id" =~ ^[0-9a-f]{64}$ ]] || {
+          echo "invalid ${name} container ID" >&2
+          exit 1
+        }
+        for unit_type in timer service; do
+          while read -r unit _; do
+            [ -n "$unit" ] || continue
+            ${pkgs.systemd}/bin/systemctl stop "$unit" || true
+            if [ "$unit_type" = service ]; then
+              ${pkgs.systemd}/bin/systemctl reset-failed "$unit" || true
+            fi
+          done < <(
+            ${pkgs.systemd}/bin/systemctl list-units \
+              --all --plain --no-legend "$container_id-*.$unit_type"
+          )
+        done
       fi
       ${pkgs.podman}/bin/podman stop --ignore --cidfile=/run/${name}/ctr-id
     '';
