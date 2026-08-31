@@ -17,6 +17,7 @@ ToolButton {
     }
 
     label: Audio.available ? icon + " " + percent + "%" : "\uf6a9"
+    fontFamily: Theme.monoFont
     tooltipText: Audio.description + "\nLeft: switch output · Right: mixer · Wheel: volume"
 
     onTriggered: button => {

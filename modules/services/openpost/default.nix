@@ -9,16 +9,27 @@
 let
   cfg = config.vps.openpost;
   isCloud = cfg.edition == "cloud";
+  runtimeContract = builtins.fromJSON (builtins.readFile ./runtime-contract.json);
 
   # Host port (external) - must be unique per service
   openpostHostPort = 8090;
   # Container port (internal) - OpenPost listens on 8080 inside container
   openpostContainerPort = 8080;
-  # Keep SOPS file ownership aligned with the image user through Podman's host UID mapping.
-  openpostContainerUid = 1000;
-  openpostContainerGid = 1000;
+  # Map the image user into a non-login host range so the interactive UID 1000
+  # cannot read runtime secrets or application data from the host.
+  openpostContainerUid = runtimeContract.containerUid;
+  openpostContainerGid = runtimeContract.containerGid;
+  openpostHostIdBase = runtimeContract.hostIdBase;
+  openpostHostUid = openpostHostIdBase + openpostContainerUid;
+  openpostHostGid = openpostHostIdBase + openpostContainerGid;
   openpostPostgresUser = "openpost";
   openpostPostgresDatabase = "openpost";
+  openpostPostgresImage = "docker.io/library/postgres:17-alpine@sha256:0a8a1e76503c091f0feb387d51b10fcd746c2d61cf6cdd6e8356973a45e40a0f";
+  openpostImageRepository = lib.removeSuffix ":latest" cfg.image;
+  openpostApplicationUnits = [
+    "podman-openpost.service"
+  ]
+  ++ lib.optional isCloud "podman-openpost-worker.service";
 
   openpostFileSecrets = [
     {
@@ -146,9 +157,10 @@ let
       secret:
       lib.nameValuePair "openpost-${secret.name}" {
         content = secret.value;
-        uid = openpostContainerUid;
-        gid = openpostContainerGid;
+        uid = openpostHostUid;
+        gid = openpostHostGid;
         mode = "0400";
+        restartUnits = openpostApplicationUnits;
       }
     ) openpostFileSecrets
   );
@@ -160,6 +172,110 @@ let
     in
     "--mount=type=bind,source=${config.sops.templates.${templateName}.path},target=${secret.target},ro"
   ) openpostFileSecrets;
+
+  openpostApplicationEnvironment = {
+    OPENPOST_PORT = toString openpostContainerPort;
+    OPENPOST_EDITION = cfg.edition;
+    OPENPOST_APP_URL = "https://${cfg.domain}";
+    OPENPOST_PUBLIC_URL = "https://${cfg.domain}";
+    OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain}";
+    OPENPOST_DISABLE_REGISTRATIONS = "false";
+    OPENPOST_STOCK_MEDIA_ENABLED = "true";
+    LINKEDIN_DISABLE_THREAD_REPLIES = "true";
+    X_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/x/callback";
+    LINKEDIN_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/linkedin/callback";
+    THREADS_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/threads/callback";
+    MASTODON_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/mastodon/callback";
+    TZ = cfg.timezone;
+  }
+  // openpostFileSecretEnvironment
+  // (
+    if isCloud then
+      {
+        OPENPOST_DATABASE_DRIVER = "postgres";
+        OPENPOST_STORAGE_DRIVER = "s3";
+      }
+    else
+      {
+        OPENPOST_DATABASE_DRIVER = "sqlite";
+        OPENPOST_DATABASE_PATH = "/data/db/openpost.db";
+        OPENPOST_STORAGE_DRIVER = "local";
+        OPENPOST_MEDIA_PATH = "/data/media";
+        OPENPOST_MEDIA_URL = "https://${cfg.domain}/media";
+      }
+  )
+  // cfg.extraEnvironment;
+
+  openpostApplicationEnvironmentFiles =
+    cfg.extraEnvironmentFiles
+    ++ lib.optionals isCloud [
+      config.sops.templates.openpost-cloud-env.path
+    ];
+
+  openpostApplicationOptions = [
+    "--network=podman"
+    "--uidmap=0:${toString openpostHostIdBase}:65536"
+    "--gidmap=0:${toString openpostHostIdBase}:65536"
+    "--pull=${cfg.pullPolicy}"
+  ];
+
+  stopManagedContainer =
+    name:
+    pkgs.writeShellScript "stop-${name}" ''
+      set -euo pipefail
+      if ${pkgs.podman}/bin/podman container exists ${lib.escapeShellArg name}; then
+        # Podman 5.8 can leave its transient systemd timer loaded after this
+        # update. Quiesce the container-ID-specific timer and any active probe
+        # before replacement so neither can fail after the container is gone.
+        ${pkgs.podman}/bin/podman update --health-interval=disable ${lib.escapeShellArg name} >/dev/null
+        read -r container_id < /run/${name}/ctr-id
+        [[ "$container_id" =~ ^[0-9a-f]{64}$ ]] || {
+          echo "invalid ${name} container ID" >&2
+          exit 1
+        }
+        for unit_type in timer service; do
+          while read -r unit _; do
+            [ -n "$unit" ] || continue
+            ${pkgs.systemd}/bin/systemctl stop "$unit" || true
+            if [ "$unit_type" = service ]; then
+              ${pkgs.systemd}/bin/systemctl reset-failed "$unit" || true
+            fi
+          done < <(
+            ${pkgs.systemd}/bin/systemctl list-units \
+              --all --plain --no-legend "$container_id-*.$unit_type"
+          )
+        done
+      fi
+      ${pkgs.podman}/bin/podman stop --ignore --cidfile=/run/${name}/ctr-id
+    '';
+
+  openpostOpsAlert = pkgs.writeShellScript "openpost-ops-alert" ''
+    set -euo pipefail
+    [ "$#" -eq 1 ] || { echo "expected a failed systemd unit" >&2; exit 1; }
+    unit="$1"
+    [[ "$unit" =~ ^[A-Za-z0-9@_.:-]+$ ]] || { echo "invalid systemd unit" >&2; exit 1; }
+    webhook_url="$(${pkgs.coreutils}/bin/tr -d '\r\n' < ${
+      config.sops.templates."openpost-feedback-webhook".path
+    })"
+    case "$webhook_url" in
+      https://discord.com/api/webhooks/*|https://discordapp.com/api/webhooks/*) ;;
+      *) echo "OpenPost operations webhook is not an approved Discord URL" >&2; exit 1 ;;
+    esac
+    result="$(${pkgs.systemd}/bin/systemctl show "$unit" --property=Result --value 2>/dev/null || printf unknown)"
+    message="OpenPost operations failure on $(${pkgs.inetutils}/bin/hostname): $unit result=$result at $(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
+    payload="$(${pkgs.jq}/bin/jq -cn --arg content "$message" '{content: $content}')"
+    printf 'url = "%s"\n' "$webhook_url" \
+      | ${pkgs.curl}/bin/curl \
+          --config - \
+          --fail \
+          --silent \
+          --show-error \
+          --connect-timeout 10 \
+          --max-time 30 \
+          --header 'Content-Type: application/json' \
+          --data-binary "$payload" \
+          --output /dev/null
+  '';
 
 in
 {
@@ -212,6 +328,20 @@ in
         service from reusing a stale local `latest` image after a Nix switch.
       '';
     };
+
+    bootstrapDigest = lib.mkOption {
+      type = lib.types.nullOr (lib.types.strMatching "sha256:[0-9a-f]{64}");
+      default = null;
+      description = "Immutable OpenPost image digest used only to seed a clean host.";
+    };
+
+    bootstrapRevision = lib.mkOption {
+      type = lib.types.nullOr (lib.types.strMatching "[0-9a-f]{40}");
+      default = null;
+      description = "Source revision required on the clean-host bootstrap image.";
+    };
+
+    offsiteBackup.enable = lib.mkEnableOption "encrypted off-host OpenPost backups and log archives";
 
     extraEnvironment = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
@@ -276,6 +406,14 @@ in
         "openpost_paddle_client_token"
         "openpost_paddle_webhook_secret"
       ]
+      ++ lib.optionals (isCloud && cfg.offsiteBackup.enable) [
+        "openpost_backup_s3_endpoint"
+        "openpost_backup_s3_region"
+        "openpost_backup_s3_bucket"
+        "openpost_backup_s3_access_key_id"
+        "openpost_backup_s3_secret_access_key"
+        "openpost_backup_restic_password"
+      ]
     ) (_: { });
 
     # Create persistent directories
@@ -288,54 +426,34 @@ in
       "d /var/backup/openpost 0700 root root -"
     ]
     ++ lib.optionals (!isCloud) [
-      "d /var/lib/openpost/data 0755 1000 1000 -"
-      "d /var/lib/openpost/data/db 0755 1000 1000 -"
-      "d /var/lib/openpost/data/media 0755 1000 1000 -"
+      "d /var/lib/openpost/data 0750 ${toString openpostHostUid} ${toString openpostHostGid} -"
+      "d /var/lib/openpost/data/db 0750 ${toString openpostHostUid} ${toString openpostHostGid} -"
+      "d /var/lib/openpost/data/media 0750 ${toString openpostHostUid} ${toString openpostHostGid} -"
     ];
 
-    # OpenPost application
+    assertions = [
+      {
+        assertion = (cfg.bootstrapDigest == null) == (cfg.bootstrapRevision == null);
+        message = "OpenPost bootstrapDigest and bootstrapRevision must be configured together.";
+      }
+      {
+        assertion = cfg.bootstrapDigest == null || lib.hasSuffix ":latest" cfg.image;
+        message = "OpenPost clean-host bootstrap requires the managed image to use the :latest tag.";
+      }
+    ];
+
+    # OpenPost HTTP application. Hosted workers run in a separate container so
+    # web traffic and durable job throughput can scale and fail independently.
     virtualisation.oci-containers.containers.openpost = {
       inherit (cfg) image;
       user = "${toString openpostContainerUid}:${toString openpostContainerGid}";
+      cmd = [
+        "./openpost"
+        (if isCloud then "web" else "all")
+      ];
 
-      environment = {
-        OPENPOST_PORT = toString openpostContainerPort;
-        OPENPOST_EDITION = cfg.edition;
-        OPENPOST_APP_URL = "https://${cfg.domain}";
-        OPENPOST_PUBLIC_URL = "https://${cfg.domain}";
-        OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain}";
-        OPENPOST_DISABLE_REGISTRATIONS = "false";
-        OPENPOST_STOCK_MEDIA_ENABLED = "true";
-        LINKEDIN_DISABLE_THREAD_REPLIES = "true";
-        X_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/x/callback";
-        LINKEDIN_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/linkedin/callback";
-        THREADS_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/threads/callback";
-        MASTODON_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/mastodon/callback";
-        TZ = cfg.timezone;
-      }
-      // openpostFileSecretEnvironment
-      // (
-        if isCloud then
-          {
-            OPENPOST_DATABASE_DRIVER = "postgres";
-            OPENPOST_STORAGE_DRIVER = "s3";
-          }
-        else
-          {
-            OPENPOST_DATABASE_DRIVER = "sqlite";
-            OPENPOST_DATABASE_PATH = "/data/db/openpost.db";
-            OPENPOST_STORAGE_DRIVER = "local";
-            OPENPOST_MEDIA_PATH = "/data/media";
-            OPENPOST_MEDIA_URL = "https://${cfg.domain}/media";
-          }
-      )
-      // cfg.extraEnvironment;
-
-      environmentFiles =
-        cfg.extraEnvironmentFiles
-        ++ lib.optionals isCloud [
-          config.sops.templates.openpost-cloud-env.path
-        ];
+      environment = openpostApplicationEnvironment;
+      environmentFiles = openpostApplicationEnvironmentFiles;
 
       volumes = lib.optionals (!isCloud) [
         "/var/lib/openpost/data:/data"
@@ -347,22 +465,56 @@ in
         "127.0.0.1:${toString openpostHostPort}:${toString openpostContainerPort}"
       ];
 
-      extraOptions = [
-        "--network=podman"
-        "--userns=host"
-        "--pull=${cfg.pullPolicy}"
-        "--health-cmd=sh -ec 'attempt=0; until wget --spider http://localhost:${toString openpostContainerPort}/api/v1/ready; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
-        "--health-interval=30s"
-        "--health-timeout=75s"
-        "--health-retries=3"
-        "--health-start-period=60s"
-      ]
-      ++ openpostFileSecretMounts
-      ++ cfg.extraOptions;
+      extraOptions =
+        openpostApplicationOptions
+        ++ [
+          "--health-cmd=sh -ec 'attempt=0; until wget --spider http://localhost:${toString openpostContainerPort}/api/v1/health; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
+          "--health-interval=30s"
+          "--health-timeout=75s"
+          "--health-retries=3"
+          "--health-start-period=60s"
+          "--memory=1536m"
+          "--memory-reservation=256m"
+          "--memory-swap=1536m"
+          "--cpus=1.5"
+          "--pids-limit=512"
+        ]
+        ++ openpostFileSecretMounts
+        ++ cfg.extraOptions;
+    };
+
+    virtualisation.oci-containers.containers.openpost-worker = lib.mkIf isCloud {
+      inherit (cfg) image;
+      user = "${toString openpostContainerUid}:${toString openpostContainerGid}";
+      cmd = [
+        "./openpost"
+        "worker"
+      ];
+
+      environment = openpostApplicationEnvironment;
+      environmentFiles = openpostApplicationEnvironmentFiles;
+      dependsOn = [ "openpost-postgres" ];
+
+      extraOptions =
+        openpostApplicationOptions
+        ++ [
+          "--health-cmd=sh -ec 'kill -0 1'"
+          "--health-interval=30s"
+          "--health-timeout=3s"
+          "--health-retries=3"
+          "--health-start-period=5s"
+          "--memory=1024m"
+          "--memory-reservation=256m"
+          "--memory-swap=1024m"
+          "--cpus=1.0"
+          "--pids-limit=512"
+        ]
+        ++ openpostFileSecretMounts
+        ++ cfg.extraOptions;
     };
 
     virtualisation.oci-containers.containers.openpost-postgres = lib.mkIf isCloud {
-      image = "docker.io/postgres:17-alpine";
+      image = openpostPostgresImage;
 
       environmentFiles = [
         config.sops.templates.openpost-postgres-env.path
@@ -374,10 +526,16 @@ in
 
       extraOptions = [
         "--network=podman"
-        "--health-cmd=pg_isready -U ${openpostPostgresUser} -d ${openpostPostgresDatabase}"
+        "--health-cmd=sh -ec 'attempt=0; until pg_isready -U ${openpostPostgresUser} -d ${openpostPostgresDatabase}; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
         "--health-interval=10s"
-        "--health-timeout=5s"
+        "--health-timeout=75s"
         "--health-retries=12"
+        "--health-start-period=60s"
+        "--memory=1536m"
+        "--memory-reservation=256m"
+        "--memory-swap=1536m"
+        "--cpus=1.5"
+        "--pids-limit=256"
       ];
     };
 
@@ -391,6 +549,11 @@ in
             POSTGRES_PASSWORD=${config.sops.placeholder.openpost_postgres_password}
           '';
           mode = "0400";
+          restartUnits = [
+            "podman-openpost-postgres.service"
+            "openpost-postgres-credential-reconcile.service"
+          ]
+          ++ openpostApplicationUnits;
         };
         "openpost-cloud-env" = {
           content = ''
@@ -440,6 +603,7 @@ in
             OPENPOST_PADDLE_AGENCY_ANNUAL_PRICE_ID=pri_01kz8y7cy4bjsmtdtjwpwns4wf
           '';
           mode = "0400";
+          restartUnits = openpostApplicationUnits;
         };
         "openpost-backup-env" = {
           content = ''
@@ -453,10 +617,120 @@ in
           '';
           mode = "0400";
         };
+      }
+      // lib.optionalAttrs (isCloud && cfg.offsiteBackup.enable) {
+        "openpost-offsite-backup-env" = {
+          content = ''
+            AWS_ACCESS_KEY_ID=${config.sops.placeholder.openpost_backup_s3_access_key_id}
+            AWS_SECRET_ACCESS_KEY=${config.sops.placeholder.openpost_backup_s3_secret_access_key}
+            AWS_DEFAULT_REGION=${config.sops.placeholder.openpost_backup_s3_region}
+            RESTIC_REPOSITORY=s3:${config.sops.placeholder.openpost_backup_s3_endpoint}/${config.sops.placeholder.openpost_backup_s3_bucket}/openpost
+            RESTIC_PASSWORD=${config.sops.placeholder.openpost_backup_restic_password}
+          '';
+          mode = "0400";
+        };
       };
+
+    systemd.services.openpost-image-bootstrap = lib.mkIf (cfg.bootstrapDigest != null) {
+      description = "Seed the exact OpenPost image on a clean host";
+      before = openpostApplicationUnits;
+      requiredBy = openpostApplicationUnits;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "openpost-image-bootstrap" ''
+          set -euo pipefail
+          image=${lib.escapeShellArg cfg.image}
+          if ${pkgs.podman}/bin/podman image exists "$image"; then
+            exit 0
+          fi
+
+          candidate=${lib.escapeShellArg "${openpostImageRepository}@${cfg.bootstrapDigest}"}
+          ${pkgs.podman}/bin/podman pull "$candidate"
+          revision="$(${pkgs.podman}/bin/podman image inspect "$candidate" --format '{{index .Labels "org.opencontainers.image.revision"}}')"
+          if [ "$revision" != ${lib.escapeShellArg cfg.bootstrapRevision} ]; then
+            echo "OpenPost bootstrap image revision $revision does not match the configured revision" >&2
+            exit 1
+          fi
+          ${pkgs.podman}/bin/podman tag "$candidate" "$image"
+        '';
+      };
+    };
+
+    systemd.services."openpost-ops-alert@" = {
+      description = "Send an OpenPost operations failure alert for %i";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${openpostOpsAlert} %i";
+        UMask = "0077";
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        ProtectHome = true;
+        ProtectSystem = "strict";
+      };
+    };
+
+    systemd.services.openpost-postgres-credential-reconcile = lib.mkIf isCloud {
+      description = "Reconcile the authoritative OpenPost PostgreSQL credential";
+      after = [ "podman-openpost-postgres.service" ];
+      requires = [ "podman-openpost-postgres.service" ];
+      before = openpostApplicationUnits;
+      unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        EnvironmentFile = config.sops.templates.openpost-postgres-env.path;
+        UMask = "0077";
+        ExecStart = pkgs.writeShellScript "openpost-postgres-credential-reconcile" ''
+          set -euo pipefail
+          for attempt in $(${pkgs.coreutils}/bin/seq 1 60); do
+            if ${pkgs.podman}/bin/podman exec openpost-postgres pg_isready \
+              -U ${openpostPostgresUser} -d ${openpostPostgresDatabase} >/dev/null; then
+              break
+            fi
+            if [ "$attempt" = 60 ]; then
+              echo "OpenPost PostgreSQL did not become ready for credential reconciliation" >&2
+              exit 1
+            fi
+            ${pkgs.coreutils}/bin/sleep 1
+          done
+
+          encoded_password="$(printf '%s' "$POSTGRES_PASSWORD" | ${pkgs.coreutils}/bin/base64 | ${pkgs.coreutils}/bin/tr -d '\n')"
+          printf "SELECT format('ALTER ROLE ${openpostPostgresUser} PASSWORD %%L', convert_from(decode('%s', 'base64'), 'UTF8')) \\gexec\n" "$encoded_password" \
+            | ${pkgs.podman}/bin/podman exec -i openpost-postgres psql \
+                -v ON_ERROR_STOP=1 -U ${openpostPostgresUser} -d ${openpostPostgresDatabase} >/dev/null
+          ${pkgs.podman}/bin/podman exec --env POSTGRES_PASSWORD openpost-postgres sh -ec \
+            'PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -v ON_ERROR_STOP=1 -U ${openpostPostgresUser} -d ${openpostPostgresDatabase} -Atqc "SELECT 1"' \
+            | ${pkgs.gnugrep}/bin/grep -Fx 1 >/dev/null
+        '';
+      };
+    };
+
+    systemd.services.podman-openpost = {
+      after = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
+      requires = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
+      serviceConfig = {
+        ExecStop = lib.mkForce "${stopManagedContainer "openpost"}";
+        TimeoutStopSec = lib.mkForce 120;
+      };
+      unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
+    };
+
+    systemd.services.podman-openpost-worker = lib.mkIf isCloud {
+      after = [ "openpost-postgres-credential-reconcile.service" ];
+      requires = [ "openpost-postgres-credential-reconcile.service" ];
+      serviceConfig = {
+        ExecStop = lib.mkForce "${stopManagedContainer "openpost-worker"}";
+        TimeoutStopSec = lib.mkForce 120;
+      };
+      unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
+    };
+
+    systemd.services.podman-openpost-postgres.serviceConfig.ExecStop =
+      lib.mkForce "${stopManagedContainer "openpost-postgres"}";
 
     systemd.services.openpost-postgres-backup = lib.mkIf isCloud {
       description = "Backup OpenPost Postgres database";
+      unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
       serviceConfig = {
         Type = "oneshot";
         UMask = "0077";
@@ -496,6 +770,7 @@ in
 
     systemd.services.openpost-media-backup = lib.mkIf isCloud {
       description = "Backup OpenPost S3 media with retained changed and deleted objects";
+      unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
       serviceConfig = {
         Type = "oneshot";
         UMask = "0077";
@@ -538,32 +813,162 @@ in
       };
     };
 
-    systemd.services.openpost-restore-drill = lib.mkIf isCloud {
-      description = "Restore and validate the latest OpenPost backup";
-      after = [ "podman-openpost-postgres.service" ];
-      requires = [ "podman-openpost-postgres.service" ];
+    systemd.services.openpost-offsite-backup = lib.mkIf (isCloud && cfg.offsiteBackup.enable) {
+      description = "Encrypt and copy OpenPost backups and logs off host";
+      after = [
+        "openpost-postgres-backup.service"
+        "openpost-media-backup.service"
+      ];
+      requires = [
+        "openpost-postgres-backup.service"
+        "openpost-media-backup.service"
+      ];
+      unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
       serviceConfig = {
         Type = "oneshot";
         UMask = "0077";
+        EnvironmentFile = config.sops.templates."openpost-offsite-backup-env".path;
+        CacheDirectory = "openpost-restic";
+        ExecStart = pkgs.writeShellScript "openpost-offsite-backup" ''
+          set -euo pipefail
+          backup_root=/var/backup/openpost
+          log_root="$backup_root/logs"
+          evidence_root=/var/lib/openpost
+          ${pkgs.coreutils}/bin/mkdir -p "$log_root" "$evidence_root"
+
+          timestamp="$(${pkgs.coreutils}/bin/date -u +%Y%m%d_%H%M%S)"
+          log_archive="$log_root/openpost-journal-$timestamp.json.gz"
+          log_tmp="$(${pkgs.coreutils}/bin/mktemp "$log_root/.openpost-journal-$timestamp.XXXXXX")"
+          cleanup() {
+            ${pkgs.coreutils}/bin/rm -f -- "$log_tmp"
+          }
+          trap cleanup EXIT
+          ${pkgs.systemd}/bin/journalctl \
+            --since '25 hours ago' \
+            --output=json \
+            --unit=podman-openpost.service \
+            --unit=podman-openpost-worker.service \
+            --unit=podman-openpost-postgres.service \
+            --unit=openpost-postgres-backup.service \
+            --unit=openpost-media-backup.service \
+            --unit=openpost-restore-drill.service \
+            | ${pkgs.gzip}/bin/gzip > "$log_tmp"
+          ${pkgs.gzip}/bin/gzip -t "$log_tmp"
+          ${pkgs.coreutils}/bin/chmod 0600 "$log_tmp"
+          ${pkgs.coreutils}/bin/mv "$log_tmp" "$log_archive"
+          trap - EXIT
+          ${pkgs.findutils}/bin/find "$log_root" -type f -name 'openpost-journal-*.json.gz' -mtime +3 -delete
+
+          if ! ${pkgs.restic}/bin/restic cat config >/dev/null 2>&1; then
+            ${pkgs.restic}/bin/restic init
+          fi
+          snapshot_id="$(${pkgs.restic}/bin/restic backup \
+            --json \
+            --host rgo-vps \
+            --tag openpost \
+            --exclude "$backup_root/media-versions" \
+            "$backup_root" \
+            | ${pkgs.jq}/bin/jq -r 'select(.message_type == "summary") | .snapshot_id' \
+            | ${pkgs.coreutils}/bin/tail -n 1)"
+          [[ "$snapshot_id" =~ ^[0-9a-f]{64}$ ]] || {
+            echo "Restic did not report an OpenPost snapshot ID" >&2
+            exit 1
+          }
+          ${pkgs.restic}/bin/restic check --read-data-subset=5%
+          ${pkgs.restic}/bin/restic forget \
+            --host rgo-vps \
+            --tag openpost \
+            --keep-daily 7 \
+            --keep-weekly 5 \
+            --keep-monthly 12 \
+            --prune
+
+          checked_at="$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
+          evidence_tmp="$(${pkgs.coreutils}/bin/mktemp "$evidence_root/.offsite-backup-latest.XXXXXX")"
+          ${pkgs.jq}/bin/jq -cn \
+            --arg status passed \
+            --arg checked_at "$checked_at" \
+            --arg snapshot_id "$snapshot_id" \
+            '{status: $status, checked_at: $checked_at, snapshot_id: $snapshot_id}' \
+            > "$evidence_tmp"
+          ${pkgs.coreutils}/bin/chmod 0600 "$evidence_tmp"
+          ${pkgs.coreutils}/bin/mv "$evidence_tmp" "$evidence_root/offsite-backup-latest.json"
+        '';
+      };
+    };
+
+    systemd.timers.openpost-offsite-backup = lib.mkIf (isCloud && cfg.offsiteBackup.enable) {
+      description = "Daily encrypted off-host OpenPost backup";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "*-*-* 02:30:00";
+        Persistent = true;
+        RandomizedDelaySec = "10min";
+      };
+    };
+
+    systemd.services.openpost-restore-drill = lib.mkIf isCloud {
+      description =
+        if cfg.offsiteBackup.enable then
+          "Restore and validate the latest encrypted off-host OpenPost backup"
+        else
+          "Restore and validate the latest local OpenPost backup";
+      unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
+      after = [
+        "podman-openpost-postgres.service"
+      ]
+      ++ lib.optional cfg.offsiteBackup.enable "openpost-offsite-backup.service";
+      requires = [
+        "podman-openpost-postgres.service"
+      ]
+      ++ lib.optional cfg.offsiteBackup.enable "openpost-offsite-backup.service";
+      serviceConfig = {
+        Type = "oneshot";
+        UMask = "0077";
+        RuntimeDirectory = "openpost-restore-drill";
         ExecStart = pkgs.writeShellScript "openpost-restore-drill" ''
           set -euo pipefail
           backup_root=/var/backup/openpost
-          latest_backup=$(${pkgs.findutils}/bin/find "$backup_root" -maxdepth 1 -type f -name 'openpost_*.sql.gz' -printf '%T@ %p\n' | ${pkgs.coreutils}/bin/sort -nr | ${pkgs.gawk}/bin/awk 'NR == 1 { print $2 }')
-          if [ -z "$latest_backup" ]; then
-            echo "No OpenPost database backup found" >&2
-            exit 1
-          fi
-
-          ${pkgs.gzip}/bin/gzip -t "$latest_backup"
-          restore_database="openpost_restore_drill_$(${pkgs.coreutils}/bin/date -u +%Y%m%d_%H%M%S)"
+          offsite_restore_root=""
           database_created=false
           cleanup() {
             if [ "$database_created" = true ]; then
               ${pkgs.podman}/bin/podman exec openpost-postgres dropdb \
                 --if-exists -U ${openpostPostgresUser} "$restore_database" >/dev/null
             fi
+            ${lib.optionalString cfg.offsiteBackup.enable ''
+              if [ -n "$offsite_restore_root" ]; then
+                ${pkgs.coreutils}/bin/rm -rf -- "$offsite_restore_root"
+              fi
+            ''}
           }
           trap cleanup EXIT
+
+          ${
+            if cfg.offsiteBackup.enable then
+              ''
+                offsite_restore_root="$(${pkgs.coreutils}/bin/mktemp -d /run/openpost-restore-drill/offsite.XXXXXX)"
+                ${pkgs.restic}/bin/restic restore latest \
+                  --host rgo-vps \
+                  --tag openpost \
+                  --target "$offsite_restore_root" \
+                  --include '/var/backup/openpost/openpost_*.sql.gz' \
+                  --include '/var/backup/openpost/media-current/**'
+                backup_source_root="$offsite_restore_root/var/backup/openpost"
+              ''
+            else
+              ''
+                backup_source_root="$backup_root"
+              ''
+          }
+          latest_backup=$(${pkgs.findutils}/bin/find "$backup_source_root" -maxdepth 1 -type f -name 'openpost_*.sql.gz' -printf '%T@ %p\n' | ${pkgs.coreutils}/bin/sort -nr | ${pkgs.gawk}/bin/awk 'NR == 1 { print $2 }')
+          if [ -z "$latest_backup" ]; then
+            echo "No OpenPost database backup is available for the restore drill" >&2
+            exit 1
+          fi
+
+          ${pkgs.gzip}/bin/gzip -t "$latest_backup"
+          restore_database="openpost_restore_drill_$(${pkgs.coreutils}/bin/date -u +%Y%m%d_%H%M%S)"
 
           ${pkgs.podman}/bin/podman exec openpost-postgres createdb \
             -U ${openpostPostgresUser} "$restore_database"
@@ -583,7 +988,12 @@ in
             "SELECT count(*) FROM posts" -U ${openpostPostgresUser} -d "$restore_database")
           database_media_count=$(${pkgs.podman}/bin/podman exec openpost-postgres psql -Atqc \
             "SELECT count(*) FROM media_attachments" -U ${openpostPostgresUser} -d "$restore_database")
-          media_file_count=$(${pkgs.findutils}/bin/find "$backup_root/media-current" -type f | ${pkgs.coreutils}/bin/wc -l)
+          restored_media_root="$backup_source_root/media-current"
+          if [ -d "$restored_media_root" ]; then
+            media_file_count=$(${pkgs.findutils}/bin/find "$restored_media_root" -type f | ${pkgs.coreutils}/bin/wc -l)
+          else
+            media_file_count=0
+          fi
 
           if [ "$table_count" -lt 10 ]; then
             echo "Restore has too few public tables: $table_count" >&2
@@ -615,6 +1025,10 @@ in
           ${pkgs.coreutils}/bin/chmod 0600 "$evidence_tmp"
           ${pkgs.coreutils}/bin/mv "$evidence_tmp" "$backup_root/restore-drill-latest.json"
         '';
+      }
+      // lib.optionalAttrs cfg.offsiteBackup.enable {
+        EnvironmentFile = config.sops.templates."openpost-offsite-backup-env".path;
+        CacheDirectory = "openpost-restic";
       };
     };
 

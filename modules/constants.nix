@@ -12,8 +12,8 @@ in
 
   # Typography
   fonts = {
-    primary = "JetBrainsMono Nerd Font";
-    ui = "Bricolage Grotesque";
+    mono = "JetBrainsMono Nerd Font";
+    ui = "Geist";
     sizes = {
       small = 10.0;
       normal = 12.0;

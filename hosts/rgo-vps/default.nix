@@ -85,6 +85,10 @@ in
     # updates the local latest tag. Never let a service restart pull a mutable
     # tag behind the deployment gate.
     pullPolicy = "never";
+    # Seed a clean image store from the exact release currently proven live.
+    # Signed webhook releases replace the local latest tag after this bootstrap.
+    bootstrapDigest = "sha256:6a7c8d63d24b7ac6d979e20eb5ef0b8ffca89c13ca47e097aa8522c1d1280c01";
+    bootstrapRevision = "1246405c69f819221da6c912467efe20f20eb06d";
     extraEnvironment = {
       OPENPOST_FEEDBACK_ENABLED = "true";
       OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";

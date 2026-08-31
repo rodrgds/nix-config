@@ -6,6 +6,9 @@
 }:
 let
   cfg = config.vps.hosting.deployments;
+  openpostRuntimeContract = builtins.fromJSON (
+    builtins.readFile ../../services/openpost/runtime-contract.json
+  );
   maintenancePath = lib.makeBinPath [
     pkgs.coreutils
     pkgs.curl
@@ -48,6 +51,7 @@ let
   openpostDeploy = pkgs.writeShellScript "deploy-openpost" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
+    [ "$#" -eq 3 ] || { echo "expected OpenPost revision, release tag, and image digest" >&2; exit 1; }
     revision="''${1:-}"
     release_tag="''${2:-}"
     digest="''${3:-}"
@@ -61,8 +65,35 @@ let
     flock --exclusive 9
 
     candidate="$image_name@$digest"
-    previous_image="$(podman image inspect "$image_name:latest" --format '{{.Id}}')"
-    podman tag "$previous_image" "$image_name:rollback"
+    previous_image="$(podman image inspect "$image_name:latest" --format '{{.Id}}')" || {
+      echo "missing previous OpenPost image; refusing promotion without rollback" >&2
+      exit 1
+    }
+    [[ "$previous_image" =~ ^(sha256:)?[0-9a-f]{64}$ ]] || {
+      echo "previous OpenPost image has an invalid ID" >&2
+      exit 1
+    }
+    previous_revision="$(podman image inspect "$previous_image" --format '{{index .Labels "org.opencontainers.image.revision"}}')"
+    [[ "$previous_revision" =~ ^[0-9a-f]{40}$ ]] || {
+      echo "previous OpenPost image has an invalid revision label" >&2
+      exit 1
+    }
+    previous_version="$(podman image inspect "$previous_image" --format '{{index .Labels "org.opencontainers.image.version"}}')"
+    [[ "$previous_version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+      echo "previous OpenPost image has an invalid version label" >&2
+      exit 1
+    }
+    for container in openpost openpost-worker; do
+      running_image="$(podman inspect "$container" --format '{{.Image}}')" || {
+        echo "cannot inspect the running $container container" >&2
+        exit 1
+      }
+      [ "$running_image" = "$previous_image" ] || {
+        echo "running $container image $running_image differs from rollback target $previous_image" >&2
+        exit 1
+      }
+    done
+
     podman pull "$candidate"
 
     image_revision="$(podman image inspect "$candidate" --format '{{index .Labels "org.opencontainers.image.revision"}}')"
@@ -70,10 +101,20 @@ let
       echo "candidate image revision $image_revision does not match $revision" >&2
       exit 1
     }
+    candidate_image="$(podman image inspect "$candidate" --format '{{.Id}}')"
+    [[ "$candidate_image" =~ ^(sha256:)?[0-9a-f]{64}$ ]] || {
+      echo "candidate OpenPost image has an invalid ID" >&2
+      exit 1
+    }
 
     # Validate the candidate against the exact production environment and
     # mounted *_FILE secrets without opening a port or touching the database.
-    candidate_args=(--rm --network none)
+    candidate_args=(
+      --rm
+      --user=${toString openpostRuntimeContract.containerUid}:${toString openpostRuntimeContract.containerGid}
+      --uidmap=0:${toString openpostRuntimeContract.hostIdBase}:65536
+      --gidmap=0:${toString openpostRuntimeContract.hostIdBase}:65536
+    )
     while IFS= read -r environment; do
       environment_key="''${environment%%=*}"
       environment_is_managed=false
@@ -92,43 +133,99 @@ let
     while IFS=$'\t' read -r source destination; do
       candidate_args+=(--volume "$source:$destination:ro")
     done < <(podman inspect openpost | jq -r '.[0].Mounts[] | select(.Type == "bind") | [.Source, .Destination] | @tsv')
-    podman run "''${candidate_args[@]}" "$candidate" ./openpost check-config
+    podman run "''${candidate_args[@]}" --network none "$candidate" ./openpost check-config
 
+    # Run the release's explicit, database-serialized migration role before
+    # replacing the serving process. Migrations must remain backward compatible
+    # because image rollback never rewinds production data.
+    podman run "''${candidate_args[@]}" --network podman "$candidate" ./openpost migrate
+
+    verify_running_revision() {
+      expected_revision="$1"
+      expected_version="$2"
+      expected_image="$3"
+      local_info="$(curl -fsS http://127.0.0.1:8090/api/v1/version 2>/dev/null)" || return 1
+      local_revision="$(jq -er .revision <<< "$local_info")" || return 1
+      local_version="$(jq -er .version <<< "$local_info")" || return 1
+      [ "$local_revision" = "$expected_revision" ] || return 1
+      [ "$local_version" = "$expected_version" ] || return 1
+      curl -fsS http://127.0.0.1:8090/api/v1/health >/dev/null || return 1
+      curl -fsS http://127.0.0.1:8090/api/v1/ready >/dev/null || return 1
+      systemctl is-active --quiet podman-openpost.service || return 1
+      systemctl is-active --quiet podman-openpost-worker.service || return 1
+      web_image="$(podman inspect openpost --format '{{.Image}}')" || return 1
+      worker_image="$(podman inspect openpost-worker --format '{{.Image}}')" || return 1
+      [ "$web_image" = "$expected_image" ] || return 1
+      [ "$worker_image" = "$expected_image" ] || return 1
+      podman inspect openpost | jq -e '.[0].Config.Cmd == ["./openpost", "web"]' >/dev/null || return 1
+      podman inspect openpost-worker | jq -e '.[0].Config.Cmd == ["./openpost", "worker"]' >/dev/null || return 1
+      [ "$(podman inspect openpost --format '{{.State.Health.Status}}')" = healthy ] || return 1
+      [ "$(podman inspect openpost-worker --format '{{.State.Health.Status}}')" = healthy ] || return 1
+    }
+
+    rollback_application() {
+      echo "OpenPost rollout failed; restoring and verifying revision $previous_revision. Database migrations are not reversed." >&2
+      podman tag "$previous_image" "$image_name:latest" || return 1
+      restored_image="$(podman image inspect "$image_name:latest" --format '{{.Id}}')" || return 1
+      [ "$restored_image" = "$previous_image" ] || return 1
+      systemctl restart podman-openpost-worker.service || return 1
+      systemctl restart podman-openpost.service || return 1
+      for _attempt in $(seq 1 30); do
+        if verify_running_revision "$previous_revision" "$previous_version" "$previous_image"; then
+          public_revision="$(curl -fsS https://app.openpost.social/api/v1/version | jq -er .revision)" || return 1
+          [ "$public_revision" = "$previous_revision" ] || return 1
+          echo "ROLLBACK_OK openpost $previous_revision" >&2
+          return 0
+        fi
+        sleep 2
+      done
+      journalctl -u podman-openpost.service -u podman-openpost-worker.service -n 160 --no-pager >&2
+      return 1
+    }
+
+    fail_with_rollback() {
+      reason="$1"
+      echo "$reason" >&2
+      if rollback_application; then
+        echo "Deployment failed; verified OpenPost rollback completed." >&2
+      else
+        echo "FATAL: OpenPost deployment and rollback verification both failed." >&2
+      fi
+      return 1
+    }
+
+    podman tag "$previous_image" "$image_name:rollback"
     podman tag "$candidate" "$image_name:latest"
+    if ! systemctl restart podman-openpost-worker.service; then
+      fail_with_rollback "OpenPost candidate worker restart failed"
+      exit 1
+    fi
     if ! systemctl restart podman-openpost.service; then
-      podman tag "$image_name:rollback" "$image_name:latest"
-      systemctl restart podman-openpost.service
+      fail_with_rollback "OpenPost candidate web restart failed"
       exit 1
     fi
 
     for attempt in $(seq 1 60); do
-      running_revision="$(curl -fsS http://127.0.0.1:8090/api/v1/version 2>/dev/null | jq -r .revision 2>/dev/null || true)"
-      if [ "$running_revision" = "$revision" ] && curl -fsS http://127.0.0.1:8090/api/v1/ready >/dev/null; then
+      if verify_running_revision "$revision" "$release_tag" "$candidate_image"; then
         break
       fi
       if [ "$attempt" = 60 ]; then
-        journalctl -u podman-openpost.service -n 120 --no-pager >&2
-        podman tag "$image_name:rollback" "$image_name:latest"
-        systemctl restart podman-openpost.service
-        for rollback_attempt in $(seq 1 30); do
-          curl -fsS http://127.0.0.1:8090/api/v1/ready >/dev/null && break
-          sleep 2
-        done
+        journalctl -u podman-openpost.service -u podman-openpost-worker.service -n 120 --no-pager >&2
+        fail_with_rollback "OpenPost candidate did not become ready at the exact image and revision"
         exit 1
       fi
       sleep 2
     done
 
     if ! curl -fsS https://app.openpost.social/api/v1/ready >/dev/null; then
-      podman tag "$image_name:rollback" "$image_name:latest"
-      systemctl restart podman-openpost.service
+      fail_with_rollback "OpenPost public readiness check failed"
       exit 1
     fi
-    public_revision="$(curl -fsS https://app.openpost.social/api/v1/version | jq -r .revision)"
-    if [ "$public_revision" != "$revision" ]; then
-      podman tag "$image_name:rollback" "$image_name:latest"
-      systemctl restart podman-openpost.service
-      echo "public OpenPost revision $public_revision does not match $revision" >&2
+    public_info="$(curl -fsS https://app.openpost.social/api/v1/version)"
+    public_revision="$(jq -er .revision <<< "$public_info")"
+    public_version="$(jq -er .version <<< "$public_info")"
+    if [ "$public_revision" != "$revision" ] || [ "$public_version" != "$release_tag" ]; then
+      fail_with_rollback "public OpenPost identity does not match $release_tag at $revision"
       exit 1
     fi
     ${cleanupImages}
@@ -137,7 +234,16 @@ let
 
   triggerOpenpostDeploy = pkgs.writeShellScript "trigger-deploy-openpost" ''
     set -euo pipefail
-    exec ${openpostDeploy} "$@"
+    export PATH=${maintenancePath}:$PATH
+    [ "$#" -eq 1 ] || { echo "expected an OpenPost payload file" >&2; exit 1; }
+    payload_file="$1"
+    [ -f "$payload_file" ] || { echo "OpenPost payload file is unavailable" >&2; exit 1; }
+    payload="$(cat -- "$payload_file")"
+    jq -e -f ${./openpost-payload.jq} <<< "$payload" >/dev/null
+    revision="$(jq -er .sha <<< "$payload")"
+    release_tag="$(jq -er .tag <<< "$payload")"
+    digest="$(jq -er .digest <<< "$payload")"
+    exec ${openpostDeploy} "$revision" "$release_tag" "$digest"
   '';
 
   montraDeploy = pkgs.writeShellScript "deploy-montra" ''
@@ -422,25 +528,15 @@ let
   triggerMontraDeploy = pkgs.writeShellScript "trigger-deploy-montra" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
-    [ "$#" -eq 1 ] || { echo "expected the exact signed Montra JSON payload" >&2; exit 1; }
-    payload="$1"
-    now="$(date +%s)"
-    ${pkgs.bash}/bin/bash ${./validate-montra-delivery.sh} \
-      "$payload" "$now" /var/lib/montra/deploy-deliveries ${./montra-payload.jq}
+    [ "$#" -eq 1 ] || { echo "expected a Montra payload file" >&2; exit 1; }
+    payload_file="$1"
+    [ -f "$payload_file" ] || { echo "Montra payload file is unavailable" >&2; exit 1; }
+    payload="$(cat -- "$payload_file")"
+    jq -e -f ${./montra-payload.jq} <<< "$payload" >/dev/null
     revision="$(jq -er .sha <<< "$payload")"
-    delivery_id="$(jq -er .delivery_id <<< "$payload")"
     components="$(jq -ec .components <<< "$payload")"
 
-    ${pkgs.systemd}/bin/systemd-run \
-      --quiet \
-      --wait \
-      --collect \
-      --pipe \
-      --service-type=oneshot \
-      --unit="deploy-montra-$delivery_id" \
-      --property=TimeoutStartSec=60min \
-      ${montraDeploy} "$revision" "$components"
-    printf 'DEPLOY_OK montra %s\n' "$revision"
+    exec ${montraDeploy} "$revision" "$components"
   '';
 
   unpromptedDeploy = pkgs.writeShellScript "deploy-unprompted" ''
@@ -658,61 +754,73 @@ let
   triggerUnpromptedDeploy = pkgs.writeShellScript "trigger-deploy-unprompted" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
-    [ "$#" -eq 1 ] || { echo "expected the exact signed Unprompted JSON payload" >&2; exit 1; }
-    payload="$1"
+    [ "$#" -eq 1 ] || { echo "expected an Unprompted payload file" >&2; exit 1; }
+    payload_file="$1"
+    [ -f "$payload_file" ] || { echo "Unprompted payload file is unavailable" >&2; exit 1; }
+    payload="$(cat -- "$payload_file")"
+    jq -e -f ${./unprompted-payload.jq} <<< "$payload" >/dev/null
     revision="$(jq -er '.sha | select(type == "string")' <<< "$payload")"
-    issued_at="$(jq -er '.issued_at | select(type == "number" and . == floor)' <<< "$payload")"
-    delivery_id="$(jq -er '.delivery_id | select(type == "string")' <<< "$payload")"
-    repository="$(jq -er '.repository | select(type == "string")' <<< "$payload")"
     digests=(
       "$(jq -er '.api_digest | select(type == "string")' <<< "$payload")"
       "$(jq -er '.worker_digest | select(type == "string")' <<< "$payload")"
       "$(jq -er '.web_digest | select(type == "string")' <<< "$payload")"
       "$(jq -er '.migrate_digest | select(type == "string")' <<< "$payload")"
     )
-    [ "$repository" = "rodrgds/unprompted" ] || { echo "invalid Unprompted repository" >&2; exit 1; }
-    [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid Unprompted revision" >&2; exit 1; }
-    [[ "$issued_at" =~ ^[0-9]{1,10}$ ]] || { echo "invalid Unprompted issued_at" >&2; exit 1; }
-    [[ "$delivery_id" =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,127}$ ]] || { echo "invalid Unprompted delivery ID" >&2; exit 1; }
-    for digest in "''${digests[@]}"; do
-      [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "invalid Unprompted image digest" >&2; exit 1; }
-    done
-    now="$(date +%s)"
-    if [ "$issued_at" -lt "$((now - 300))" ]; then
-      echo "Unprompted delivery is older than five minutes" >&2
-      exit 1
-    fi
-    if [ "$issued_at" -gt "$((now + 60))" ]; then
-      echo "Unprompted delivery timestamp is too far in the future" >&2
-      exit 1
-    fi
-
-    delivery_path="/var/lib/unprompted/deploy-deliveries/$delivery_id"
-    if ! mkdir "$delivery_path" 2>/dev/null; then
-      echo "duplicate Unprompted delivery ID" >&2
-      exit 1
-    fi
-    printf '%s\n' "$issued_at" > "$delivery_path/issued_at"
-    printf '%s\n' "$revision" > "$delivery_path/revision"
-
-    ${pkgs.systemd}/bin/systemd-run \
-      --quiet \
-      --wait \
-      --collect \
-      --service-type=oneshot \
-      --unit="deploy-unprompted-$delivery_id" \
-      --property=TimeoutStartSec=60min \
-      ${unpromptedDeploy} "$revision" "''${digests[@]}"
-    printf 'DEPLOY_OK unprompted %s\n' "$revision"
+    exec ${unpromptedDeploy} "$revision" "''${digests[@]}"
   '';
 
-  triggerDeploy =
-    name:
-    pkgs.writeShellScript "trigger-deploy-${name}" ''
-      set -euo pipefail
-      ${pkgs.systemd}/bin/systemctl start deploy-${name}.service
-      echo "DEPLOY_OK ${name}"
-    '';
+  triggerPersonalWebsiteDeploy = pkgs.writeShellScript "trigger-deploy-personal-website" ''
+    set -euo pipefail
+    export PATH=${maintenancePath}:$PATH
+    [ "$#" -eq 1 ] || { echo "expected a personal website payload file" >&2; exit 1; }
+    payload_file="$1"
+    [ -f "$payload_file" ] || { echo "personal website payload file is unavailable" >&2; exit 1; }
+    payload="$(cat -- "$payload_file")"
+    jq -e -f ${./personal-website-payload.jq} <<< "$payload" >/dev/null
+    exec ${personalWebsiteDeploy}
+  '';
+
+  deploymentReceiverConfig = pkgs.writeText "deployment-receiver.json" (
+    builtins.toJSON {
+      listen_address = "127.0.0.1";
+      listen_port = 9000;
+      state_directory = "/var/lib/deployment-webhook";
+      systemd_run = "${pkgs.systemd}/bin/systemd-run";
+      routes =
+        lib.optionals config.vps.hosting.sites.personal.enable [
+          {
+            name = "personal-website";
+            path = "/hooks/deploy-personal-website";
+            secret_file = config.sops.secrets.personal_website_deploy_webhook_secret.path;
+            handler = "${triggerPersonalWebsiteDeploy}";
+          }
+        ]
+        ++ lib.optionals config.vps.openpost.enable [
+          {
+            name = "openpost";
+            path = "/hooks/deploy-openpost";
+            secret_file = config.sops.secrets.openpost_deploy_webhook_secret.path;
+            handler = "${triggerOpenpostDeploy}";
+          }
+        ]
+        ++ lib.optionals config.vps.montra.enable [
+          {
+            name = "montra";
+            path = "/hooks/deploy-montra";
+            secret_file = config.sops.secrets.montra_deploy_webhook_secret.path;
+            handler = "${triggerMontraDeploy}";
+          }
+        ]
+        ++ lib.optionals config.vps.unprompted.enable [
+          {
+            name = "unprompted";
+            path = "/hooks/deploy-unprompted";
+            secret_file = config.sops.secrets.unprompted_deploy_webhook_secret.path;
+            handler = "${triggerUnpromptedDeploy}";
+          }
+        ];
+    }
+  );
 in
 {
   options.vps.hosting.deployments = {
@@ -721,156 +829,61 @@ in
 
   config = lib.mkIf cfg.enable {
     sops.secrets =
-      lib.genAttrs [ "deploy_webhook_secret" ] (_: { })
+      lib.genAttrs
+        (
+          lib.optionals config.vps.hosting.sites.personal.enable [
+            "personal_website_deploy_webhook_secret"
+          ]
+          ++ lib.optionals config.vps.openpost.enable [
+            "openpost_deploy_webhook_secret"
+          ]
+          ++ lib.optionals config.vps.montra.enable [
+            "montra_deploy_webhook_secret"
+          ]
+        )
+        (_: {
+          restartUnits = [ "webhook-deploy.service" ];
+        })
       // lib.optionalAttrs config.vps.unprompted.enable {
-        unprompted_deploy_webhook_secret = { };
+        unprompted_deploy_webhook_secret.restartUnits = [ "webhook-deploy.service" ];
       };
-
-    sops.templates."webhook-hooks" = {
-      content = ''
-        [
-          {
-            "id": "deploy-personal-website",
-            "execute-command": "${triggerDeploy "personal-website"}",
-            "include-command-output-in-response": true,
-            "trigger-rule": {
-              "match": {
-                "type": "payload-hmac-sha256",
-                "secret": "${config.sops.placeholder.deploy_webhook_secret}",
-                "parameter": {
-                  "source": "header",
-                  "name": "X-Hub-Signature-256"
-                }
-              }
-            }
-          },
-          {
-            "id": "deploy-openpost",
-            "execute-command": "${triggerOpenpostDeploy}",
-            "include-command-output-in-response": true,
-            "pass-arguments-to-command": [
-              { "source": "payload", "name": "sha" },
-              { "source": "payload", "name": "tag" },
-              { "source": "payload", "name": "digest" }
-            ],
-            "trigger-rule": {
-              "and": [
-                {
-                  "match": {
-                    "type": "payload-hmac-sha256",
-                    "secret": "${config.sops.placeholder.deploy_webhook_secret}",
-                    "parameter": {
-                      "source": "header",
-                      "name": "X-Hub-Signature-256"
-                    }
-                  }
-                },
-                {
-                  "match": {
-                    "type": "value",
-                    "value": "getopenpost/openpost",
-                    "parameter": {
-                      "source": "payload",
-                      "name": "repository"
-                    }
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "id": "deploy-montra",
-            "execute-command": "${triggerMontraDeploy}",
-            "include-command-output-in-response": true,
-            "pass-arguments-to-command": [
-              { "source": "entire-payload" }
-            ],
-            "trigger-rule": {
-              "and": [
-                {
-                  "match": {
-                    "type": "payload-hmac-sha256",
-                    "secret": "${config.sops.placeholder.deploy_webhook_secret}",
-                    "parameter": {
-                      "source": "header",
-                      "name": "X-Hub-Signature-256"
-                    }
-                  }
-                },
-                {
-                  "match": {
-                    "type": "value",
-                    "value": "rodrgds/montra",
-                    "parameter": {
-                      "source": "payload",
-                      "name": "repository"
-                    }
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "id": "deploy-unprompted",
-            "execute-command": "${triggerUnpromptedDeploy}",
-            "include-command-output-in-response": true,
-            "pass-arguments-to-command": [
-              { "source": "entire-payload" }
-            ],
-            "trigger-rule": {
-              "and": [
-                {
-                  "match": {
-                    "type": "payload-hmac-sha256",
-                    "secret": "${config.sops.placeholder.unprompted_deploy_webhook_secret}",
-                    "parameter": {
-                      "source": "header",
-                      "name": "X-Hub-Signature-256"
-                    }
-                  }
-                },
-                {
-                  "match": {
-                    "type": "value",
-                    "value": "rodrgds/unprompted",
-                    "parameter": {
-                      "source": "payload",
-                      "name": "repository"
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      '';
-      mode = "0400";
-      restartUnits = [ "webhook-deploy.service" ];
-    };
 
     vps.caddy.internalPorts."webhooks.rgo.pt" = 9000;
 
     systemd.services.webhook-deploy = {
-      description = "GitHub Webhook for Deploys";
+      description = "Authenticated deployment receiver";
+      unitConfig.OnFailure = lib.optionals config.vps.openpost.enable [
+        "openpost-ops-alert@%n.service"
+      ];
       serviceConfig = {
-        ExecStart = "${pkgs.webhook}/bin/webhook -hooks=${
-          config.sops.templates."webhook-hooks".path
-        } -verbose";
-        Restart = "always";
+        Type = "simple";
+        ExecStart = "${pkgs.python3}/bin/python3 ${./deployment_receiver.py} ${deploymentReceiverConfig}";
+        Restart = "on-failure";
+        RestartSec = "2s";
+        StateDirectory = "deployment-webhook";
+        StateDirectoryMode = "0700";
+        UMask = "0077";
+        NoNewPrivileges = true;
+        PrivateDevices = true;
+        PrivateTmp = true;
+        ProtectClock = true;
+        ProtectControlGroups = true;
+        ProtectHome = true;
+        ProtectKernelLogs = true;
+        ProtectKernelModules = true;
+        ProtectKernelTunables = true;
+        ProtectSystem = "strict";
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+          "AF_UNIX"
+        ];
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        SystemCallArchitectures = "native";
+        LockPersonality = true;
       };
       wantedBy = [ "multi-user.target" ];
     };
-
-    systemd.services.deploy-personal-website = {
-      description = "Deploy the verified personal website main branch";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = personalWebsiteDeploy;
-        TimeoutStartSec = "15min";
-      };
-    };
-
   };
 }

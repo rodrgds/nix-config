@@ -16,7 +16,7 @@ Singleton {
     readonly property color orange: "@orange@"
     readonly property color orangeBright: "@orangeBright@"
 
-    readonly property string primaryFont: "@primaryFont@"
+    readonly property string monoFont: "@monoFont@"
     readonly property string uiFont: "@uiFont@"
     readonly property int textSize: 12
     readonly property int iconSize: 15

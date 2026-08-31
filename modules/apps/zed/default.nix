@@ -20,7 +20,7 @@ let
     };
     ui_font_family = fonts.ui;
     ui_font_size = fontSize;
-    buffer_font_family = fonts.primary;
+    buffer_font_family = fonts.mono;
     buffer_font_size = fontSize;
     buffer_line_height = "standard";
     agent_ui_font_size = fontSize;
@@ -30,7 +30,7 @@ let
     format_on_save = "on";
     features.inline_completion = false;
     terminal = {
-      font_family = fonts.primary;
+      font_family = fonts.mono;
       font_size = fontSize;
       line_height = "standard";
     };

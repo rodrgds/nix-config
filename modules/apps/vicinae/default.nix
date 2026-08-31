@@ -166,7 +166,28 @@ in
 
         {
           home-manager.users.${username} =
-            _:
+            { config, ... }:
+            let
+              expandedSessionPath = map (
+                path: lib.replaceStrings [ "$HOME" ] [ constants.homeDir ] path
+              ) config.home.sessionPath;
+              linuxLauncherPath = lib.concatStringsSep ":" (
+                expandedSessionPath
+                ++ [
+                  "/run/wrappers/bin"
+                  "${constants.homeDir}/.local/share/flatpak/exports/bin"
+                  "/var/lib/flatpak/exports/bin"
+                  "${constants.homeDir}/.nix-profile/bin"
+                  "/nix/profile/bin"
+                  "${constants.homeDir}/.local/state/nix/profile/bin"
+                  "/etc/profiles/per-user/${username}/bin"
+                  "/nix/var/nix/profiles/default/bin"
+                  "/run/current-system/sw/bin"
+                  "/usr/bin"
+                  "/bin"
+                ]
+              );
+            in
             lib.mkMerge [
               (lib.optionalAttrs isLinux {
                 programs.vicinae = {
@@ -186,12 +207,10 @@ in
                 systemd.user.services.vicinae = {
                   Unit.After = [ "graphical-session.target" ];
                   Service = {
-                    # Inherit the complete UWSM-imported XDG_DATA_DIRS so
-                    # Home Manager themes and icons remain visible to Vicinae
-                    # and to applications it launches.
-                    Environment = [
-                      "PATH=${vicinaePackage}/libexec/vicinae:/run/current-system/sw/bin:/home/${username}/.nix-profile/bin:/usr/bin:/bin"
-                    ];
+                    # The user manager keeps its login-time environment across
+                    # live rebuilds. Mirror the evaluated Home Manager path so
+                    # newly launched apps see current user commands immediately.
+                    Environment = [ "PATH=${linuxLauncherPath}" ];
                     KillMode = lib.mkForce "control-group";
                   };
                 };
