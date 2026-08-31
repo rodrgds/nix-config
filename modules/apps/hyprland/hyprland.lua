@@ -25,8 +25,9 @@ hl.monitor({
 
 hl.config({
   general = {
-    gaps_in = 0,
-    gaps_out = 0,
+    -- Match AeroSpace's compact 6 px tile gap and 3 px screen inset.
+    gaps_in = 6,
+    gaps_out = 3,
     border_size = 2,
     col = {
       active_border = "rgb(@orangeBright@)",
@@ -37,7 +38,7 @@ hl.config({
     layout = "dwindle",
   },
   decoration = {
-    rounding = 0,
+    rounding = 6,
     active_opacity = 1,
     inactive_opacity = 1,
     shadow = { enabled = false },
