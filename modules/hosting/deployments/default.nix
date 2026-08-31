@@ -172,8 +172,10 @@ let
       systemctl restart podman-openpost.service || return 1
       for _attempt in $(seq 1 30); do
         if verify_running_revision "$previous_revision" "$previous_version" "$previous_image"; then
-          public_revision="$(curl -fsS https://app.openpost.social/api/v1/version | jq -er .revision)" || return 1
-          [ "$public_revision" = "$previous_revision" ] || return 1
+          canonical_revision="$(curl -fsS https://app.openpo.st/api/v1/version | jq -er .revision)" || return 1
+          legacy_revision="$(curl -fsS https://app.openpost.social/api/v1/version | jq -er .revision)" || return 1
+          [ "$canonical_revision" = "$previous_revision" ] || return 1
+          [ "$legacy_revision" = "$previous_revision" ] || return 1
           echo "ROLLBACK_OK openpost $previous_revision" >&2
           return 0
         fi
@@ -217,17 +219,19 @@ let
       sleep 2
     done
 
-    if ! curl -fsS https://app.openpost.social/api/v1/ready >/dev/null; then
-      fail_with_rollback "OpenPost public readiness check failed"
-      exit 1
-    fi
-    public_info="$(curl -fsS https://app.openpost.social/api/v1/version)"
-    public_revision="$(jq -er .revision <<< "$public_info")"
-    public_version="$(jq -er .version <<< "$public_info")"
-    if [ "$public_revision" != "$revision" ] || [ "$public_version" != "$release_tag" ]; then
-      fail_with_rollback "public OpenPost identity does not match $release_tag at $revision"
-      exit 1
-    fi
+    for public_origin in https://app.openpo.st https://app.openpost.social; do
+      if ! curl -fsS "$public_origin/api/v1/ready" >/dev/null; then
+        fail_with_rollback "OpenPost public readiness check failed at $public_origin"
+        exit 1
+      fi
+      public_info="$(curl -fsS "$public_origin/api/v1/version")"
+      public_revision="$(jq -er .revision <<< "$public_info")"
+      public_version="$(jq -er .version <<< "$public_info")"
+      if [ "$public_revision" != "$revision" ] || [ "$public_version" != "$release_tag" ]; then
+        fail_with_rollback "public OpenPost identity at $public_origin does not match $release_tag at $revision"
+        exit 1
+      fi
+    done
     ${cleanupImages}
     echo "DEPLOY_OK openpost $revision $release_tag"
   '';
