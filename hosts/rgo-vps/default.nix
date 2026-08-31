@@ -87,8 +87,8 @@ in
     pullPolicy = "never";
     # Seed a clean image store from the exact release currently proven live.
     # Signed webhook releases replace the local latest tag after this bootstrap.
-    bootstrapDigest = "sha256:028ecf167a28ebde2342a66dbd64634e71342176b43cda1c48b2221fbb8e920c";
-    bootstrapRevision = "ae15eed0a805ab35af616a388e5d3e0014335cf7";
+    bootstrapDigest = "sha256:6a7c8d63d24b7ac6d979e20eb5ef0b8ffca89c13ca47e097aa8522c1d1280c01";
+    bootstrapRevision = "1246405c69f819221da6c912467efe20f20eb06d";
     extraEnvironment = {
       OPENPOST_FEEDBACK_ENABLED = "true";
       OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";
