@@ -10,6 +10,7 @@ let
   cfg = config.vps.openpost;
   isCloud = cfg.edition == "cloud";
   runtimeContract = builtins.fromJSON (builtins.readFile ./runtime-contract.json);
+  legacyHostedOrigin = "https://app.openpost.social";
 
   # Host port (external) - must be unique per service
   openpostHostPort = 8090;
@@ -178,14 +179,14 @@ let
     OPENPOST_EDITION = cfg.edition;
     OPENPOST_APP_URL = "https://${cfg.domain}";
     OPENPOST_PUBLIC_URL = "https://${cfg.domain}";
-    OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain}";
+    OPENPOST_EXTRA_CORS_ORIGINS = "https://${cfg.domain},${legacyHostedOrigin}";
     OPENPOST_DISABLE_REGISTRATIONS = "false";
     OPENPOST_STOCK_MEDIA_ENABLED = "true";
     LINKEDIN_DISABLE_THREAD_REPLIES = "true";
     X_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/x/callback";
     LINKEDIN_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/linkedin/callback";
     THREADS_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/threads/callback";
-    MASTODON_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/mastodon/callback";
+    MASTODON_REDIRECT_URI = "https://${cfg.domain}/accounts/mastodon/callback";
     TZ = cfg.timezone;
   }
   // openpostFileSecretEnvironment
@@ -296,7 +297,7 @@ in
 
     domain = lib.mkOption {
       type = lib.types.str;
-      default = "app.openpost.social";
+      default = "app.openpo.st";
       description = "Domain for OpenPost";
     };
 
@@ -565,16 +566,16 @@ in
             OPENPOST_S3_SECRET_ACCESS_KEY=${config.sops.placeholder.openpost_s3_secret_access_key}
             OPENPOST_S3_PUBLIC_BASE_URL=${config.sops.placeholder.openpost_s3_public_base_url}
             OPENPOST_LEGAL_ACCEPTANCE_REQUIRED=true
-            OPENPOST_TERMS_URL=https://openpost.social/terms
-            OPENPOST_PRIVACY_URL=https://openpost.social/privacy
+            OPENPOST_TERMS_URL=https://openpo.st/terms
+            OPENPOST_PRIVACY_URL=https://openpo.st/privacy
             OPENPOST_TERMS_VERSION=2026-08-05
             OPENPOST_PRIVACY_VERSION=2026-08-11
             OPENPOST_TELEMETRY_ENABLED=true
             OPENPOST_POSTHOG_API_HOST=https://eu.i.posthog.com
-            OPENPOST_POSTHOG_BROWSER_HOST=https://eu.i.posthog.com
+            OPENPOST_POSTHOG_BROWSER_HOST=https://cool.openpo.st
             OPENPOST_POSTHOG_UI_HOST=https://eu.posthog.com
             OPENPOST_TELEMETRY_ENVIRONMENT=production
-            OPENPOST_SUPPORT_EMAIL=hello@openpost.social
+            OPENPOST_SUPPORT_EMAIL=hello@openpo.st
             OPENPOST_EMAIL_VERIFICATION_REQUIRED=true
             OPENPOST_EMAIL_PROVIDER=smtp
             OPENPOST_EMAIL_FROM=hello@openpost.social
