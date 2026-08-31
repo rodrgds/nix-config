@@ -14,6 +14,8 @@ const HINDSIGHT_ADMIN_TOOLS = new Set([
   "hindsight_scope_migrate",
 ]);
 
+const COMMAND_ONLY_TOOLS = new Set(["annotate"]);
+
 const GOAL_TOOLS = ["get_goal", "create_goal", "update_goal"] as const;
 const GOAL_TOOL_SET = new Set<string>(GOAL_TOOLS);
 const GOAL_ENTRY_TYPE = "pi-codex-goal";
@@ -87,6 +89,7 @@ export default function toolSurface(pi: ExtensionAPI) {
     const next = current.filter(
       (toolName) =>
         !HINDSIGHT_ADMIN_TOOLS.has(toolName) &&
+        !COMMAND_ONLY_TOOLS.has(toolName) &&
         (goalToolsEnabled || !GOAL_TOOL_SET.has(toolName)),
     );
 

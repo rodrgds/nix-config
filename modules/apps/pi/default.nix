@@ -42,7 +42,10 @@ let
     "npm:@narumitw/pi-btw"
     "npm:pi-context-view"
     "npm:@luxusai/pi-hindsight"
-    "npm:pi-mcp-adapter"
+    {
+      source = "npm:pi-mcp-adapter";
+      skills = [ ];
+    }
     "npm:pi-annotate"
     "npm:pi-image-paste"
     "npm:pi-subagents"
@@ -334,12 +337,21 @@ in
             hostConfigDiscovery = "off";
             notifyOnStartupConnect = false;
             mcpFooterStatus = "compact";
+            scriptMode = false;
+            disableProxyTool = true;
           };
           mcpServers.executor = {
             url = "https://executor.sh/rodrigo-dias/mcp";
             auth = "oauth";
             lifecycle = "lazy-keep-alive";
             directTools = true;
+            excludeTools = [
+              "create-artifact"
+              "edit-artifact"
+              "list-artifacts"
+              "show-artifact"
+              "read_executor_shell"
+            ];
             protocolVersion = "legacy";
           };
         };
