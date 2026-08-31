@@ -219,6 +219,19 @@ let
     "--pull=${cfg.pullPolicy}"
   ];
 
+  stopManagedContainer =
+    name:
+    pkgs.writeShellScript "stop-${name}" ''
+      set -euo pipefail
+      if ${pkgs.podman}/bin/podman container exists ${lib.escapeShellArg name}; then
+        # Podman schedules health checks as transient systemd units. Disable
+        # the old container's timer before replacement so it cannot fire after
+        # the container has stopped and make the NixOS switch look degraded.
+        ${pkgs.podman}/bin/podman update --health-interval=disable ${lib.escapeShellArg name} >/dev/null
+      fi
+      ${pkgs.podman}/bin/podman stop --ignore --cidfile=/run/${name}/ctr-id
+    '';
+
   openpostOpsAlert = pkgs.writeShellScript "openpost-ops-alert" ''
     set -euo pipefail
     [ "$#" -eq 1 ] || { echo "expected a failed systemd unit" >&2; exit 1; }
@@ -678,16 +691,25 @@ in
     systemd.services.podman-openpost = {
       after = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
       requires = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
-      serviceConfig.TimeoutStopSec = lib.mkForce 120;
+      serviceConfig = {
+        ExecStop = lib.mkForce "${stopManagedContainer "openpost"}";
+        TimeoutStopSec = lib.mkForce 120;
+      };
       unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
     };
 
     systemd.services.podman-openpost-worker = lib.mkIf isCloud {
       after = [ "openpost-postgres-credential-reconcile.service" ];
       requires = [ "openpost-postgres-credential-reconcile.service" ];
-      serviceConfig.TimeoutStopSec = lib.mkForce 120;
+      serviceConfig = {
+        ExecStop = lib.mkForce "${stopManagedContainer "openpost-worker"}";
+        TimeoutStopSec = lib.mkForce 120;
+      };
       unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
     };
+
+    systemd.services.podman-openpost-postgres.serviceConfig.ExecStop =
+      lib.mkForce "${stopManagedContainer "openpost-postgres"}";
 
     systemd.services.openpost-postgres-backup = lib.mkIf isCloud {
       description = "Backup OpenPost Postgres database";
