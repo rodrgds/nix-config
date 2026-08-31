@@ -40,7 +40,7 @@ let
     "npm:pi-copy-all"
     "npm:pi-codex-goal"
     "npm:@narumitw/pi-btw"
-    "npm:@agnishc/edb-context-viewer"
+    "npm:pi-context-view"
     "npm:@luxusai/pi-hindsight"
     "npm:pi-mcp-adapter"
     "npm:pi-annotate"
