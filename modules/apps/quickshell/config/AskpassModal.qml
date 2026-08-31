@@ -1,6 +1,6 @@
 /*
 THESIS: Administrator approval interrupts clearly without looking foreign to the desktop.
-OWN-WORLD: Flexoki warm blacks, restrained orange focus, compact Bricolage prose, and near-square controls.
+OWN-WORLD: Flexoki warm blacks, restrained orange focus, compact Geist prose, and near-square controls.
 STORY: Read the privileged command, enter the password, then authorize or cancel without leaving the current workspace.
 FIRST VIEWPORT: A dimmed focused monitor holds one compact 440px panel with the exact command, password input, and two explicit actions.
 FORM: A protected operational modal extending the established Quickshell instrument rail.
@@ -178,7 +178,7 @@ PanelWindow {
                     }
                     text: root.sudoCommand.length > 0 ? root.sudoCommand : "sudo"
                     color: Theme.fg0
-                    font.family: Theme.primaryFont
+                    font.family: Theme.monoFont
                     font.pixelSize: 11
                     renderType: Text.NativeRendering
                     elide: Text.ElideMiddle
@@ -221,7 +221,7 @@ PanelWindow {
                     color: Theme.fg0
                     selectionColor: Theme.orange
                     selectedTextColor: Theme.bg0
-                    font.family: Theme.primaryFont
+                    font.family: Theme.uiFont
                     font.pixelSize: 14
                     echoMode: TextInput.Password
                     passwordCharacter: "•"

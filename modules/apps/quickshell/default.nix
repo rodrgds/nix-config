@@ -24,7 +24,7 @@ let
       orange
       orangeBright
       ;
-    primaryFont = constants.fonts.primary;
+    monoFont = constants.fonts.mono;
     uiFont = constants.fonts.ui;
     inherit (desktopBar) foregroundMuted;
     workspaceSpecs = builtins.toJSON desktopBar.workspaces;

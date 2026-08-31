@@ -12,7 +12,7 @@ let
   inherit (constants) isDarwin isLinux;
   ghosttySettings = {
     theme = "Flexoki Dark";
-    font-family = constants.fonts.primary;
+    font-family = constants.fonts.mono;
     font-size = constants.fonts.sizes.large;
     background-opacity = constants.display.opacity;
     window-padding-x = 5;

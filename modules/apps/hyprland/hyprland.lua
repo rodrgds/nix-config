@@ -61,7 +61,7 @@ hl.config({
     insert_after_current = true,
     groupbar = {
       enabled = true,
-      font_family = "@font@",
+      font_family = "@uiFont@",
       font_size = 10,
       gradients = false,
       height = 18,

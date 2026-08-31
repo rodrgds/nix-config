@@ -29,7 +29,7 @@ let
     lib.replaceStrings
       [
         "@scriptDir@"
-        "@font@"
+        "@uiFont@"
         "@bg0@"
         "@bg2@"
         "@fg0@"
@@ -41,7 +41,7 @@ let
       ]
       [
         constants.scriptDir
-        constants.fonts.primary
+        constants.fonts.ui
         (color "bg0")
         (color "bg2")
         (color "fg0")
@@ -57,7 +57,7 @@ let
   sddmTheme = pkgs.sddm-astronaut.override {
     embeddedTheme = "black_hole";
     themeConfig = {
-      Font = constants.fonts.primary;
+      Font = constants.fonts.ui;
       FontSize = 12;
       RoundCorners = 8;
       HeaderText = "rgo-desktop";
@@ -232,7 +232,7 @@ in
                 monitor = "";
                 text = "$TIME";
                 color = "rgb(${color "fg0"})";
-                font_family = constants.fonts.primary;
+                font_family = constants.fonts.ui;
                 font_size = 48;
                 position = "0, 80";
                 halign = "center";

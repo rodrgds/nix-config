@@ -9,7 +9,8 @@ export ITEM_GAP="@itemGap@"
 export INDICATOR_HEIGHT="@indicatorHeight@"
 export CORNER_RADIUS="@cornerRadius@"
 
-export PRIMARY_FONT="@primaryFont@"
+export MONO_FONT="@monoFont@"
+export UI_FONT="@uiFont@"
 
 export TRANSPARENT="0x00000000"
 export BG0="@bg0@"

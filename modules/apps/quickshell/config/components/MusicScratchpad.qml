@@ -52,7 +52,7 @@ Rectangle {
         Text {
             text: Media.playing ? "\uf04b" : "\uf001"
             color: pointer.pressed ? Theme.bg0 : root.openHere ? Theme.orangeBright : Theme.fg0
-            font.family: Theme.primaryFont
+            font.family: Theme.monoFont
             font.pixelSize: Theme.textSize
             renderType: Text.NativeRendering
         }
@@ -63,7 +63,7 @@ Rectangle {
             text: Media.nowPlaying
             color: pointer.pressed ? Theme.bg0 : Theme.fg0
             elide: Text.ElideMiddle
-            font.family: Theme.primaryFont
+            font.family: Theme.uiFont
             font.pixelSize: Theme.textSize
             renderType: Text.NativeRendering
         }

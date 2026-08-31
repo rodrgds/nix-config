@@ -32,7 +32,8 @@ let
       itemGap
       cornerRadius
       ;
-    primaryFont = desktopBar.fonts.primary;
+    monoFont = desktopBar.fonts.mono;
+    uiFont = desktopBar.fonts.ui;
     bg0 = toSketchyColor desktopBar.colors.bg0;
     bg1 = toSketchyColor desktopBar.colors.bg1;
     bg2 = toSketchyColor desktopBar.colors.bg2;
@@ -50,7 +51,7 @@ let
         icon="${if workspace.icon == "" then toString workspace.id else workspace.icon}" \
         label="●" \
         label.drawing=off \
-        label.font="$PRIMARY_FONT:Regular:6.0" \
+        label.font="$MONO_FONT:Regular:6.0" \
         label.y_offset=7 \
         label.width=6 \
         label.padding_left=-6 \

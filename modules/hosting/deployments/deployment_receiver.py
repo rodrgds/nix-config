@@ -252,7 +252,7 @@ class DeploymentServer(ThreadingHTTPServer):
                 "--service-type=oneshot",
                 f"--unit={unit_name}",
                 "--property=TimeoutStartSec=60min",
-                "--property=OnFailure=openpost-ops-alert@%n.service",
+                f"--property=OnFailure=openpost-ops-alert@{unit_name}.service",
                 str(route.handler),
                 str(payload_path),
             ],

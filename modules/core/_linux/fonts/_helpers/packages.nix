@@ -2,6 +2,7 @@
 let
   sharedPackages = with pkgs; [
     inter
+    geist-font
     jetbrains-mono
     # iosevka
     nerd-fonts.jetbrains-mono

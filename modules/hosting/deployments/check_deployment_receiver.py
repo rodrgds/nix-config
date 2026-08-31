@@ -8,6 +8,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import deployment_receiver as receiver
 
@@ -223,6 +224,35 @@ class DeploymentReceiverTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 server_thread.join(timeout=2)
+
+    def test_dispatch_expands_failure_unit_name(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            payload_path = temporary_root / "payload.json"
+            payload_path.write_bytes(self.body)
+            route = receiver.Route(
+                name="personal-website",
+                path="/hooks/deploy-personal-website",
+                secret_file=temporary_root / "secret",
+                handler=temporary_root / "handler",
+            )
+            server = object.__new__(receiver.DeploymentServer)
+            server.systemd_run = Path("/run/systemd-run")
+
+            with mock.patch.object(receiver.subprocess, "run") as run:
+                server.dispatch(route, self.delivery_id, payload_path)
+
+            command = run.call_args.args[0]
+            unit_name = f"deploy-{route.name}-{self.delivery_id}"
+            self.assertIn(f"--unit={unit_name}", command)
+            self.assertIn(
+                f"--property=OnFailure=openpost-ops-alert@{unit_name}.service",
+                command,
+            )
+            self.assertNotIn(
+                "--property=OnFailure=openpost-ops-alert@%n.service",
+                command,
+            )
 
     @staticmethod
     def request(server, method, path, headers, body):

@@ -16,7 +16,7 @@ Item {
         anchors.centerIn: parent
         text: Time.compact
         color: Theme.fg0
-        font.family: Theme.primaryFont
+        font.family: Theme.uiFont
         font.pixelSize: Theme.textSize
         renderType: Text.NativeRendering
     }

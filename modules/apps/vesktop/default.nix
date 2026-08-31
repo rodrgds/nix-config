@@ -44,7 +44,7 @@ let
       --backgroundfloating: 28, 27, 26;
       --framecolor: 64, 62, 60, 0.55;
 
-      --font: "gg sans", "Noto Sans", sans-serif;
+      --font: "${constants.fonts.ui}", sans-serif;
       --settingsicons: 0;
     }
 
@@ -59,7 +59,7 @@ let
 
     code,
     pre {
-      font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace !important;
+      font-family: "${constants.fonts.mono}", monospace !important;
     }
   '';
 in
