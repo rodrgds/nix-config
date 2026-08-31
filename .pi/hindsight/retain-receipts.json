@@ -2,6 +2,27 @@
   "version": 1,
   "receipts": [
     {
+      "createdAt": "2026-08-31T19:02:30.048Z",
+      "bankId": "rodrigo",
+      "documentId": "pi-explicit:3ec0b28e1a66a41d:7832999046078a03",
+      "queueJobId": "9623389b-80a0-4bf4-bf82-5b9fab5b874c",
+      "updateMode": "replace",
+      "source": "tool",
+      "context": "Verified desktop spacing decision from the Hyprland configuration and the rendered 1920x1080 desktop screenshot.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-409eb669ba7f",
+        "session:3ec0b28e1a66a41d",
+        "project:home"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    },
+    {
       "createdAt": "2026-08-30T18:20:50.887Z",
       "bankId": "rodrigo",
       "documentId": "pi-explicit:471ba4180e9b8dd8:ab8a123ebdd2fcbb",

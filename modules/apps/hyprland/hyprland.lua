@@ -25,9 +25,10 @@ hl.monitor({
 
 hl.config({
   general = {
-    -- Match AeroSpace's compact 6 px tile gap and 3 px screen inset.
-    gaps_in = 6,
-    gaps_out = 3,
+    -- Hyprland applies the inner gap at both tile edges, so these values
+    -- produce balanced 6 px seams and screen insets.
+    gaps_in = 3,
+    gaps_out = 6,
     border_size = 2,
     col = {
       active_border = "rgb(@orangeBright@)",
