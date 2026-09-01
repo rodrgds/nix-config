@@ -91,8 +91,23 @@ let
       '';
     };
 
-    # OpenPost app
+    # OpenPost compatibility app host
     "app.openpost.social" = {
+      extraConfig = ''
+        reverse_proxy localhost:${toString (cfg.internalPorts.openpost or 8090)}
+
+        header {
+          Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+          X-Content-Type-Options "nosniff"
+          X-Frame-Options "SAMEORIGIN"
+          X-XSS-Protection "1; mode=block"
+          Referrer-Policy "strict-origin-when-cross-origin"
+        }
+      '';
+    };
+
+    # OpenPost canonical app host
+    "app.openpo.st" = {
       extraConfig = ''
         reverse_proxy localhost:${toString (cfg.internalPorts.openpost or 8090)}
 
@@ -109,7 +124,7 @@ let
     # Redirect old domain to app
     "openpost.rgo.pt" = {
       extraConfig = ''
-        redir https://app.openpost.social{uri} permanent
+        redir https://app.openpo.st{uri} permanent
       '';
     };
 
