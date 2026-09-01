@@ -6,14 +6,8 @@ mode=${1:-region}
 
 if [[ $mode == "region" ]]; then
   selection=$(slurp) || exit $?
-  if ! grim -g "$selection" -t ppm - | satty \
-    --filename - \
-    --fullscreen \
-    --copy-command wl-copy \
-    --actions-on-enter save-to-clipboard,exit \
-    --actions-on-escape exit \
-    --early-exit; then
-    notify-send "Screenshot failed" "The selected region could not be opened in Satty."
+  if ! grim -g "$selection" -t ppm - | swappy -f -; then
+    notify-send "Screenshot failed" "The selected region could not be opened in Swappy."
     exit 1
   fi
 elif [[ $mode == "full" ]]; then

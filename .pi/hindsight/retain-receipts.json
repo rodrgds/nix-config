@@ -2,6 +2,48 @@
   "version": 1,
   "receipts": [
     {
+      "createdAt": "2026-09-01T10:02:22.177Z",
+      "bankId": "rodrigo",
+      "documentId": "pi-explicit:0d9d98b1509d3548:4e7c7949983b1219",
+      "queueJobId": "4893186e-02a3-43ed-aaa3-5725f074a4d4",
+      "updateMode": "replace",
+      "source": "tool",
+      "context": "Verified screenshot editor replacement and remaining activation step in the declarative home configuration.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-409eb669ba7f",
+        "session:0d9d98b1509d3548",
+        "project:home"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    },
+    {
+      "createdAt": "2026-09-01T09:45:53.400Z",
+      "bankId": "rodrigo",
+      "documentId": "pi-explicit:0d9d98b1509d3548:71fa3e40bed775b6",
+      "queueJobId": "31e72a2b-70e1-4deb-8b70-6b5011f9f0ed",
+      "updateMode": "replace",
+      "source": "tool",
+      "context": "Verified screenshot startup-latency diagnosis for the declarative home configuration.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-409eb669ba7f",
+        "session:0d9d98b1509d3548",
+        "project:home"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    },
+    {
       "createdAt": "2026-08-31T19:02:30.048Z",
       "bankId": "rodrigo",
       "documentId": "pi-explicit:3ec0b28e1a66a41d:7832999046078a03",

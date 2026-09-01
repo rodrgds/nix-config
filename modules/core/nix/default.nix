@@ -56,7 +56,15 @@ in
         };
       };
 
-      nix.optimise.automatic = true;
+      nix.optimise = {
+        automatic = true;
+      }
+      // lib.optionalAttrs isLinux {
+        dates = "weekly";
+        # Optimisation is maintenance, not a boot prerequisite. Skip a missed
+        # weekly run instead of saturating storage shortly after startup.
+        persistent = false;
+      };
 
       nixpkgs.config = {
         allowUnfree = true;

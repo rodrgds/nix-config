@@ -23,8 +23,8 @@ in
         settings = {
           # Don't block prompt on slow modules
           command_timeout = 500;
-          # Performance: don't scan network drives
-          scan_timeout = 30;
+          # Large or cold directories can exceed Starship's 30 ms default.
+          scan_timeout = 100;
 
           # Warm orange → yellow → cream fade prompt
           format = lib.concatStrings [

@@ -11,7 +11,7 @@ Companion to the `how` skill. `how` answers what the code does and how it works.
 
 ## How this skill works
 
-Historical context spreads across evidence categories: Hindsight, Vikunja, source control history, public issue tracking, legacy long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics. You cannot predict from the question alone which one holds the answer, so the skill queries all available categories in parallel, then synthesizes with explicit confidence calibration. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings. The default is coverage, not minimalism.
+Historical context spreads across evidence categories: Hindsight, Vikunja, source control history, public issue tracking, long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics. You cannot predict from the question alone which one holds the answer, so the skill queries all available categories in parallel, then synthesizes with explicit confidence calibration. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings. The default is coverage, not minimalism.
 
 ## Operating Posture
 
@@ -103,7 +103,7 @@ Source control is always available through git and `gh`. For the other categorie
 2. **Vikunja internal work** - accepted specs, tasks, comments and execution history
 3. **Source control history** - always available via git and `gh`
 4. **Public issue / contributor tracking** - GitHub Issues and PR discussion
-5. **Legacy long-form documents** - historical ADRs, design docs, specs, READMEs and wikis
+5. **Long-form documents** - ADRs, design docs, specs, READMEs and wikis
 6. **Real-time team chat** - Slack, Discord, etc. if accessible
 7. **Infrastructure observability** - Datadog, Grafana, etc. if accessible
 8. **Error / exception tracking** - Sentry, Bugsnag, etc. if accessible
@@ -114,6 +114,7 @@ Aim for a complete **coverage map**, not a minimal one. A null result from an is
 Launch all matching investigators in a single message so they run concurrently. One investigator per category lets each specialize in one tool's query vocabulary and result shape. Don't ask one agent to cover multiple categories.
 
 Each investigator gets:
+
 1. The base prompt from `references/investigator-prompt.md`
 2. The category playbook from `references/sources/<source>.md` if available
 3. The cross-cutting `references/sources/incident-postmortem.md` **if the target code looks defensive** (null checks, retry logic, timeout handling, rate limiting, feature flags, egress guards, OOM handlers)
@@ -124,19 +125,19 @@ Each investigator gets:
 
 Spawn one investigator per available category. Each owns exactly one source.
 
-1. **Source control investigator**. Git history, `gh` for PRs, code comments, tests. Always spawn; the only guaranteed source. Best at surfacing *implementation-time rationale captured during review*. PR descriptions stating the problem, review threads debating alternatives, inline comments encoding non-obvious constraints, test names that encode motivating edge cases, and commit messages linking tickets or incidents.
+1. **Source control investigator**. Git history, `gh` for PRs, code comments, tests. Always spawn; the only guaranteed source. Best at surfacing _implementation-time rationale captured during review_. PR descriptions stating the problem, review threads debating alternatives, inline comments encoding non-obvious constraints, test names that encode motivating edge cases, and commit messages linking tickets or incidents.
 
-2. **Issue / ticket tracker investigator**. Tickets, project docs, status updates. Best at surfacing *the product or business forcing function*. Customer requests, compliance deadlines, parent-initiative framing, ticket-level scope changes.
+2. **Issue / ticket tracker investigator**. Tickets, project docs, status updates. Best at surfacing _the product or business forcing function_. Customer requests, compliance deadlines, parent-initiative framing, ticket-level scope changes.
 
-3. **Long-form documents investigator**. PRDs, specs, RFCs, design docs, ADRs, postmortems, meeting notes. Best at surfacing *long-form design rationale*. Problem statements, explicit "alternatives considered" sections, strategy documents, ADRs with finalized decisions.
+3. **Long-form documents investigator**. PRDs, specs, RFCs, design docs, ADRs, postmortems, meeting notes. Best at surfacing _long-form design rationale_. Problem statements, explicit "alternatives considered" sections, strategy documents, ADRs with finalized decisions.
 
-4. **Real-time team chat investigator**. Feature-name and symbol searches, PR URL mentions, incident channels. Best at surfacing *real-time deliberation that never reached a doc*. Fire-drill decisions during incidents, Q&A between PR author and reviewers, rationale for small changes that didn't warrant a PRD.
+4. **Real-time team chat investigator**. Feature-name and symbol searches, PR URL mentions, incident channels. Best at surfacing _real-time deliberation that never reached a doc_. Fire-drill decisions during incidents, Q&A between PR author and reviewers, rationale for small changes that didn't warrant a PRD.
 
-5. **Infrastructure observability investigator**. Metrics, monitors, dashboards, logs, traces, incidents. Best at surfacing *infrastructure and runtime reality that motivated the code*. Monitor thresholds matching code constants, metric spikes before a PR merge, dashboards created as postmortem action items.
+5. **Infrastructure observability investigator**. Metrics, monitors, dashboards, logs, traces, incidents. Best at surfacing _infrastructure and runtime reality that motivated the code_. Monitor thresholds matching code constants, metric spikes before a PR merge, dashboards created as postmortem action items.
 
-6. **Error / exception tracking investigator**. Issues, events, stack traces, releases. Best at surfacing *the specific exceptions and error trajectories that motivated defensive code*. Stack traces through the target function, issues whose first-seen windows bracket the PR ship date.
+6. **Error / exception tracking investigator**. Issues, events, stack traces, releases. Best at surfacing _the specific exceptions and error trajectories that motivated defensive code_. Stack traces through the target function, issues whose first-seen windows bracket the PR ship date.
 
-7. **Product analytics investigator**. Usage events, experiment data, feature flags, billing events. Best at surfacing *product and data reality that shaped the code*. Feature-usage trajectories, experiment exposure data, pre-ship distributions that reveal threshold constants.
+7. **Product analytics investigator**. Usage events, experiment data, feature flags, billing events. Best at surfacing _product and data reality that shaped the code_. Feature-usage trajectories, experiment exposure data, pre-ship distributions that reveal threshold constants.
 
 ### When to skip an investigator
 
@@ -152,6 +153,7 @@ Run the search; let the null result speak. The cost of an investigator returning
 Synthesize all investigator findings into one confidence-weighted, evidence-cited narrative. Use `references/synthesizer-prompt.md` as the template.
 
 The synthesizer gets:
+
 1. The investigator findings, including any null results and any categories skipped with justification
 2. The code anchor from Step 2
 3. The user's original question

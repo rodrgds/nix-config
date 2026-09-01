@@ -22,9 +22,11 @@ in
     home-manager.users.${username} = {
       programs.direnv = {
         enable = true;
-        enableZshIntegration = true;
-        enableBashIntegration = true;
-        enableFishIntegration = true;
+        # NixOS already installs these hooks system-wide. Home Manager owns
+        # them only on Darwin so each prompt runs direnv once.
+        enableZshIntegration = isDarwin;
+        enableBashIntegration = isDarwin;
+        enableFishIntegration = isDarwin;
         nix-direnv.enable = true;
       };
     };

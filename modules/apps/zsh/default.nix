@@ -120,7 +120,6 @@ in
         enable = true;
         enableZshIntegration = true;
       };
-      programs.direnv.enableZshIntegration = true;
     };
   };
 }

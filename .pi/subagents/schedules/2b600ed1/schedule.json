@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "2b600ed1",
+  "name": "Check pi-hindsight PR 601 CI",
+  "cwd": "/home/rgo/.config/home",
+  "trigger": {
+    "kind": "once",
+    "at": "+15m"
+  },
+  "target": {
+    "workflowScript": "const result = await runs.run('pr-601-check', { agent: 'scout', task: 'Use gh to check https://github.com/luxus/pi-hindsight/pull/601 for CI results or maintainer feedback. Report failures or requested changes with concise actionable details. Do not edit or merge.' }); return result;"
+  },
+  "overlap": "skip",
+  "catchUp": "latest",
+  "paused": false,
+  "sessionOnly": true,
+  "ownerSessionFile": "/home/rgo/.pi/agent/sessions/--home-rgo-.config-home--/2026-08-31T19-28-09-684Z_01a0594b-1bd4-72ce-b39c-45f7e882af8a.jsonl",
+  "createdAt": "2026-08-31T22:36:32.682Z",
+  "updatedAt": "2026-08-31T22:52:20.200Z",
+  "lastRunId": "160a5ae2"
+}

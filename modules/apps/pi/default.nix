@@ -35,7 +35,6 @@ let
   managedPackages = [
     "npm:pi-web-access"
     "npm:@howaboua/pi-codex-conversion"
-    "npm:@howaboua/pi-cache-hit-predictor"
     "npm:pi-powerline-footer"
     "npm:pi-copy-all"
     "npm:pi-codex-goal"

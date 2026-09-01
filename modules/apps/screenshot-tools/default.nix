@@ -3,6 +3,7 @@
   config,
   pkgs,
   constants,
+  username,
   ...
 }:
 let
@@ -17,7 +18,13 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       (lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.unstable.satty ];
+        environment.systemPackages = [ pkgs.swappy ];
+
+        # Ctrl+C copies through wl-copy, then closes the editor.
+        home-manager.users.${username}.xdg.configFile."swappy/config".text = ''
+          [Default]
+          early_exit=true
+        '';
       })
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [

@@ -147,7 +147,6 @@ in
         enable = true;
         enableBashIntegration = true;
       };
-      programs.direnv.enableBashIntegration = true;
     };
   };
 }
