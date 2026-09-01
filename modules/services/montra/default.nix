@@ -108,6 +108,7 @@ in
       "d /var/lib/montra/meilisearch 0750 1000 1000 -"
       "d /var/lib/montra/bootstrap 0750 root root -"
       "d /var/lib/montra/backup-status 0755 root root -"
+      "z /var/lib/montra/backup-status/status.json 0644 root root -"
       "d /var/backup/montra 0750 root root -"
       "f /run/montra-catalog-maintenance.lock 0666 root root -"
     ];
@@ -519,6 +520,8 @@ in
             "$(${pkgs.coreutils}/bin/sha256sum "$backup" | ${pkgs.coreutils}/bin/cut -d' ' -f1)" \
             "$(${pkgs.coreutils}/bin/basename "$backup")" \
             > /var/lib/montra/backup-status/status.json.tmp
+          ${pkgs.coreutils}/bin/chmod 0644 \
+            /var/lib/montra/backup-status/status.json.tmp
           ${pkgs.coreutils}/bin/mv /var/lib/montra/backup-status/status.json.tmp \
             /var/lib/montra/backup-status/status.json
 
