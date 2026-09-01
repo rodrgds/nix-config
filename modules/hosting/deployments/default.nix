@@ -173,9 +173,7 @@ let
       for _attempt in $(seq 1 30); do
         if verify_running_revision "$previous_revision" "$previous_version" "$previous_image"; then
           canonical_revision="$(curl -fsS https://app.openpo.st/api/v1/version | jq -er .revision)" || return 1
-          legacy_revision="$(curl -fsS https://app.openpost.social/api/v1/version | jq -er .revision)" || return 1
           [ "$canonical_revision" = "$previous_revision" ] || return 1
-          [ "$legacy_revision" = "$previous_revision" ] || return 1
           echo "ROLLBACK_OK openpost $previous_revision" >&2
           return 0
         fi
@@ -219,7 +217,7 @@ let
       sleep 2
     done
 
-    for public_origin in https://app.openpo.st https://app.openpost.social; do
+    for public_origin in https://app.openpo.st; do
       if ! curl -fsS "$public_origin/api/v1/ready" >/dev/null; then
         fail_with_rollback "OpenPost public readiness check failed at $public_origin"
         exit 1

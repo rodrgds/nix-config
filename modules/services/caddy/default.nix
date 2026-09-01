@@ -91,18 +91,10 @@ let
       '';
     };
 
-    # OpenPost compatibility app host
+    # OpenPost former app host
     "app.openpost.social" = {
       extraConfig = ''
-        reverse_proxy localhost:${toString (cfg.internalPorts.openpost or 8090)}
-
-        header {
-          Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-          X-Content-Type-Options "nosniff"
-          X-Frame-Options "SAMEORIGIN"
-          X-XSS-Protection "1; mode=block"
-          Referrer-Policy "strict-origin-when-cross-origin"
-        }
+        redir https://app.openpo.st{uri} permanent
       '';
     };
 
