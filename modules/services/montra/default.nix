@@ -187,6 +187,9 @@ in
           CATALOG_ARTIFACT_STORAGE_ACCESS_KEY_ID=${config.sops.placeholder.montra_r2_artifact_access_key_id}
           CATALOG_ARTIFACT_STORAGE_SECRET_ACCESS_KEY=${config.sops.placeholder.montra_r2_artifact_secret_access_key}
           CATALOG_ARTIFACT_STORAGE_FORCE_PATH_STYLE=false
+          # Production visual search is stored in Postgres. Do not also write a
+          # local index into the read-only application image.
+          VISUAL_WRITE_INDEX_FILE=0
           # Schedules ship disabled by default on purpose; enabling automated
           # runs is an explicit later operator decision.
         '';
