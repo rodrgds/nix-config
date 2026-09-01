@@ -194,6 +194,11 @@ in
           # runs is an explicit later operator decision.
         '';
         mode = "0400";
+        restartUnits = [
+          "podman-montra-api.service"
+          "podman-montra-worker.service"
+          "podman-montra-integration-worker.service"
+        ];
       };
       "montra-meili-env" = {
         content = ''
