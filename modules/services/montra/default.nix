@@ -416,7 +416,9 @@ in
         extraOptions = [
           "--network=podman"
           "--pull=never"
-          "--memory=1g"
+          # A fresh catalog snapshot expands roughly 500 MiB of JSON into
+          # JavaScript objects before derived processing starts.
+          "--memory=3g"
         ];
       };
       montra-integration-worker = {
