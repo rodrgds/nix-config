@@ -13,6 +13,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Hermes Desktop is built from the upstream flake on Linux. macOS uses
+    # the signed Homebrew cask, while sharing the same declarative remote
+    # connection and SOPS token module.
+    hermes-agent.url = "github:NousResearch/hermes-agent";
+
     nix-darwin = {
       url = "github:lnl7/nix-darwin/nix-darwin-26.05";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
