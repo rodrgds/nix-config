@@ -2,6 +2,26 @@
   "version": 1,
   "receipts": [
     {
+      "createdAt": "2026-09-02T13:38:11.102Z",
+      "bankId": "rodrigo",
+      "documentId": "pi-explicit:2bbc4c5d54e6d770:18c6d10bd018e0d0",
+      "queueJobId": "529b9aec-124a-4df3-b56e-3e06160f1102",
+      "updateMode": "replace",
+      "source": "tool",
+      "context": "Verified durable Pi package and desktop credential-store configuration after rebuilding and pushing main.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-409eb669ba7f",
+        "session:2bbc4c5d54e6d770"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    },
+    {
       "createdAt": "2026-09-01T10:02:22.177Z",
       "bankId": "rodrigo",
       "documentId": "pi-explicit:0d9d98b1509d3548:4e7c7949983b1219",
