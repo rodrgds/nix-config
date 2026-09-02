@@ -36,14 +36,17 @@ in
             setRemoteEnvironment = pkgs.writeShellApplication {
               name = "set-hermes-desktop-remote-environment";
               text = ''
-                if [ ! -r ${lib.escapeShellArg tokenPath} ]; then
-                  echo "hermes-desktop: cannot read the remote session token" >&2
-                  exit 1
-                fi
+                token=""
+                for _attempt in {1..30}; do
+                  if [ -r ${lib.escapeShellArg tokenPath} ]; then
+                    token="$(tr -d '\r\n' < ${lib.escapeShellArg tokenPath})"
+                    [ -n "$token" ] && break
+                  fi
+                  sleep 1
+                done
 
-                token="$(tr -d '\r\n' < ${lib.escapeShellArg tokenPath})"
                 if [ -z "$token" ]; then
-                  echo "hermes-desktop: the remote session token is empty" >&2
+                  echo "hermes-desktop: remote session token was not provisioned within 30 seconds" >&2
                   exit 1
                 fi
 
