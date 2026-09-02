@@ -18,6 +18,34 @@ let
   pythonHealthCheck =
     url:
     "--health-cmd=python -c \"import urllib.request,time\nfor i in range(60):\n    try:\n        urllib.request.urlopen('${url}')\n        exit(0)\n    except Exception:\n        time.sleep(1)\nexit(1)\"";
+  stopManagedContainer =
+    name:
+    pkgs.writeShellScript "stop-${name}" ''
+      set -euo pipefail
+      if ${pkgs.podman}/bin/podman container exists ${lib.escapeShellArg name}; then
+        # Podman 5.8 leaves container-ID-specific health timers behind after a
+        # replacement unless both the timer and any active probe are stopped.
+        ${pkgs.podman}/bin/podman update --health-interval=disable ${lib.escapeShellArg name} >/dev/null
+        read -r container_id < /run/${name}/ctr-id
+        [[ "$container_id" =~ ^[0-9a-f]{64}$ ]] || {
+          echo "invalid ${name} container ID" >&2
+          exit 1
+        }
+        for unit_type in timer service; do
+          while read -r unit _; do
+            [ -n "$unit" ] || continue
+            ${pkgs.systemd}/bin/systemctl stop "$unit" || true
+            if [ "$unit_type" = service ]; then
+              ${pkgs.systemd}/bin/systemctl reset-failed "$unit" || true
+            fi
+          done < <(
+            ${pkgs.systemd}/bin/systemctl list-units \
+              --all --plain --no-legend "$container_id-*.$unit_type"
+          )
+        done
+      fi
+      ${pkgs.podman}/bin/podman stop --ignore --cidfile=/run/${name}/ctr-id
+    '';
   montraMaintenance = pkgs.writeShellScriptBin "montra-catalog-maintenance" ''
     set -euo pipefail
     [ "$#" -gt 0 ] || {
@@ -213,18 +241,25 @@ in
     systemd.services.podman-montra-postgres = {
       after = [ "packages-registry-login.service" ];
       requires = [ "packages-registry-login.service" ];
+      serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-postgres"}";
+    };
+    systemd.services.podman-montra-meilisearch = {
+      serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-meilisearch"}";
     };
     systemd.services.podman-montra-embedding = {
       after = [ "packages-registry-login.service" ];
       requires = [ "packages-registry-login.service" ];
+      serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-embedding"}";
     };
     systemd.services.podman-montra-detector = {
       after = [ "packages-registry-login.service" ];
       requires = [ "packages-registry-login.service" ];
+      serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-detector"}";
     };
     systemd.services.podman-montra-api = {
       after = [ "packages-registry-login.service" ];
       requires = [ "packages-registry-login.service" ];
+      serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-api"}";
     };
     systemd.services.podman-montra-worker = {
       after = [ "packages-registry-login.service" ];
