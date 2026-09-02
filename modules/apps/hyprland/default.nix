@@ -123,6 +123,10 @@ in
       binPath = "${hyprlandUWSMLauncher}/bin/Hyprland";
     };
 
+    # Back OAuth clients with the persistent Secret Service keyring and let
+    # the login PAM stack unlock it with the desktop password.
+    services.gnome.gnome-keyring.enable = true;
+
     # Keep live rebuilds from restarting UWSM lifecycle services. Stopping any
     # of these triggers a full graphical-session shutdown by design. UWSM also
     # prepares the graphical-session environment itself, so its units must not
