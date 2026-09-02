@@ -8,6 +8,7 @@ Rectangle {
     property string tooltipText: ""
     property string fontFamily: Theme.uiFont
     property bool danger: false
+    property bool active: false
     readonly property bool hovered: pointer.containsMouse
 
     signal triggered(int button)
@@ -16,6 +17,8 @@ Rectangle {
     implicitWidth: Math.max(Theme.controlMinWidth, buttonLabel.implicitWidth + 12)
     implicitHeight: Theme.controlHeight
     color: {
+        if (active)
+            return pointer.pressed ? Theme.orange : Theme.orangeBright;
         if (pointer.pressed)
             return danger ? Theme.bg2 : Theme.orangeBright;
         if (hovered)
@@ -36,7 +39,7 @@ Rectangle {
         id: buttonLabel
         anchors.centerIn: parent
         text: root.label
-        color: pointer.pressed && !root.danger ? Theme.bg0 : Theme.fg0
+        color: root.active || (pointer.pressed && !root.danger) ? Theme.bg0 : Theme.fg0
         font.family: root.fontFamily
         font.pixelSize: Theme.textSize
         renderType: Text.NativeRendering

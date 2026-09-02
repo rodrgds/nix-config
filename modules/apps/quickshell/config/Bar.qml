@@ -88,6 +88,18 @@ PanelWindow {
             Layout.alignment: Qt.AlignVCenter
         }
 
+        ToolButton {
+            label: ""
+            fontFamily: Theme.monoFont
+            active: Caffeine.active
+            tooltipText: Caffeine.active ? "Caffeine on\n\nThe machine stays awake and never locks.\nClick to allow sleep again" : "Caffeine off\n\nClick to keep the machine awake"
+            onTriggered: button => {
+                if (button === Qt.LeftButton)
+                    Caffeine.toggle();
+            }
+            Layout.alignment: Qt.AlignVCenter
+        }
+
         TrayWidget {
             Layout.alignment: Qt.AlignVCenter
         }

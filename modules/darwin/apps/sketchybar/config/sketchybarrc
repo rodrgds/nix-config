@@ -52,14 +52,15 @@ sketchybar --add event keyboard_layout_change
 TRAY_ITEMS=()
 
 # SketchyBar prepends right-positioned items, so source these in reverse of
-# their desired visual order: CPU, RAM, DISK, audio, keyboard, tray, clock,
-# power.
+# their desired visual order: CPU, RAM, DISK, audio, keyboard, caffeinate,
+# tray, clock, power.
 for item in \
   workspaces \
   media \
   power \
   clock \
   tray \
+  caffeinate \
   keyboard \
   audio \
   metrics
@@ -71,7 +72,7 @@ done
 # --reorder lists right-positioned items from the edge inward. Each zero-space
 # meter precedes the metric it overlays; keeping the full order explicit also
 # prevents aliases from jumping ahead of the system modules.
-sketchybar --reorder power clock "${TRAY_ITEMS[@]}" keyboard audio \
+sketchybar --reorder power clock "${TRAY_ITEMS[@]}" caffeinate keyboard audio \
   disk.meter disk memory.meter memory cpu.meter cpu
 
 sketchybar --update

@@ -88,6 +88,8 @@ let
     cp ${pkgs.replaceVars ./config/tray.sh.in { inherit traySetup; }} "$out/items/tray.sh"
     substituteInPlace "$out/items/power.sh" \
       --replace-fail '@vicinaeLauncher@' '/Users/${username}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher'
+    substituteInPlace "$out/plugins/caffeinate.sh" "$out/plugins/caffeinate_click.sh" \
+      --replace-fail '@caffeinateToggle@' '${constants.scriptDir}/toggle_caffeine.sh'
     chmod +x "$out/sketchybarrc" "$out/plugins/"*.sh
   '';
 in
