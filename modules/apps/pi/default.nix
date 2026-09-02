@@ -48,6 +48,7 @@ let
     "npm:pi-annotate"
     "npm:pi-image-paste"
     "npm:pi-subagents"
+    "git:github.com/edxeth/pi-better-skills"
   ];
 in
 {
