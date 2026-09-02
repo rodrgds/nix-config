@@ -173,7 +173,7 @@ in
           CATALOG_PREWARM=1
           ADMIN_EMBEDDED_JOB_WORKER=0
           CATALOG_MAINTENANCE_LOCK_FILE=/run/montra-catalog-maintenance.lock
-          CATALOG_MAINTENANCE_SOURCE_IDS=isto,bershka
+          CATALOG_MAINTENANCE_SOURCE_IDS=isto,bershka,lefties,stradivarius
           CATALOG_WORKER_TOKEN_SHA256=aacc46672cbb244bf6d106d051ba01bf81ebb7e335c427b3b16c57352cc3177d
           MEILI_HOST=http://montra-meilisearch:7700
           MEILI_MASTER_KEY=${config.sops.placeholder.montra_meili_master_key}
