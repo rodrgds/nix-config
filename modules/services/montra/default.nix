@@ -26,7 +26,7 @@ let
         # Podman 5.8 leaves container-ID-specific health timers behind after a
         # replacement unless both the timer and any active probe are stopped.
         ${pkgs.podman}/bin/podman update --health-interval=disable ${lib.escapeShellArg name} >/dev/null
-        read -r container_id < /run/${name}/ctr-id
+        container_id="$(${pkgs.coreutils}/bin/cat /run/${name}/ctr-id)"
         [[ "$container_id" =~ ^[0-9a-f]{64}$ ]] || {
           echo "invalid ${name} container ID" >&2
           exit 1
