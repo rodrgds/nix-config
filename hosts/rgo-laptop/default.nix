@@ -58,6 +58,7 @@
   apps.vesktop.enable = true;
   apps.obsidian.enable = true;
   apps.screenshot-tools.enable = true;
+  apps.vicu.enable = true;
 
   apps.mpv.enable = true;
   apps.stremio.enable = true;

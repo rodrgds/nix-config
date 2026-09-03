@@ -125,6 +125,7 @@
   apps.darktable.enable = false;
   apps.gimp.enable = false;
   apps.screenshot-tools.enable = true;
+  apps.vicu.enable = true;
   apps.flatpak.installFlatseal = false;
 
   apps.steam.enable = true;
