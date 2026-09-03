@@ -46,6 +46,7 @@ in
           { config, lib, ... }:
           let
             nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
+            opencodeGoApiKeyPath = config.sops.secrets.opencode_go_api_key.path;
 
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
@@ -69,6 +70,41 @@ in
                       };
                     }) nineRouterCatalog.models
                   );
+                };
+                opencode = {
+                  npm = "@ai-sdk/openai-compatible";
+                  name = "Opencode Zen";
+                  options = {
+                    baseURL = "https://opencode.ai/zen/v1";
+                    apiKey = "{env:OPENCODE_GO_API_KEY}";
+                  };
+                  models = {
+                    "x-preview-f-free" = {
+                      name = "Ox Alpha Free (0x)";
+                    };
+                    "muse-spark-1.2-contributor-free" = {
+                      name = "Muse Spark 1.2 Free";
+                    };
+                    "muse-spark-1.3-contributor-free" = {
+                      name = "Muse Spark 1.3 Free";
+                    };
+                  };
+                };
+                opencode-go = {
+                  npm = "@ai-sdk/openai-compatible";
+                  name = "Opencode Go";
+                  options = {
+                    baseURL = "https://opencode.ai/zen/go/v1";
+                    apiKey = "{env:OPENCODE_GO_API_KEY}";
+                  };
+                  models = {
+                    "muse-spark-1.2-contributor" = {
+                      name = "Muse Spark 1.2 Contributor";
+                    };
+                    "muse-spark-1.3-contributor" = {
+                      name = "Muse Spark 1.3 Contributor";
+                    };
+                  };
                 };
               };
               mcp = lib.optionalAttrs isLinux {
@@ -136,11 +172,17 @@ in
               if [ -z "''${NINE_ROUTER_API_KEY:-}" ] && [ -r "${nineRouterApiKeyPath}" ]; then
                 export NINE_ROUTER_API_KEY="$(tr -d '\n' < "${nineRouterApiKeyPath}")"
               fi
+              if [ -z "''${OPENCODE_GO_API_KEY:-}" ] && [ -r "${opencodeGoApiKeyPath}" ]; then
+                export OPENCODE_GO_API_KEY="$(tr -d '\n' < "${opencodeGoApiKeyPath}")"
+              fi
             '';
 
             programs.zsh.envExtra = lib.mkAfter ''
               if [ -z "''${NINE_ROUTER_API_KEY:-}" ] && [ -r "${nineRouterApiKeyPath}" ]; then
                 export NINE_ROUTER_API_KEY="$(tr -d '\n' < "${nineRouterApiKeyPath}")"
+              fi
+              if [ -z "''${OPENCODE_GO_API_KEY:-}" ] && [ -r "${opencodeGoApiKeyPath}" ]; then
+                export OPENCODE_GO_API_KEY="$(tr -d '\n' < "${opencodeGoApiKeyPath}")"
               fi
             '';
 
