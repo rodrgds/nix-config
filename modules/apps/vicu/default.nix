@@ -44,9 +44,18 @@ in
               # (inbox project, hotkeys, custom lists) the app itself manages.
               # The token travels from the sops secret file to jq via
               # --rawfile, never through the Nix store or process arguments.
+              # sops-nix decrypts through an async launchd service, so a new
+              # secret may not be on disk yet when this runs. Wait for it
+              # instead of skipping (hermes-desktop uses the same pattern).
               vicuConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
                 secret="${config.sops.secrets.vicu_api_token.path}"
                 configFile="${vicuConfigDir}/config.json"
+                for _attempt in {1..30}; do
+                  if [ -r "$secret" ]; then
+                    break
+                  fi
+                  sleep 1
+                done
                 if [ -r "$secret" ]; then
                   ${coreutils}/mkdir -p "${vicuConfigDir}"
                   tmp="$(${coreutils}/mktemp)"
@@ -64,10 +73,11 @@ in
                   if [ ! -f "$configFile" ] || ! ${coreutils}/cmp -s "$tmp" "$configFile"; then
                     ${coreutils}/cat "$tmp" > "$configFile"
                     ${coreutils}/chmod 600 "$configFile"
+                    echo "vicu: seeded tasks.rgo.pt account into config.json" >&2
                   fi
                   ${coreutils}/rm -f "$tmp" "$tmp.base"
                 else
-                  echo "vicu: sops secret not provisioned yet, skipping config seeding" >&2
+                  echo "vicu: sops secret was not provisioned within 30 seconds, skipping config seeding" >&2
                 fi
               '';
             }
