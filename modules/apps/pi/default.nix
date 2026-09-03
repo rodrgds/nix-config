@@ -149,7 +149,10 @@ in
           defaultThinkingLevel = "high";
           enabledModels = (map (model: "nine_router/${model.alias}") nineRouterCatalog.models) ++ [
             "opencode/x-preview-f-free"
+            "opencode/muse-spark-1.2-contributor-free"
+            "opencode/muse-spark-1.3-contributor-free"
             "opencode-go/muse-spark-1.2-contributor"
+            "opencode-go/muse-spark-1.3-contributor"
             "openai-codex/gpt-5.6-luna"
             "openai-codex/gpt-5.6-sol"
           ];
@@ -209,9 +212,9 @@ in
             ) nineRouterCatalog.models;
           };
 
-          # OpenCode Go subscription. muse-spark-1.2-contributor is served
-          # through the Responses API (/v1/responses); declare it explicitly
-          # so the built-in opencode-go model list does not need to carry it.
+          # OpenCode Go subscription. muse-spark is served through the Responses
+          # API (/v1/responses); declare it explicitly so the built-in
+          # opencode-go model list does not need to carry it.
           providers.opencode-go = {
             baseUrl = "https://opencode.ai/zen/go/v1";
             api = "openai-responses";
@@ -234,18 +237,81 @@ in
                   cacheWrite = 0;
                 };
               }
+              {
+                id = "muse-spark-1.3-contributor";
+                name = "Muse Spark 1.3 Contributor";
+                reasoning = true;
+                input = [
+                  "text"
+                  "image"
+                ];
+                contextWindow = 1048576;
+                maxTokens = 131072;
+                cost = {
+                  input = 0.10;
+                  output = 0.20;
+                  cacheRead = 0.002;
+                  cacheWrite = 0;
+                };
+              }
             ];
           };
 
-          # Ox Alpha (0x) free stealth model via OpenCode Zen (`x-preview-f-free`).
-          # Endpoint: https://opencode.ai/zen/v1/chat/completions (openai-completions).
-          # Reuses the same OpenCode Zen API key as opencode-go. Free, zero-retention.
+          # OpenCode Zen free models via https://opencode.ai/zen/v1
+          # (openai-completions). Reuses the same OpenCode Zen API key as
+          # opencode-go. Free, zero-retention.
           providers.opencode = {
             apiKey = "!${pkgs.coreutils}/bin/cat ${opencodeGoApiKeyPath}";
             models = [
               {
                 id = "x-preview-f-free";
                 name = "Ox Alpha Free (0x)";
+                api = "openai-completions";
+                reasoning = true;
+                input = [
+                  "text"
+                  "image"
+                ];
+                contextWindow = 1048576;
+                maxTokens = 131072;
+                cost = {
+                  input = 0;
+                  output = 0;
+                  cacheRead = 0;
+                  cacheWrite = 0;
+                };
+                compat = {
+                  supportsStore = false;
+                  supportsDeveloperRole = false;
+                  maxTokensField = "max_tokens";
+                };
+              }
+              {
+                id = "muse-spark-1.2-contributor-free";
+                name = "Muse Spark 1.2 Free";
+                api = "openai-completions";
+                reasoning = true;
+                input = [
+                  "text"
+                  "image"
+                ];
+                contextWindow = 1048576;
+                maxTokens = 131072;
+                cost = {
+                  input = 0;
+                  output = 0;
+                  cacheRead = 0;
+                  cacheWrite = 0;
+                };
+                compat = {
+                  supportsStore = false;
+                  supportsDeveloperRole = false;
+                  maxTokensField = "max_tokens";
+                };
+              }
+              {
+                id = "muse-spark-1.3-contributor-free";
+                name = "Muse Spark 1.3 Free";
                 api = "openai-completions";
                 reasoning = true;
                 input = [
@@ -340,10 +406,15 @@ in
             scriptMode = false;
             disableProxyTool = true;
           };
+          # Executor MCP via OAuth. Keep the entry stable (no Nix-store hashes in
+          # the URL) so the OS keychain entry (pi-mcp-adapter.oauth / sha256-…)
+          # remains valid across rebuilds on both Darwin (Keychain) and Linux
+          # (libsecret/kernel keyring). `protocolVersion` and `lifecycle` are
+          # left at the adapter defaults (auto / lazy) to avoid forcing a
+          # re-registration that would invalidate the stored refresh token.
           mcpServers.executor = {
             url = "https://executor.sh/rodrigo-dias/mcp";
             auth = "oauth";
-            lifecycle = "lazy-keep-alive";
             directTools = true;
             excludeTools = [
               "create-artifact"
@@ -352,7 +423,6 @@ in
               "show-artifact"
               "read_executor_shell"
             ];
-            protocolVersion = "legacy";
           };
         };
 
