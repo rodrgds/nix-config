@@ -25,6 +25,9 @@ affinityOverlay
   # Cap screen recorder (official Linux release).
   cap = prev.callPackage ./cap { };
 
+  # Vicu desktop task manager (upstream AppImage on Linux, dmg on macOS).
+  vicu = prev.callPackage ./vicu { };
+
   # Handy - Speech-to-text application
   inherit (inputs.handy.packages.${prev.stdenv.hostPlatform.system}) handy;
 
