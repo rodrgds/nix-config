@@ -173,7 +173,7 @@ in
           CATALOG_PREWARM=1
           ADMIN_EMBEDDED_JOB_WORKER=0
           CATALOG_MAINTENANCE_LOCK_FILE=/run/montra-catalog-maintenance.lock
-          CATALOG_MAINTENANCE_SOURCE_IDS=isto,salsa,tiffosi,sacoor,calzedonia,bimbaylola,prof,bershka,stradivarius,jdsports,lefties,seaside,zara,pullandbear,hm,primark,parfois,womensecret,springfield,cortefiel,camper
+          CATALOG_MAINTENANCE_SOURCE_IDS=isto,salsa,tiffosi,sacoor,calzedonia,bimbaylola,prof,bershka,stradivarius,jdsports,lefties,seaside,zara,pullandbear,hm,primark,parfois,womensecret,springfield,cortefiel,camper,ca,decenio,intimissimi,sportzone
           CATALOG_DERIVED_MAINTENANCE_ENABLED=1
           IMAGE_ASSET_CONCURRENCY=4
           IMAGE_NORMALIZE_CONCURRENCY=1
