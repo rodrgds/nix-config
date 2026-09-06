@@ -1,0 +1,29 @@
+name: montra-catalog
+services:
+  worker:
+    image: ${CATALOG_WORKER_IMAGE:-ghcr.io/rodrgds/montra-catalog-worker:latest}
+    container_name: montra-catalog-worker
+    restart: unless-stopped
+    env_file: worker.env
+    mem_limit: 3g
+    shm_size: 1g
+    stop_grace_period: 120s
+    volumes:
+      - worker-state:/var/lib/montra-catalog-worker
+  updater:
+    image: docker:28-cli@sha256:625d9431a9f54c5a2bc90f24f0e1c3d55b1349fd857dd85035f98c2c9acbdd4d
+    container_name: montra-catalog-updater
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    working_dir: /volume1/docker/montra-catalog-worker
+    entrypoint: ["/bin/sh", "./update-worker.sh"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /volume1/docker/montra-catalog-worker:/volume1/docker/montra-catalog-worker:ro
+volumes:
+  worker-state:
+    external: true
+    name: montra-catalog-worker-state
