@@ -15,7 +15,6 @@ services:
     container_name: montra-catalog-updater
     restart: unless-stopped
     mem_limit: 128m
-    cpus: 0.25
     environment:
       DOCKER_HOST: unix:///var/run/docker.sock
     working_dir: /volume1/docker/montra-catalog-worker
