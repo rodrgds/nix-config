@@ -21,6 +21,7 @@ services:
     entrypoint: ["/bin/sh", "./update-worker.sh"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /var/services/homes/kraktoos/.docker/config.json:/root/.docker/config.json:ro
       - /volume1/docker/montra-catalog-worker:/volume1/docker/montra-catalog-worker:ro
 volumes:
   worker-state:
