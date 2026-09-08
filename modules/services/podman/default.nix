@@ -14,6 +14,7 @@ let
       pkgs.coreutils
       pkgs.jq
       pkgs.podman
+      pkgs.systemd
       pkgs.util-linux
     ];
     text = ''
@@ -55,6 +56,32 @@ let
         exec ${pkgs.util-linux}/bin/flock --exclusive /run/podman-maintenance.lock \
           "$0" "--$mode" --lock-held
       fi
+
+      # Podman health checks use transient systemd units keyed by container ID.
+      # A rapid declarative restart can remove the container before its stop
+      # hook sees it, leaving the old timer to fail every health interval.
+      declare -A orphaned_health_container_ids=()
+      while read -r unit _; do
+        if [[ "$unit" =~ ^([0-9a-f]{64})-.*\.(timer|service)$ ]]; then
+          container_id="''${BASH_REMATCH[1]}"
+          if ! podman container exists "$container_id"; then
+            orphaned_health_container_ids["$container_id"]=1
+          fi
+        fi
+      done < <(systemctl list-units --all --plain --no-legend)
+      for container_id in "''${!orphaned_health_container_ids[@]}"; do
+        echo "podman-image-cleanup: removing orphaned health units for $container_id"
+        for unit_type in timer service; do
+          while read -r unit _; do
+            [ -n "$unit" ] || continue
+            systemctl stop "$unit" || true
+            systemctl reset-failed "$unit" || true
+          done < <(
+            systemctl list-units --all --plain --no-legend \
+              "$container_id-*.$unit_type"
+          )
+        done
+      done
 
       work_dir="$(mktemp -d)"
       trap 'rm -rf "$work_dir"' EXIT
