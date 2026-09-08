@@ -23,9 +23,9 @@ let
     pkgs.writeShellScript "stop-${name}" ''
       set -euo pipefail
       if ${pkgs.podman}/bin/podman container exists ${lib.escapeShellArg name}; then
-        # Podman 5.8 leaves container-ID-specific health timers behind after a
-        # replacement unless both the timer and any active probe are stopped.
-        ${pkgs.podman}/bin/podman update --health-interval=disable ${lib.escapeShellArg name} >/dev/null
+        # Disabling an in-flight probe can fail in Podman 5.8. Continue through
+        # explicit timer cleanup so a replacement cannot leave orphan probes.
+        ${pkgs.podman}/bin/podman update --health-interval=disable ${lib.escapeShellArg name} >/dev/null || true
         container_id="$(${pkgs.coreutils}/bin/cat /run/${name}/ctr-id)"
         [[ "$container_id" =~ ^[0-9a-f]{64}$ ]] || {
           echo "invalid ${name} container ID" >&2
