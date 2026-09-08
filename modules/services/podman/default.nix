@@ -172,6 +172,8 @@ let
 
       echo "podman-image-cleanup: removed $removed image(s); pruning build cache"
       podman image prune --force --build-cache
+      echo "podman-image-cleanup: pruning unreferenced anonymous volumes"
+      podman volume prune --force
       echo "podman-image-cleanup: cleanup complete ($mode)"
     '';
   };
