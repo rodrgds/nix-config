@@ -75,7 +75,9 @@ let
           while read -r unit _; do
             [ -n "$unit" ] || continue
             systemctl stop "$unit" || true
-            systemctl reset-failed "$unit" || true
+            if [ "$unit_type" = service ]; then
+              systemctl reset-failed "$unit" || true
+            fi
           done < <(
             systemctl list-units --all --plain --no-legend \
               "$container_id-*.$unit_type"
