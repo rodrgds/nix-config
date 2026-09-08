@@ -251,7 +251,9 @@ let
   montraDeploy = pkgs.writeShellScript "deploy-montra" ''
     set -euo pipefail
     export PATH=${maintenancePath}:$PATH
-    [ "$#" -eq 2 ] || { echo "expected Montra revision and component digest map" >&2; exit 1; }
+    [ "$#" -ge 2 ] && [ "$#" -le 3 ] || { echo "expected Montra revision, component identities, and optional delivery mode" >&2; exit 1; }
+    delivery_mode="''${3:-registry}"
+    case "$delivery_mode" in registry|local) ;; *) echo "invalid Montra delivery mode" >&2; exit 1 ;; esac
     revision="$1"
     components_json="$2"
     [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid Montra revision" >&2; exit 1; }
@@ -327,11 +329,17 @@ let
       digests[$component]="$digest"
     done
 
-    systemctl restart packages-registry-login.service
+    if [ "$delivery_mode" = registry ]; then
+      systemctl restart packages-registry-login.service
+    fi
     for component in "''${selected_components[@]}"; do
       image="$(image_name "$component")"
-      candidate="$image@''${digests[$component]}"
-      podman pull "$candidate"
+      if [ "$delivery_mode" = registry ]; then
+        candidate="$image@''${digests[$component]}"
+        podman pull "$candidate"
+      else
+        candidate="$image:sha-$revision"
+      fi
       image_revision="$(podman image inspect "$candidate" --format '{{index .Labels "org.opencontainers.image.revision"}}')"
       [ "$image_revision" = "$revision" ] || {
         echo "$component candidate revision $image_revision does not match $revision" >&2
@@ -342,6 +350,10 @@ let
         echo "$component candidate image has an invalid ID" >&2
         exit 1
       }
+      if [ "$delivery_mode" = local ] && [ "''${candidate_image#sha256:}" != "''${digests[$component]#sha256:}" ]; then
+        echo "$component local image ID does not match the reviewed candidate" >&2
+        exit 1
+      fi
       candidate_images[$component]="$candidate_image"
       podman tag "''${previous_images[$component]}" "$image:rollback"
     done
@@ -358,7 +370,7 @@ let
     promote_candidates() {
       for component in "''${selected_components[@]}"; do
         image="$(image_name "$component")"
-        podman tag "$image@''${digests[$component]}" "$image:latest" || return 1
+        podman tag "''${candidate_images[$component]}" "$image:latest" || return 1
         promoted_image="$(podman image inspect "$image:latest" --format '{{.Id}}')" || return 1
         [ "$promoted_image" = "''${candidate_images[$component]}" ] || return 1
       done
@@ -525,6 +537,10 @@ let
 
     ${cleanupImages}
     printf 'DEPLOY_OK montra %s components=%s\n' "$revision" "$(IFS=,; echo "''${selected_components[*]}")"
+  '';
+
+  montraLocalDeploy = pkgs.writeShellScriptBin "montra-deploy-local" ''
+    exec ${montraDeploy} "$@" local
   '';
 
   triggerMontraDeploy = pkgs.writeShellScript "trigger-deploy-montra" ''
@@ -830,6 +846,9 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    environment.systemPackages = lib.optionals config.vps.montra.enable [ montraLocalDeploy ];
+    system.build.montraLocalDeploy = montraLocalDeploy;
+
     sops.secrets =
       lib.genAttrs
         (

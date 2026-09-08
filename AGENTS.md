@@ -12,7 +12,7 @@ rebuild --laptop    # nix-darwin, on rgo-laptop
 rebuild --vps       # deploy-rs, from either machine
 ```
 
-When you change a VPS-hosted repository, image name, unit name, domain, health endpoint, or build directory, update the project's workflow/AGENTS and the matching Nix module under `modules/hosting/` or `modules/services/`. All delivery runs through the deployment webhook and systemd units.
+When you change a VPS-hosted repository, image name, unit name, domain, health endpoint, or build directory, update the project's workflow/AGENTS and the matching Nix module under `modules/hosting/` or `modules/services/`. All delivery runs through the deployment webhook and systemd units. For locally built Montra images, use `sudo montra-deploy-local REVISION COMPONENTS_JSON`; the map contains reviewed `sha256:` image IDs. This shares registry deployment locks, migrations, health checks, and rollback.
 
 ## Compatibility
 
