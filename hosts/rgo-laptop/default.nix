@@ -1,4 +1,5 @@
 {
+  lib,
   config,
   pkgs,
   username,
@@ -14,6 +15,8 @@
   darwin.core.networking.nas.enable = true;
   darwin.core.fonts.enable = true;
   darwin.core.homebrew.enable = true;
+  # Applying configuration must not also replace every installed app.
+  homebrew.onActivation.upgrade = lib.mkForce false;
   darwin.core.karabiner.enable = true;
 
   core.nix.enable = true;
@@ -38,9 +41,9 @@
 
   darwin.apps.aerospace.enable = true;
   darwin.apps.lightweight-borders.enable = true;
-  # The native bar remains lighter than the tested Swift replacement. Its
-  # observers update shared state without one polling process per item.
-  darwin.apps.sketchybar.enable = true;
+  darwin.apps.sketchybar.enable = false;
+  darwin.apps.keepingyouawake.enable = true;
+  darwin.apps.stats.enable = true;
   darwin.apps.keyboard-layout.enable = true;
 
   networking.hostName = "rgo-laptop";
@@ -69,6 +72,9 @@
   core.downloads-cleanup.enable = true;
   core.cache-cleanup = {
     enable = true;
+    # Automatic rescue is separate from the rebuild wizard's space preflight.
+    pressureFreeGiB = 16;
+    autoPressure.recoveryFreeGiB = 24;
     goBuildCache.extraDirectories = [
       "/Users/rgo/dev/openpost/.devenv/state/go-build"
     ];

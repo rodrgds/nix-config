@@ -7,7 +7,19 @@
 }:
 let
   cfg = config.darwin.core.system;
-  laptopHealth = pkgs.writeShellScriptBin "rgo-laptop-health" (builtins.readFile ./laptop-health.sh);
+  laptopHealth = pkgs.writeShellScriptBin "rgo-laptop-health" (
+    ''
+      health_sketchybar=${lib.boolToString config.darwin.apps.sketchybar.enable}
+      health_borders=${lib.boolToString config.darwin.apps.lightweight-borders.enable}
+      health_aerospace=${lib.boolToString config.darwin.apps.aerospace.enable}
+      health_keepingyouawake=${lib.boolToString config.darwin.apps.keepingyouawake.enable}
+      health_stats=${lib.boolToString config.darwin.apps.stats.enable}
+      health_macshot=${lib.boolToString config.apps.screenshot-tools.enable}
+      health_brave=${lib.boolToString config.apps.brave.enable}
+      health_vicinae=${lib.boolToString config.apps.vicinae.enable}
+    ''
+    + builtins.readFile ./laptop-health.sh
+  );
 in
 {
   options.darwin.core.system = {

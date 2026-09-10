@@ -1,0 +1,295 @@
+--- a/helper/borders.swift
++++ b/helper/borders.swift
+@@ -8,7 +8,7 @@
+ // same layer JankyBorders and yabai use, verified on macOS 26.3):
+ // front-app changes, window create/destroy, and per-window move/resize
+ // all arrive as callbacks the instant the WindowServer processes them.
+-// A 0.5s heartbeat remains as a safety net for anything eventless,
++// An adaptive heartbeat remains as a safety net for anything eventless,
+ // and kqueue watches cover theme/config changes. Notify procs only
+ // fire while the connection's event port is drained — see the
+ // CFMachPort pump at the bottom; registrations succeed silently and
+@@ -53,7 +53,7 @@
+ let EVENT_WINDOW_DESTROY: UInt32 = 1326
+ let EVENT_FRONT_CHANGE: UInt32 = 1508
+
+-// styling from ~/.config/omacosy/borders.conf (width, radius, per-app
++// styling from ~/.config/rgo-desktop/borders.conf (width, radius, per-app
+ // radius overrides)
+ struct Conf {
+     var width: CGFloat = 4
+@@ -65,7 +65,7 @@
+     var appRadius: [String: CGFloat] = [:]
+ }
+ let confFile = FileManager.default.homeDirectoryForCurrentUser
+-    .appendingPathComponent(".config/omacosy/borders.conf")
++    .appendingPathComponent(".config/rgo-desktop/borders.conf")
+
+ func loadConf() -> Conf {
+     var c = Conf()
+@@ -87,7 +87,7 @@
+ }
+
+ let themeFile = FileManager.default.homeDirectoryForCurrentUser
+-    .appendingPathComponent(".config/omarchy/current/theme/borders.sh")
++    .appendingPathComponent(".config/rgo-desktop/borders-theme.sh")
+
+ func loadColor() -> CGColor {
+     guard let text = try? String(contentsOf: themeFile, encoding: .utf8) else {
+@@ -241,14 +241,16 @@
+     return 0
+ }
+
+-let logURL = URL(fileURLWithPath: "/tmp/omacosy-borders.log")
++let diagnosticsEnabled = CommandLine.arguments.contains("--diagnostics")
++let logURL = URL(fileURLWithPath: "/tmp/rgo-borders.log")
+ let logFmt: ISO8601DateFormatter = {
+     let f = ISO8601DateFormatter()
+     f.formatOptions.insert(.withFractionalSeconds)
+     return f
+ }()
+-func tlog(_ m: String) {
+-    let line = "\(logFmt.string(from: Date())) \(m)\n"
++func tlog(_ m: @autoclosure () -> String) {
++    guard diagnosticsEnabled else { return }
++    let line = "\(logFmt.string(from: Date())) \(m())\n"
+     if let h = try? FileHandle(forWritingTo: logURL) {
+         h.seekToEndOfFile()
+         h.write(line.data(using: .utf8)!)
+@@ -336,6 +338,8 @@
+ var pendingSince = Date.distantPast
+ var shownApp = ""
+ var justHid = true
++var lastPathInset = CGRect.null
++var lastPathRadius: CGFloat = -1
+ var lastFrame = CGRect.zero
+ var lastWsSwitchAt = Date.distantPast
+ shape.strokeColor = loadColor()
+@@ -384,6 +388,7 @@
+ var statEvents = 0
+ var statTicks = 0
+ func noteStat(event: Bool) {
++    guard diagnosticsEnabled else { return }
+     if event { statEvents += 1 } else { statTicks += 1 }
+     let now = Date()
+     if now.timeIntervalSince(statWindowStart) >= 1.0 {
+@@ -396,13 +401,31 @@
+     }
+ }
+
+-// uncoalesced re-check for deferred gates — events won't re-fire for a
+-// window that has stopped moving, so a deferral must reschedule itself
++// One deferred gate check may be pending. An earlier deadline wins so
++// event bursts cannot postpone final-state convergence indefinitely.
++var deferredRecheck: DispatchWorkItem?
++var deferredDeadline: DispatchTime?
++func cancelRecheck() {
++    deferredRecheck?.cancel()
++    deferredRecheck = nil
++    deferredDeadline = nil
++}
+ func recheck(after delay: Double) {
+-    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { tick() }
++    let deadline = DispatchTime.now() + max(0, delay)
++    if let pending = deferredDeadline, pending <= deadline { return }
++    cancelRecheck()
++    let work = DispatchWorkItem {
++        deferredRecheck = nil
++        deferredDeadline = nil
++        tick()
++    }
++    deferredRecheck = work
++    deferredDeadline = deadline
++    DispatchQueue.main.asyncAfter(deadline: deadline, execute: work)
+ }
+
+ func tick() {
++    cancelRecheck()
+     noteStat(event: false)
+     guard let hit = focusedWindowFrame() else {
+         // ring already hidden: there is nothing to hide and nothing
+@@ -431,7 +454,8 @@
+
+     // fullscreen is deliberate, not a transient: drop the ring at once
+     // and cover the notch strip on displays that have one
+-    if isFullscreen(f) {
++    // Ordinary full-height tiles must not cover the menu bar notch strip.
++    if isFullscreen(f), abs(f.width - CGDisplayBounds(displayOf(f)).width) < 2 {
+         hideRing("fullscreen")
+         syncShroud(f)
+         return
+@@ -461,7 +485,7 @@
+     }
+     justHid = false
+
+-    guard f != lastFrame || !win.isVisible else { return }
++    guard f != lastFrame || appName != shownApp || !win.isVisible else { return }
+     // same app moving on the same display glides tick-by-tick; any
+     // other change hides first so the ring never visibly travels
+     // between windows or screens
+@@ -481,8 +505,12 @@
+     let bounds = CGRect(origin: .zero, size: outer.size)
+     shape.frame = bounds
+     let inset = bounds.insetBy(dx: conf.width / 2, dy: conf.width / 2)
+-    shape.path = CGPath(roundedRect: inset, cornerWidth: radius,
+-        cornerHeight: radius, transform: nil)
++    if inset != lastPathInset || radius != lastPathRadius {
++        shape.path = CGPath(roundedRect: inset, cornerWidth: radius,
++            cornerHeight: radius, transform: nil)
++        lastPathInset = inset
++        lastPathRadius = radius
++    }
+     CATransaction.commit()
+     if !win.isVisible {
+         win.orderFrontRegardless()
+@@ -532,16 +560,18 @@
+ // (exec-on-workspace-change): hide instantly and arm the stability
+ // gate — the SLS move-burst alone can't distinguish a switch from a
+ // drag until the ghosts are already ringed
+-watch("/tmp/omacosy-ws-switch", create: true) {
++watch("/tmp/rgo-aerospace-ws-switch", create: true) {
+     lastWsSwitchAt = Date()
+     hideRing("workspace-switch")
+     syncShroud(nil) // the next tick re-covers if the target is fullscreen too
+-}
+-
+-// theme-set swaps the ~/.config/omarchy/current/theme symlink — watch
++    rebuildSubscriptions()
++    tick()
++}
++
++// theme-set swaps the ~/.config/rgo-desktop/theme symlink — watch
+ // the directory; the file behind the old symlink never changes itself
+ watch(FileManager.default.homeDirectoryForCurrentUser
+-    .appendingPathComponent(".config/omarchy/current").path, create: false) {
++    .appendingPathComponent(".config/rgo-desktop").path, create: false) {
+     shape.strokeColor = loadColor()
+ }
+
+@@ -549,6 +579,7 @@
+     conf = loadConf()
+     shape.lineWidth = conf.width
+     lastFrame = .zero // force redraw with new geometry
++    tick()
+ }
+
+ // --- SkyLight notifications ---------------------------------------------
+@@ -558,8 +589,16 @@
+ // move/resize only fire for subscribed windows: keep the subscription
+ // set equal to every normal window that exists (create/destroy events
+ // plus the heartbeat keep it current; each request replaces the set)
++let fallbackInterval: TimeInterval = 0.5
++let idleInterval: TimeInterval = 2
++let subscriptionRepairInterval: TimeInterval = 10
++var notificationsWorking = false
++var registrationsWorking = true
++var subscriptionsWorking = false
++var notificationPort: CFMachPort?
++var lastSubscriptionRepair = Date.distantPast
+ var subscribed = Set<UInt32>()
+-func rebuildSubscriptions() {
++func rebuildSubscriptions(force: Bool = false) {
+     guard let list = CGWindowListCopyWindowInfo([.optionAll],
+         kCGNullWindowID) as? [[String: Any]] else { return }
+     var wids: [UInt32] = []
+@@ -567,14 +606,18 @@
+         if let n = w["kCGWindowNumber"] as? Int { wids.append(UInt32(n)) }
+     }
+     let set = Set(wids)
+-    guard set != subscribed, !wids.isEmpty else { return }
+-    subscribed = set
+-    _ = wids.withUnsafeBufferPointer {
++    guard !wids.isEmpty else { return }
++    guard force || !subscriptionsWorking || set != subscribed else { return }
++    let result = wids.withUnsafeBufferPointer {
+         SLSRequestNotificationsForWindows(cid, $0.baseAddress!, Int32(wids.count))
+     }
++    subscriptionsWorking = result == .success
++    if subscriptionsWorking { subscribed = set }
++    else { notificationsWorking = false }
+ }
+
+ let slsCallback: NotifyProc = { event, _, _, _ in
++    notificationsWorking = true
+     if event == EVENT_WINDOW_CREATE || event == EVENT_WINDOW_DESTROY {
+         rebuildSubscriptions()
+     }
+@@ -584,7 +627,9 @@
+
+ for code in [EVENT_WINDOW_MOVE, EVENT_WINDOW_RESIZE, EVENT_WINDOW_CREATE,
+              EVENT_WINDOW_DESTROY, EVENT_FRONT_CHANGE] {
+-    _ = SLSRegisterNotifyProc(slsCallback, code, nil)
++    if SLSRegisterNotifyProc(slsCallback, code, nil) != .success {
++        registrationsWorking = false
++    }
+ }
+ rebuildSubscriptions()
+
+@@ -596,6 +641,7 @@
+ var eventPort: mach_port_t = 0
+ if SLSGetEventPort(cid, &eventPort).rawValue == 0,
+     let machPort = CFMachPortCreateWithPort(nil, eventPort, portCallback, nil, nil) {
++    notificationPort = machPort
+     _CFMachPortSetOptions(machPort, 0x40)
+     let source = CFMachPortCreateRunLoopSource(nil, machPort, 0)
+     CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .defaultMode)
+@@ -603,13 +649,33 @@
+     tlog("SLSGetEventPort failed — running on heartbeat only")
+ }
+
+-// safety net for anything eventless (subscription races, missed
+-// events): cheap at this cadence, and the only poll left
+-let timer = Timer(timeInterval: 0.5, repeats: true) { _ in
+-    rebuildSubscriptions()
+-    tick()
+-}
+-RunLoop.current.add(timer, forMode: .common)
++// Slow down only after notifications actually arrive. Failed registration,
++// a dead pump, or a frame first discovered by polling restores the fallback.
++var heartbeat: Timer?
++func armHeartbeat() {
++    let pumpWorking = notificationPort.map { CFMachPortIsValid($0) } ?? false
++    let interval = notificationsWorking && registrationsWorking && subscriptionsWorking && pumpWorking
++        ? idleInterval : fallbackInterval
++    let timer = Timer(timeInterval: interval, repeats: false) { _ in
++        let now = Date()
++        if !notificationsWorking || !subscriptionsWorking ||
++            now.timeIntervalSince(lastSubscriptionRepair) >= subscriptionRepairInterval {
++            rebuildSubscriptions(force: true)
++            lastSubscriptionRepair = now
++        }
++        let previousFrame = lastFrame
++        let previousApp = shownApp
++        tick()
++        if lastFrame != previousFrame || shownApp != previousApp {
++            notificationsWorking = false
++        }
++        armHeartbeat()
++    }
++    timer.tolerance = interval * 0.1
++    heartbeat = timer
++    RunLoop.current.add(timer, forMode: .common)
++}
++armHeartbeat()
+
+ // display attach/detach moves the CG↔Cocoa flip origin (primary
+ // screen height). The ring frame is diffed against lastFrame, so an
+@@ -622,7 +688,18 @@
+ ) { _ in
+     tlog("screen parameters changed — reframing ring")
+     lastFrame = .zero
++    rebuildSubscriptions(force: true)
+     tick()
++}
++NSWorkspace.shared.notificationCenter.addObserver(
++    forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
++) { _ in
++    notificationsWorking = false
++    lastFrame = .zero
++    rebuildSubscriptions(force: true)
++    tick()
++    heartbeat?.invalidate()
++    armHeartbeat()
+ }
+ tick()
+ app.run()

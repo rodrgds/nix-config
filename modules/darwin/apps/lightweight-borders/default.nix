@@ -2,6 +2,7 @@
   lib,
   config,
   inputs,
+  pkgs,
   username,
   constants,
   ...
@@ -9,15 +10,23 @@
 let
   cfg = config.darwin.apps.lightweight-borders;
   homeDir = "/Users/${username}";
-  source = "${inputs.omacosy}/helper/borders.swift";
+  patchedSource = pkgs.applyPatches {
+    name = "rgo-borders-source";
+    src = inputs.omacosy;
+    patches = [ ./scheduling.patch ];
+  };
+  source = "${patchedSource}/helper/borders.swift";
   sourceRevision = inputs.omacosy.rev or "9e60b396b5e48a862bcb46bca5f2b13a63a822aa";
-  borderBuildId = builtins.hashString "sha256" "${sourceRevision}:rgo-borders-v2";
+  borderBuildId = builtins.hashString "sha256" (
+    "${sourceRevision}:rgo-borders-v3:" + builtins.readFile ./scheduling.patch
+  );
   binary = "${homeDir}/.local/libexec/rgo-borders";
   toBorderColor = hex: "0xff${lib.removePrefix "#" hex}";
 in
 {
   options.darwin.apps.lightweight-borders = {
     enable = lib.mkEnableOption "the lightweight focused-window border";
+    diagnostics = lib.mkEnableOption "border event and rendering diagnostics in /tmp/rgo-borders.log";
   };
 
   config = lib.mkIf cfg.enable {
@@ -57,20 +66,7 @@ in
               build_dir="$(/usr/bin/mktemp -d /tmp/rgo-borders.XXXXXX)"
               trap '/bin/rm -rf "$build_dir"' EXIT
 
-              /usr/bin/sed \
-                -e 's|.config/omacosy/borders.conf|.config/rgo-desktop/borders.conf|g' \
-                -e 's|.config/omarchy/current/theme/borders.sh|.config/rgo-desktop/borders-theme.sh|g' \
-                -e 's|.config/omarchy/current|.config/rgo-desktop|g' \
-                -e 's|/tmp/omacosy-ws-switch|/tmp/rgo-aerospace-ws-switch|g' \
-                -e 's|if isFullscreen(f) {|if isFullscreen(f), abs(f.width - CGDisplayBounds(displayOf(f)).width) < 2 {|g' \
-                ${source} > "$build_dir/borders.swift"
-
-              # A zero AeroSpace top gap makes ordinary full-height tiles share
-              # fullscreen's vertical geometry. Only a full-display-width frame
-              # may activate the black notch shroud above SketchyBar.
-              /usr/bin/grep -Fq \
-                'if isFullscreen(f), abs(f.width - CGDisplayBounds(displayOf(f)).width) < 2 {' \
-                "$build_dir/borders.swift"
+              /bin/cp ${source} "$build_dir/borders.swift"
 
               /usr/bin/xcrun swiftc -O \
                 -F /System/Library/PrivateFrameworks \
@@ -80,13 +76,18 @@ in
               /usr/bin/codesign --force --sign - --identifier dev.rgo.borders "$build_dir/rgo-borders"
               /bin/mv "$build_dir/rgo-borders" ${binary}
             printf '%s\n' ${lib.escapeShellArg borderBuildId} > "$stamp"
+            # The launchd command path is unchanged when the binary is replaced.
+            # Restart an existing job so it does not keep running the old code.
+            if /bin/launchctl print "gui/$(/usr/bin/id -u)/dev.rgo.borders" >/dev/null 2>&1; then
+              /bin/launchctl kickstart -k "gui/$(/usr/bin/id -u)/dev.rgo.borders"
+            fi
             fi
         '';
       };
 
     launchd.user.agents.rgo-borders.serviceConfig = {
       Label = "dev.rgo.borders";
-      ProgramArguments = [ binary ];
+      ProgramArguments = [ binary ] ++ lib.optional cfg.diagnostics "--diagnostics";
       KeepAlive = true;
       RunAtLoad = true;
       ProcessType = "Interactive";

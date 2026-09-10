@@ -24,6 +24,7 @@ let
     name = "rgo-cache-cleanup";
     runtimeInputs = [
       pkgs.coreutils
+      pkgs.gawk
       pkgs.findutils
       pkgs.procps
     ];
@@ -49,9 +50,9 @@ let
           ;;
       esac
 
-      home=${lib.escapeShellArg homeDir}
-      xdg_cache_home="''${XDG_CACHE_HOME:-$home/.cache}"
-      nix_cache_dir="$home/.cache/nix"
+      user_home=${lib.escapeShellArg homeDir}
+      xdg_cache_home="''${XDG_CACHE_HOME:-$user_home/.cache}"
+      nix_cache_dir="$user_home/.cache/nix"
       interval_seconds=${toString cfg.intervalSeconds}
       transient_days=${toString cfg.transientRetentionDays}
       npx_days=${toString cfg.npxRetentionDays}
@@ -81,23 +82,9 @@ let
       log_file="$log_dir/cache-cleanup.log"
       stamp_file="$state_dir/cache-cleanup.last-success"
       failures=0
-      auto_pressure_triggered=0
-
-      if [ "$auto_pressure" = "1" ] && [ "$pressure" = "0" ]; then
-        available_bytes=$(df -B1 --output=avail "$home" 2>/dev/null | tail -n 1 | tr -d ' ' || true)
-        pressure_bytes=$((pressure_free_gib * 1024 * 1024 * 1024))
-        case "$available_bytes" in
-          *[!0-9]* | "")
-            ;;
-          *)
-            if [ "$available_bytes" -lt "$pressure_bytes" ]; then
-              force=1
-              pressure=1
-              auto_pressure_triggered=1
-            fi
-            ;;
-        esac
-      fi
+      pressure_recovery_gib=${toString cfg.autoPressure.recoveryFreeGiB}
+      pressure_cooldown_seconds=${toString cfg.autoPressure.cooldownSeconds}
+      managed_cache_days=${toString cfg.managedCacheRetentionDays}
 
       mkdir -p "$log_dir" "$state_dir"
       exec >>"$log_file" 2>&1
@@ -107,6 +94,10 @@ let
       }
 
       run() {
+        if pressure_target_reached; then
+          log "pressure recovery target reached; skipping: $*"
+          return 0
+        fi
         log "running: $*"
         if "$@"; then
           return 0
@@ -118,10 +109,15 @@ let
         fi
       }
 
+      ${builtins.readFile ./policy.sh}
+
       cache_exceeds_limit() {
         dir=$1
         max_gib=$2
 
+        if pressure_target_reached; then
+          return 1
+        fi
         if [ "$pressure" = "1" ]; then
           return 0
         fi
@@ -141,9 +137,9 @@ let
         max_gib=$3
 
         if cache_exceeds_limit "$dir" "$max_gib"; then
-          log "clearing $label cache at $dir (pressure mode or over ''${max_gib} GiB)"
+          log "pruning $label cache at $dir (pressure mode or over ''${max_gib} GiB)"
           if [ -d "$dir" ]; then
-            run find "$dir" -xdev -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+            prune_managed_cache "$dir"
           fi
         else
           log "keeping $label cache at or below ''${max_gib} GiB"
@@ -162,8 +158,8 @@ let
         fi
 
         if cache_exceeds_limit "$dir" "$go_build_cache_max_gib"; then
-          log "clearing Go build cache at $dir (pressure mode or over ''${go_build_cache_max_gib} GiB)"
-          run env GOCACHE="$dir" go clean -cache
+          log "pruning Go build cache at $dir (pressure mode or over ''${go_build_cache_max_gib} GiB)"
+          prune_managed_cache "$dir"
         else
           log "keeping Go build cache at $dir at or below ''${go_build_cache_max_gib} GiB"
         fi
@@ -233,6 +229,7 @@ let
       }
 
       now=$(date +%s)
+      configure_pressure
       if [ "$force" = "0" ] && [ -f "$stamp_file" ]; then
         last_success=$(cat "$stamp_file" 2>/dev/null || true)
         case "$last_success" in
@@ -249,17 +246,17 @@ let
         esac
       fi
 
-      log "started force=$force pressure=$pressure auto_pressure_triggered=$auto_pressure_triggered"
+      log "started force=$force pressure=$pressure"
 
       repair_nix_git_cache
 
       if [ "$do_homebrew" = "1" ] && command -v brew >/dev/null 2>&1; then
         export HOMEBREW_NO_AUTO_UPDATE=1
-        run brew cleanup -s --prune=all
+        run brew cleanup --prune="$managed_cache_days"
       fi
 
       if [ "$do_beeper_uploads" = "1" ]; then
-        prune_top_level_by_age "$home/Library/Application Support/BeeperTexts/api-uploads" "$transient_days"
+        prune_top_level_by_age "$user_home/Library/Application Support/BeeperTexts/api-uploads" "$transient_days"
       fi
 
       if [ "$do_bun" = "1" ]; then
@@ -268,7 +265,7 @@ let
         else
           bun_caches=(
             "$xdg_cache_home/.bun/install/cache"
-            "$home/.bun/install/cache"
+            "$user_home/.bun/install/cache"
           )
           bun_caches+=(
       ${lib.concatMapStringsSep "\n" (
@@ -287,33 +284,38 @@ let
         if process_running '(^|/)(npm|npx)( |$)'; then
           log "keeping npm cache while a package operation is active"
         elif command -v npm >/dev/null 2>&1; then
-          if cache_exceeds_limit "$home/.npm/_cacache" "$npm_max_gib"; then
-            run npm cache clean --force
+          if cache_exceeds_limit "$user_home/.npm/_cacache" "$npm_max_gib"; then
+            prune_managed_cache "$user_home/.npm/_cacache"
+            run npm cache verify
           else
             run npm cache verify
           fi
         fi
-        prune_top_level_by_age "$home/.npm/_npx" "$npx_days"
+        if ! process_running '(^|/)(npm|npx)( |$)'; then
+          prune_top_level_by_age "$user_home/.npm/_npx" "$npx_days"
+        fi
       fi
 
       if [ "$do_gradle" = "1" ]; then
         if process_running 'GradleDaemon|(^|/)(gradle|gradlew)( |$)'; then
           log "keeping Gradle cache while a build daemon is active"
         else
-          clear_cache_dir "Gradle" "$home/.gradle/caches" "$gradle_max_gib"
+          clear_cache_dir "Gradle" "$user_home/.gradle/caches" "$gradle_max_gib"
         fi
       fi
 
       if [ "$do_xcode" = "1" ]; then
-        prune_top_level_by_age "$home/Library/Developer/Xcode/DerivedData" "$derived_data_days"
+        prune_top_level_by_age "$user_home/Library/Developer/Xcode/DerivedData" "$derived_data_days"
       fi
 
       if [ "$do_cocoapods" = "1" ] && command -v pod >/dev/null 2>&1; then
-        run pod cache clean --all
+        if ! process_running '(^|/)(pod)( |$)'; then
+          prune_managed_cache "$user_home/Library/Caches/CocoaPods"
+        fi
       fi
 
       if [ "$do_user_cache" = "1" ]; then
-        prune_cache_files_by_age "$home/.cache" "$user_cache_days"
+        prune_cache_files_by_age "$user_home/.cache" "$user_cache_days"
         if [ "$pressure" = "1" ]; then
           pressure_cache_dirs=(
       ${lib.concatMapStringsSep "\n" (
@@ -321,9 +323,6 @@ let
       ) cfg.userCache.pressureDirectories}
           )
           for pressure_cache_dir in "''${pressure_cache_dirs[@]}"; do
-            if [ -d "$pressure_cache_dir" ]; then
-              run chmod -R u+w "$pressure_cache_dir"
-            fi
             clear_cache_dir "pressure-only user" "$pressure_cache_dir" 1
           done
         fi
@@ -377,6 +376,10 @@ let
         run docker builder prune "''${docker_args[@]}"
       fi
 
+      if [ "$pressure" = 1 ] && ! pressure_target_reached; then
+        log "warning: cleanup could not reach the $pressure_recovery_gib GiB recovery target; recent caches were retained"
+      fi
+
       if [ "$failures" -eq 0 ]; then
         printf '%s\n' "$now" >"$stamp_file"
         log "finished successfully"
@@ -407,6 +410,24 @@ in
       type = lib.types.bool;
       default = true;
       description = "Run pressure cleanup even inside the normal interval when free space is below the configured floor.";
+    };
+
+    autoPressure.recoveryFreeGiB = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = cfg.pressureFreeGiB + 8;
+      description = "Stop pressure eviction after recovering this much free space.";
+    };
+
+    autoPressure.cooldownSeconds = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 259200;
+      description = "Minimum time between automatic pressure attempts, including failed runs.";
+    };
+
+    managedCacheRetentionDays = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 30;
+      description = "Preserve recently accessed or modified package and build cache files during eviction. Size limits trigger age-bounded pruning, not full deletion.";
     };
 
     transientRetentionDays = lib.mkOption {
@@ -502,7 +523,7 @@ in
     cocoapods.enable = lib.mkOption {
       type = lib.types.bool;
       default = isDarwin;
-      description = "Clear the CocoaPods download cache.";
+      description = "Prune unused CocoaPods download cache files by age.";
     };
 
     userCache.enable = lib.mkOption {

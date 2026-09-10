@@ -22,6 +22,11 @@ in
 {
   options.darwin.apps.aerospace = {
     enable = lib.mkEnableOption "Enable Aerospace";
+    automaticSplitHints = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Set new split directions from focused-window geometry. Disable for native tiling without a helper process on each focus change.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -52,7 +57,7 @@ in
 
             # Set the next split from the focused window's shape. This gives
             # AeroSpace the same stable spiral rule as Hyprland's dwindle layout.
-            on-focus-changed = ['exec-and-forget ${helperBinary} split-hint']
+            on-focus-changed = [${lib.optionalString cfg.automaticSplitHints "'exec-and-forget ${helperBinary} split-hint'"}]
 
             # Normalization (similar to i3 behavior)
             enable-normalization-flatten-containers = false
@@ -183,12 +188,12 @@ in
              alt-period = "exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
 
              # Screenshot annotation, OCR, and screen color picker.
-             cmd-ctrl-alt-shift-s = 'exec-and-forget /usr/bin/open "shottr://grab/area?then=edit"'
-             alt-shift-s = 'exec-and-forget /usr/bin/open "shottr://grab/area?then=edit"'
+             cmd-ctrl-alt-shift-s = 'exec-and-forget /usr/bin/open "macshot://capture"'
+             alt-shift-s = 'exec-and-forget /usr/bin/open "macshot://capture"'
              cmd-ctrl-alt-shift-c = 'exec-and-forget /usr/bin/open "pika://pick/foreground/hex"'
              alt-shift-c = 'exec-and-forget /usr/bin/open "pika://pick/foreground/hex"'
-             cmd-ctrl-alt-shift-t = 'exec-and-forget /usr/bin/open "shottr://ocr"'
-             alt-shift-t = 'exec-and-forget /usr/bin/open "shottr://ocr"'
+             cmd-ctrl-alt-shift-t = 'exec-and-forget /usr/bin/open "macshot://ocr"'
+             alt-shift-t = 'exec-and-forget /usr/bin/open "macshot://ocr"'
 
                # Match the desktop input-source toggle. Requires the keyboard-layout module.
                ${
@@ -235,6 +240,18 @@ in
              alt-shift-k = ['join-with up', 'mode main']
              alt-shift-l = ['join-with right', 'mode main']
 
+            # Float exceptions first, then retain the app workspace assignment.
+            [[on-window-detected]]
+            if.window-title-regex-substring = '^(Picture-in-Picture|PiP)'
+            check-further-callbacks = true
+            run = 'layout floating'
+
+            [[on-window-detected]]
+            if.app-id = 'com.apple.finder'
+            if.window-title-regex-substring = '(Info|Preferences)'
+            check-further-callbacks = true
+            run = 'layout floating'
+
             # Window detection callbacks - auto-assign apps to workspaces
             [[on-window-detected]]
             if.app-id = 'com.mitchellh.ghostty'
@@ -271,10 +288,6 @@ in
 
             # Float specific window types
             [[on-window-detected]]
-            if.window-title-regex-substring = '^(Picture-in-Picture|PiP)'
-            run = 'layout floating'
-
-            [[on-window-detected]]
             if.app-id = 'com.apple.systempreferences'
             run = 'layout floating'
 
@@ -282,11 +295,6 @@ in
             if.app-id = 'com.apple.finder'
             run = 'move-node-to-workspace 3'
 
-            # Float specific Finder windows (Info, Preferences)
-            [[on-window-detected]]
-            if.app-id = 'com.apple.finder'
-            if.window-title-regex-substring = '(Info|Preferences)'
-            run = 'layout floating'
           '';
         };
 

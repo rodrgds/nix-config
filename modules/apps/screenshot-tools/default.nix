@@ -29,7 +29,7 @@ in
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [
           "pika"
-          "shottr"
+          "macshot"
         ];
 
         # Pika's URL-triggered picker should leave the selected Hex value on
@@ -38,6 +38,22 @@ in
           copyColorOnPick = true;
           hidePikaWhilePicking = true;
           viewedSplash = true;
+        };
+
+        # AeroSpace owns the global screenshot and OCR shortcuts.
+        system.defaults.CustomUserPreferences."com.sw33tlie.macshot.macshot" = lib.genAttrs (map (
+          slot: "hotkeyDisabled_${toString slot}"
+        ) (lib.range 1 12)) (_: true);
+
+        # Macshot's first URL-triggered capture after login can leave an
+        # invisible overlay that blocks later captures. Start it before use.
+        home-manager.users.${username}.launchd.agents.macshot = {
+          enable = true;
+          config = {
+            ProgramArguments = [ "/Applications/macshot.app/Contents/MacOS/macshot" ];
+            RunAtLoad = true;
+            ProcessType = "Interactive";
+          };
         };
       })
     ]
