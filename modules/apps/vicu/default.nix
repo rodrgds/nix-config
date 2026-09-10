@@ -70,7 +70,7 @@ in
                     | .api_token = ($token | sub("\r?\n$"; ""))
                     | .auth_method = "api_token"
                   ' "$src" > "$tmp"
-                  if [ ! -f "$configFile" ] || ! ${coreutils}/cmp -s "$tmp" "$configFile"; then
+                  if [ ! -f "$configFile" ] || ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$configFile"; then
                     ${coreutils}/cat "$tmp" > "$configFile"
                     ${coreutils}/chmod 600 "$configFile"
                     echo "vicu: seeded tasks.rgo.pt account into config.json" >&2
