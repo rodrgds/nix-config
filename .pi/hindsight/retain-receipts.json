@@ -2,6 +2,69 @@
   "version": 1,
   "receipts": [
     {
+      "createdAt": "2026-09-10T10:03:52.399Z",
+      "bankId": "rodrigo",
+      "documentId": "pi-explicit:1c2158816a43c0e8:759a43468a49ddae",
+      "queueJobId": "03a92efe-18d5-4b77-8ec3-0c59bdd1172d",
+      "updateMode": "append",
+      "source": "tool",
+      "context": "Verified declarative laptop menu bar monitoring configuration after a successful laptop rebuild, live preference inspection, service health check, and visual menu bar inspection.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-1eaafa522ac3",
+        "session:1c2158816a43c0e8",
+        "project:home"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    },
+    {
+      "createdAt": "2026-09-10T09:29:42.283Z",
+      "bankId": "rodrigo",
+      "documentId": "pi-explicit:1c2158816a43c0e8:b2b236ef296f962c",
+      "queueJobId": "0331d37f-93d3-48d5-af6f-22524caf80c2",
+      "updateMode": "replace",
+      "source": "tool",
+      "context": "Durable rgo-laptop Macshot startup constraint and declarative workaround, verified by reproducing the hidden overlay after boot, warm-launch testing, LaunchAgent kickstart testing, and post-rebuild synthetic Option+Shift+S testing.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-1eaafa522ac3",
+        "session:1c2158816a43c0e8",
+        "project:nix-config"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    },
+    {
+      "createdAt": "2026-09-09T22:08:33.565Z",
+      "bankId": "rodrigo",
+      "documentId": "pi-explicit:1c2158816a43c0e8:d90026574e65f1ee",
+      "queueJobId": "1922e2f4-3901-431d-ac1f-3715bbfa9a02",
+      "updateMode": "replace",
+      "source": "tool",
+      "context": "Verified diagnosis and live repair of the macOS screenshot shortcut in the declarative home configuration.",
+      "tags": [
+        "source:pi",
+        "harness:pi",
+        "project:github-com-rodrgds-nix-config",
+        "repo:home-1eaafa522ac3",
+        "session:1c2158816a43c0e8",
+        "project:home"
+      ],
+      "outcome": {
+        "itemsCount": 1,
+        "operations": 1
+      }
+    },
+    {
       "createdAt": "2026-09-02T13:38:11.102Z",
       "bankId": "rodrigo",
       "documentId": "pi-explicit:2bbc4c5d54e6d770:18c6d10bd018e0d0",

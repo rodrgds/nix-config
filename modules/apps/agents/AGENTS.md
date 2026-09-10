@@ -2,7 +2,7 @@
 
 ## Core
 
-- Optimize technical decisions for correctness, simplicity, robustness, long-term maintainability, and scalability. Don't attribute ANY value to the implementation effort when making technical decisions. Always make the BEST decision.
+- Choose technical solutions for correctness, simplicity, robustness, maintainability, and scalability. Implementation effort is not a reason to accept a weaker design.
 - For one-off or infrequent operational work, take the simplest direct end-to-end path. Do not build wrappers, control planes, policy layers, custom verifiers, or automation until a concrete blocker or repeated need justifies them.
 - Prefer a maintained library to custom code when it fits.
 - Keep changes focused on the task. Do not refactor, reformat, or comment unrelated code. Fix an unrelated defect only when it is obvious, safe, verified, and not owned by another agent, then commit it separately.
@@ -10,12 +10,20 @@
 - Group commits by concern. Name each commit for why the change exists, not which files changed.
 - Update the project's `AGENTS.md` when a change introduces a convention, architectural boundary, constraint, or workflow that future agents must follow.
 
+## Initiative and scope
+
+- Treat requests to do work as authorization to implement and verify it. Make routine choices from the current code and stated intent. Ask only when missing information materially changes scope, correctness, compatibility, or an irreversible action; continue independent work while waiting.
+- Apply corrections and answer side questions without dropping the original task. Finish authorized work before presenting any remaining decision for approval.
+- User instructions take precedence over skill guidelines, subject to system and developer constraints. Load only relevant skills. If a skill blocks progress, cite its exact file and instruction and explain why existing authorization does not cover the action.
+- A request to release or deploy authorizes its normal commits, pushes, tags, artifact publication, and deployment. State the revision and effect, verify the result, and finish without another approval prompt. Ask separately for destructive actions outside the requested workflow.
+
 ## Testing and bug fixes
 
 - When fixing a bug, first reproduce it at the closest practical end-user boundary. Then add the smallest stable regression test that proves the same behavior, observe it fail for the expected reason, implement the fix, and observe it pass.
-- Write tests that prove observable behavior through stable public interfaces and would fail on a plausible regression. Derive expected results independently from the implementation. The test must fail on a plausible regression, not assert implementation details, mock internal collaborators, or repeat the production logic.
+- Test observable behavior through stable public interfaces, with expected results derived independently from the implementation. Choose the closest useful boundary from the acceptance criteria and existing tests; routine test placement needs no separate approval.
 - Run the closest existing checks first. Add only the smallest coverage needed for changed behavior that existing checks cannot prove, and tie each new test to an acceptance criterion.
 - Executing changed code or increasing coverage does not make a test useful. Delete tautological tests.
+- Complete the required checks for the changed surfaces. Once they pass, repeat or broaden verification only after further edits, failures, or unresolved risks. Documentation and low-impact edits need relevant validation, not tests that repeat their contents.
 
 ## Engineering
 
@@ -29,6 +37,7 @@
 
 ## Delegation
 
+- When delegation is allowed, use subagents for bounded, independent work that improves quality or shortens the critical path. Keep tightly coupled changes local. Give each agent its scope, evidence required, and completion criterion; inspect its results before integrating.
 - Use Worktrunk (`wt`) for all worktree operations. Do not use raw `git worktree` or another worktree manager.
 - Give each parallel editing agent its own branch and Worktrunk-managed worktree. Tell the agent its absolute worktree path and require all edits to stay there.
 
@@ -40,9 +49,7 @@ All machines use Tailscale.
 
 When a dependency belongs to a project rather than the machine, use the project's Devenv environment.
 
-All agent harnesses and skills are also configured through my Nix config. Don't run imperative commands such as `pi remove`, `pi config`, etc.
-
-Everything should be done declaratively.
+All agent harnesses and skills are configured through the Nix source. Edit their owning module and use the repository's rebuild workflow to apply changes.
 
 ## Project operating stack
 

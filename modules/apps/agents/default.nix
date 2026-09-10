@@ -10,6 +10,22 @@ let
   cfg = config.apps.agents;
   toolchain = config.apps.javascript-toolchain;
 
+  # Declarative global skill sources. `skills add` is idempotent, so the
+  # postUpdate hook re-runs it before `skills update`: this recreates
+  # ~/.agents/.skill-lock.json entries (untracked, outside this repo) on
+  # fresh machines and keeps every source updatable via the daily
+  # update-javascript-toolchain timer. To add a skill: append its source
+  # spec here, run the same `skills add -g -y ...` command manually,
+  # verify `skills list -g`, then commit the new files under ./skills.
+  # To update any time: `skills update --global --yes`, then commit.
+  globalSkillSources = [
+    "jakubkrehel/skills --all"
+    "humanlayer/skills -s show-me"
+  ];
+  ensureSkillsSnippet = lib.concatMapStringsSep "\n" (spec: ''
+    ${lib.escapeShellArg toolchain.npm.binDir}/skills add -g -y ${spec}
+  '') globalSkillSources;
+
   # All skills live in this repo directory. It is the single source of truth.
   # Edit skills here; the rebuild creates a symlink at ~/.agents/skills/.
   # The skills CLI writes through the symlink, so `skills add` and `skills update`
@@ -47,6 +63,7 @@ in
         postUpdate = [
           ''
             if [ -x ${lib.escapeShellArg toolchain.npm.binDir}/skills ]; then
+              ${ensureSkillsSnippet}
               ${lib.escapeShellArg toolchain.npm.binDir}/skills update --global --yes
             fi
           ''

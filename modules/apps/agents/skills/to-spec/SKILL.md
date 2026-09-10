@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # To spec
 
-Synthesize what is already known. Do not restart the interview.
+Synthesize what is already known. Resolve routine implementation details from current code. Ask only about missing decisions that change the outcome, scope, or compatibility.
 
 ## Process
 
@@ -51,4 +51,4 @@ Never create an internal GitHub Issue or repo-local spec/context file. A public 
 - <public issue, PR, design, source or evidence URL>
 ```
 
-Descriptions must remain actionable and user-facing. Do not include migration keys, source paths, hashes or audit boilerplate.
+Descriptions must be actionable. Include source paths, migration constraints, and verification commands when they are needed to implement safely. Keep raw logs, secrets, and unrelated audit notes out.

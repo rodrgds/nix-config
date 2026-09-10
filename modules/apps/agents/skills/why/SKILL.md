@@ -1,6 +1,6 @@
 ---
 name: why
-description: "Use for 'why does X work this way', 'why we picked Y', design rationale, regressions, postmortems, or data-backed thresholds. Investigates source control, tickets, docs, chat, observability, error tracking, and analytics in parallel, then returns a cited read on decisions and tradeoffs. Use how for runtime behavior."
+description: "Investigate why a design or behavior exists using project history and evidence. Use how for runtime explanations."
 ---
 
 # Why

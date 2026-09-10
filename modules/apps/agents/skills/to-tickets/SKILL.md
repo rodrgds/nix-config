@@ -1,6 +1,6 @@
 ---
 name: to-tickets
-description: Split an approved spec into vertical implementation tasks in Vikunja with real blocking relationships.
+description: Split an authorized spec into vertical implementation tasks in Vikunja with real blocking relationships.
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,7 @@ Vikunja is the authority for internal implementation work. Do not create GitHub 
 
 ## Process
 
-1. Load the approved spec from Vikunja/current conversation and recall relevant Hindsight decisions.
+1. Load the spec and authorized scope from Vikunja or the current conversation, then recall relevant Hindsight decisions. A request to implement or split settled work supplies authorization; ask only about unresolved decisions that change scope or compatibility.
 2. Inspect the current code so tasks match real seams and terminology.
 3. Split the work into end-to-end tracer bullets. Each task must produce observable value or reduce a concrete blocking risk; avoid horizontal layer tickets.
 4. Keep each task independently executable in one agent session where practical.
