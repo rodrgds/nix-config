@@ -264,7 +264,10 @@ in
     systemd.services.podman-montra-api = {
       after = [ "packages-registry-login.service" ];
       requires = [ "packages-registry-login.service" ];
-      serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-api"}";
+      serviceConfig = {
+        ExecStop = lib.mkForce "${stopManagedContainer "montra-api"}";
+        ExecStopPost = lib.mkAfter [ config.services.podman.healthUnitCleanupCommand ];
+      };
     };
     systemd.services.podman-montra-worker = {
       after = [ "packages-registry-login.service" ];

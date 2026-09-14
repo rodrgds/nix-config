@@ -293,6 +293,20 @@
               ${./modules/hosting/deployments/check-montra-payloads.sh}
               touch "$out"
             '';
+        podman-health-unit-cleanup =
+          nixpkgs.legacyPackages.x86_64-linux.runCommand "check-podman-health-unit-cleanup"
+            {
+              nativeBuildInputs = with nixpkgs.legacyPackages.x86_64-linux; [
+                bash
+                coreutils
+                diffutils
+              ];
+            }
+            ''
+              bash ${./modules/services/podman/tests/health-unit-cleanup.sh} \
+                ${./modules/services/podman/health-unit-cleanup.sh}
+              touch "$out"
+            '';
       };
 
       checks.aarch64-darwin.rgo-laptop =

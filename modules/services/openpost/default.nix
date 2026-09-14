@@ -712,6 +712,7 @@ in
       requires = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
       serviceConfig = {
         ExecStop = lib.mkForce "${stopManagedContainer "openpost"}";
+        ExecStopPost = lib.mkAfter [ config.services.podman.healthUnitCleanupCommand ];
         TimeoutStopSec = lib.mkForce 120;
       };
       unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
@@ -722,13 +723,16 @@ in
       requires = [ "openpost-postgres-credential-reconcile.service" ];
       serviceConfig = {
         ExecStop = lib.mkForce "${stopManagedContainer "openpost-worker"}";
+        ExecStopPost = lib.mkAfter [ config.services.podman.healthUnitCleanupCommand ];
         TimeoutStopSec = lib.mkForce 120;
       };
       unitConfig.OnFailure = [ "openpost-ops-alert@%n.service" ];
     };
 
-    systemd.services.podman-openpost-postgres.serviceConfig.ExecStop =
-      lib.mkForce "${stopManagedContainer "openpost-postgres"}";
+    systemd.services.podman-openpost-postgres.serviceConfig = {
+      ExecStop = lib.mkForce "${stopManagedContainer "openpost-postgres"}";
+      ExecStopPost = lib.mkAfter [ config.services.podman.healthUnitCleanupCommand ];
+    };
 
     systemd.services.openpost-postgres-backup = lib.mkIf isCloud {
       description = "Backup OpenPost Postgres database";

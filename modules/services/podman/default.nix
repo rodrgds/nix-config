@@ -8,12 +8,21 @@
 }:
 let
   cfg = config.services.podman;
+  podmanHealthUnitCleanup = pkgs.writeShellApplication {
+    name = "podman-health-unit-cleanup";
+    runtimeInputs = [
+      pkgs.podman
+      pkgs.systemd
+    ];
+    text = builtins.readFile ./health-unit-cleanup.sh;
+  };
   podmanImageCleanup = pkgs.writeShellApplication {
     name = "podman-image-cleanup";
     runtimeInputs = [
       pkgs.coreutils
       pkgs.jq
       pkgs.podman
+      podmanHealthUnitCleanup
       pkgs.util-linux
     ];
     text = ''
@@ -55,6 +64,8 @@ let
         exec ${pkgs.util-linux}/bin/flock --exclusive /run/podman-maintenance.lock \
           "$0" "--$mode" --lock-held
       fi
+
+      podman-health-unit-cleanup
 
       work_dir="$(mktemp -d)"
       trap 'rm -rf "$work_dir"' EXIT
@@ -150,6 +161,12 @@ in
 {
   options.services.podman = {
     enable = lib.mkEnableOption "Enable Podman";
+    healthUnitCleanupCommand = lib.mkOption {
+      type = lib.types.str;
+      default = "${podmanHealthUnitCleanup}/bin/podman-health-unit-cleanup";
+      readOnly = true;
+      internal = true;
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -195,8 +212,16 @@ in
     # Install the shared rootful image cleanup command alongside Podman tools.
     environment.systemPackages = [
       pkgs.podman-compose
+      podmanHealthUnitCleanup
       podmanImageCleanup
     ];
+
+    # switch-to-configuration stops changed units before running activation.
+    # Remove health timers left by those old containers before it checks the
+    # systemd failure state and decides whether the generation is valid.
+    system.activationScripts.podmanHealthUnitCleanup = lib.stringAfter [ "etc" ] ''
+      ${cfg.healthUnitCleanupCommand}
+    '';
 
     # Failed deployment candidates remain available for diagnosis until this
     # conservative age-filtered sweep. Deployments run immediate mode on success.
