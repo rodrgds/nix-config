@@ -92,6 +92,7 @@ in
     extraEnvironment = {
       OPENPOST_FEEDBACK_ENABLED = "true";
       OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";
+      OPENPOST_DIAGNOSTICS_INGEST_ENABLED = "true";
       OPENPOST_MEME_GENERATOR_ENABLED = "true";
       # Keep the legacy flag until the always-on Video Editor release reaches production.
       OPENPOST_VIDEO_STUDIO_ENABLED = "true";
