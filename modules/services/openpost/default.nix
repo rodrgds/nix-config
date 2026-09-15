@@ -98,6 +98,12 @@ let
       value = config.sops.placeholder.openpost_diagnostics_discord_webhook;
     }
     {
+      name = "billing-discord-webhook";
+      env = "OPENPOST_BILLING_DISCORD_WEBHOOK_URL_FILE";
+      target = "/run/secrets/openpost_billing_discord_webhook";
+      value = config.sops.placeholder.openpost_billing_discord_webhook;
+    }
+    {
       name = "smtp-password";
       env = "OPENPOST_SMTP_PASSWORD_FILE";
       target = "/run/secrets/openpost_smtp_password";
@@ -391,6 +397,7 @@ in
         "openpost_unsplash_access_key"
         "openpost_feedback_webhook"
         "openpost_diagnostics_discord_webhook"
+        "openpost_billing_discord_webhook"
         "openpost_smtp_password"
         "openpost_twitter_client_id"
         "openpost_twitter_client_secret"
