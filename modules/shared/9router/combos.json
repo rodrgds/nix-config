@@ -9,12 +9,24 @@
       "displayName": "good"
     },
     {
+      "alias": "hermes",
+      "displayName": "hermes"
+    },
+    {
+      "alias": "hermes-extras",
+      "displayName": "hermes-extras"
+    },
+    {
       "alias": "memory",
       "displayName": "memory"
     },
     {
       "alias": "openrouter-free",
       "displayName": "openrouter-free"
+    },
+    {
+      "alias": "parents-hermes",
+      "displayName": "parents-hermes"
     }
   ]
 }
