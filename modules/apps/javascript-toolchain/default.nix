@@ -228,6 +228,24 @@ in
 
           home.file.".npmrc".text = "prefix=${installRoot}\n";
 
+          # npm treats ~/.npmrc as its writable user config, but that path is
+          # an immutable home-manager symlink, so `npm login` fails with
+          # EACCES. Redirect npm at a mutable file instead. The activation
+          # below seeds it with the managed prefix default exactly once and
+          # never touches it again, so tokens survive rebuilds. The managed
+          # ~/.npmrc stays for prefix-only readers (bun, fallback npm runs
+          # without session variables).
+          home.sessionVariables.NPM_CONFIG_USERCONFIG = "${homeDir}/.config/npm/npmrc";
+
+          home.activation.seedNpmUserConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            npm_config_file="$HOME/.config/npm/npmrc"
+            if [ ! -f "$npm_config_file" ]; then
+              mkdir -p "$HOME/.config/npm"
+              printf 'prefix=%s\n' ${lib.escapeShellArg installRoot} > "$npm_config_file"
+              chmod 600 "$npm_config_file"
+            fi
+          '';
+
           home.activation.bootstrapJavascriptToolchain = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             needs_bootstrap=0
 
