@@ -15,6 +15,11 @@ let
   # ~/.agents/skills. Referenced by absolute path (not a Nix path) so the
   # config points at the mutable repo, not a /nix/store snapshot.
   skillsDir = "${constants.homeDir}/.config/home/modules/apps/agents/skills";
+  # Local plugin path for the Hindsight memory runtime (declared in the
+  # toolchain below). Upstream
+  # manual wiring is `{ "plugin": ["/path/to/hindsight-coding-agents"] }`;
+  # one entry serves both CLIs and V2 normalizes `plugin` to `plugins`.
+  hindsightPluginPath = "${toolchain.npm.installRoot}/lib/node_modules/@vectorize-io/hindsight-coding-agents";
   opencodeSkills = lib.mapAttrs' (
     name: _:
     lib.nameValuePair "opencode/skills/${lib.removeSuffix ".md" name}/SKILL.md" {
@@ -49,6 +54,16 @@ in
             package = "@opencode/cli@latest";
             retiredPackages = [ "opencode-ai" ];
           };
+          # Hindsight memory plugin runtime (v2 entry resolves the package
+          # dir through its index.js). Library package: no binaries, but a
+          # bootstrap file so a missing install still triggers an update.
+          npm.cliPackages.hindsight-coding-agents = {
+            package = "@vectorize-io/hindsight-coding-agents@latest";
+            binaries = [ ];
+            bootstrapFiles = [
+              "lib/node_modules/@vectorize-io/hindsight-coding-agents/package.json"
+            ];
+          };
         };
 
         home-manager.users.${username} =
@@ -68,6 +83,11 @@ in
               websearch = {
                 provider = "exa";
               };
+              # Hindsight memory plugin: session recall injection, auto-retain
+              # on idle, compaction hook, and hindsight_* tools. Points at the
+              # self-hosted server; bank and tags below live in
+              # ~/.hindsight/coding-agent.json, token in HINDSIGHT_API_TOKEN.
+              plugin = [ hindsightPluginPath ];
               # Global agent skills, same set Pi uses.
               skills = [ skillsDir ];
               provider = {
@@ -125,22 +145,12 @@ in
               };
               # Native V2 shape. The V1 provider/model fields above are
               # still accepted and normalized in memory. MCP detail:
-              # - hindsight points at the self-hosted per-bank MCP endpoint
-              #   (bank `rodrigo`, same memory Pi uses), Bearer token from
-              #   HINDSIGHT_API_TOKEN in shell init below.
-              # - executor aggregates the remaining integrations (exa,
-              #   context7, github, hindsight tools, vikunja, ...). Uses
-              #   OAuth: run `opencode mcp auth executor` once per machine.
+              # executor aggregates the integrations (exa, context7, github,
+              # hindsight tools, vikunja, ...). Uses OAuth: run
+              # `opencode mcp auth executor` once per machine. Memory itself
+              # is the Hindsight plugin above, not an MCP server.
               mcp = {
                 servers = {
-                  hindsight = {
-                    type = "remote";
-                    url = "http://rgo-nas:8888/mcp/rodrigo/";
-                    oauth = false;
-                    headers = {
-                      Authorization = "Bearer {env:HINDSIGHT_API_TOKEN}";
-                    };
-                  };
                   executor = {
                     type = "remote";
                     url = "https://executor.sh/rodrigo-dias/mcp";
@@ -241,6 +251,23 @@ in
                   theme = "flexoki";
                 };
               };
+
+            # Hindsight plugin config (single JSON file per upstream).
+            # apiToken is deliberately absent: the file wins where it sets
+            # a value, so the token stays in HINDSIGHT_API_TOKEN from shell
+            # init below instead of landing in the Nix store. bankId rodrigo
+            # shares Pi's bank; retains carry per-repo project tags plus
+            # source:opencode, mirroring Pi's project:/source: tagging.
+            # autoUpdate is pinned off; rebuilds move the runtime forward.
+            home.file.".hindsight/coding-agent.json".text = builtins.toJSON {
+              apiUrl = "http://rgo-nas:8888";
+              bankId = "rodrigo";
+              retainTags = [
+                "project:{gitProject}"
+                "source:opencode"
+              ];
+              autoUpdate = false;
+            };
           }
           // lib.optionalAttrs isLinux {
             sops.templates."opencode-config" = {
