@@ -11,6 +11,10 @@ let
   inherit (constants) isDarwin isLinux;
   toolchain = config.apps.javascript-toolchain;
   nineRouterCatalog = import ../../shared/9router.nix;
+  # Global agent skills. Single source of truth, shared with Pi via
+  # ~/.agents/skills. Referenced by absolute path (not a Nix path) so the
+  # config points at the mutable repo, not a /nix/store snapshot.
+  skillsDir = "${constants.homeDir}/.config/home/modules/apps/agents/skills";
   opencodeSkills = lib.mapAttrs' (
     name: _:
     lib.nameValuePair "opencode/skills/${lib.removeSuffix ".md" name}/SKILL.md" {
@@ -39,7 +43,12 @@ in
       {
         apps.javascript-toolchain = {
           enable = true;
-          npm.cliPackages.opencode.package = "opencode-ai@latest";
+          # V2 ships as @opencode/cli; opencode-ai is the retired V1 package.
+          # Both provide the `opencode` binary, so uninstall V1 first.
+          npm.cliPackages.opencode = {
+            package = "@opencode/cli@latest";
+            retiredPackages = [ "opencode-ai" ];
+          };
         };
 
         home-manager.users.${username} =
@@ -47,12 +56,20 @@ in
           let
             nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
             opencodeGoApiKeyPath = config.sops.secrets.opencode_go_api_key.path;
+            exaApiKeyPath = config.sops.secrets.exa_api_key.path;
+            hindsightApiTokenPath = config.sops.secrets.hindsight_api_token.path;
 
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
               autoupdate = true;
-              model = "nine_router/flash";
-              plugin = [ "@mohak34/opencode-notifier@latest" ];
+              model = "nine_router/good";
+              # Native websearch (V2): Exa key comes from EXA_API_KEY,
+              # exported from the sops secret in shell init below.
+              websearch = {
+                provider = "exa";
+              };
+              # Global agent skills, same set Pi uses.
+              skills = [ skillsDir ];
               provider = {
                 nine_router = {
                   npm = "@ai-sdk/openai-compatible";
@@ -106,20 +123,27 @@ in
                   };
                 };
               };
-              mcp = lib.optionalAttrs isLinux {
-                context7 = {
-                  type = "remote";
-                  url = "https://mcp.context7.com/mcp";
-                  headers = {
-                    CONTEXT7_API_KEY = config.sops.placeholder.context7_api_key;
+              # Native V2 shape. The V1 provider/model fields above are
+              # still accepted and normalized in memory. MCP detail:
+              # - hindsight points at the self-hosted per-bank MCP endpoint
+              #   (bank `rodrigo`, same memory Pi uses), Bearer token from
+              #   HINDSIGHT_API_TOKEN in shell init below.
+              # - executor aggregates the remaining integrations (exa,
+              #   context7, github, hindsight tools, vikunja, ...). Uses
+              #   OAuth: run `opencode mcp auth executor` once per machine.
+              mcp = {
+                servers = {
+                  hindsight = {
+                    type = "remote";
+                    url = "http://rgo-nas:8888/mcp/rodrigo/";
+                    oauth = false;
+                    headers = {
+                      Authorization = "Bearer {env:HINDSIGHT_API_TOKEN}";
+                    };
                   };
-                };
-                exa = {
-                  type = "remote";
-                  url = "https://mcp.exa.ai/mcp";
-                  oauth = false;
-                  headers = {
-                    "x-api-key" = config.sops.placeholder.exa_api_key;
+                  executor = {
+                    type = "remote";
+                    url = "https://executor.sh/rodrigo-dias/mcp";
                   };
                 };
               };
@@ -130,10 +154,15 @@ in
               nine_router_api_key = { };
               exa_api_key = { };
               opencode_go_api_key = { };
+              hindsight_api_token.sopsFile = ../../../secrets/hindsight-secrets.yaml;
             };
 
             programs.opencode = {
               enable = true;
+              # Note: HM also installs nixpkgs opencode (still V1), but the
+              # managed npm prefix comes first on PATH so `opencode` is V2.
+              # package=null is not an option: the pinned HM module calls
+              # versionAtLeast on null and fails evaluation.
               commands = {
                 release = ''
                   # Release Command
@@ -174,6 +203,12 @@ in
               if [ -z "''${OPENCODE_GO_API_KEY:-}" ] && [ -r "${opencodeGoApiKeyPath}" ]; then
                 export OPENCODE_GO_API_KEY="$(tr -d '\n' < "${opencodeGoApiKeyPath}")"
               fi
+              if [ -z "''${EXA_API_KEY:-}" ] && [ -r "${exaApiKeyPath}" ]; then
+                export EXA_API_KEY="$(tr -d '\n' < "${exaApiKeyPath}")"
+              fi
+              if [ -z "''${HINDSIGHT_API_TOKEN:-}" ] && [ -r "${hindsightApiTokenPath}" ]; then
+                export HINDSIGHT_API_TOKEN="$(tr -d '\n' < "${hindsightApiTokenPath}")"
+              fi
             '';
 
             programs.zsh.envExtra = lib.mkAfter ''
@@ -182,6 +217,12 @@ in
               fi
               if [ -z "''${OPENCODE_GO_API_KEY:-}" ] && [ -r "${opencodeGoApiKeyPath}" ]; then
                 export OPENCODE_GO_API_KEY="$(tr -d '\n' < "${opencodeGoApiKeyPath}")"
+              fi
+              if [ -z "''${EXA_API_KEY:-}" ] && [ -r "${exaApiKeyPath}" ]; then
+                export EXA_API_KEY="$(tr -d '\n' < "${exaApiKeyPath}")"
+              fi
+              if [ -z "''${HINDSIGHT_API_TOKEN:-}" ] && [ -r "${hindsightApiTokenPath}" ]; then
+                export HINDSIGHT_API_TOKEN="$(tr -d '\n' < "${hindsightApiTokenPath}")"
               fi
             '';
 
@@ -199,94 +240,9 @@ in
                 "opencode/tui.json".text = builtins.toJSON {
                   theme = "flexoki";
                 };
-              }
-              // {
-                "opencode/opencode-notifier.json".text = builtins.toJSON {
-                  sound = true;
-                  notification = true;
-                  timeout = 5;
-                  showProjectName = true;
-                  showSessionTitle = false;
-                  showIcon = true;
-                  suppressWhenFocused = true;
-                  enableOnDesktop = false;
-
-                  linux = {
-                    grouping = false;
-                  };
-                  events = {
-                    permission = {
-                      sound = true;
-                      notification = true;
-                      command = true;
-                    };
-                    complete = {
-                      sound = true;
-                      notification = true;
-                      command = true;
-                    };
-                    subagent_complete = {
-                      sound = false;
-                      notification = false;
-                      command = true;
-                    };
-                    error = {
-                      sound = true;
-                      notification = true;
-                      command = true;
-                    };
-                    question = {
-                      sound = true;
-                      notification = true;
-                      command = true;
-                    };
-                    user_cancelled = {
-                      sound = false;
-                      notification = false;
-                      command = true;
-                    };
-                    plan_exit = {
-                      sound = true;
-                      notification = true;
-                      command = true;
-                    };
-                  };
-                  messages = {
-                    permission = "Session needs permission: {sessionTitle}";
-                    complete = "Session has finished: {sessionTitle}";
-                    subagent_complete = "Subagent task completed: {sessionTitle}";
-                    error = "Session encountered an error: {sessionTitle}";
-                    question = "Session has a question: {sessionTitle}";
-                    user_cancelled = "Session was cancelled by user: {sessionTitle}";
-                    plan_exit = "Plan ready for review: {sessionTitle}";
-                  };
-                  sounds = {
-                    permission = null;
-                    complete = null;
-                    subagent_complete = null;
-                    error = null;
-                    question = null;
-                    user_cancelled = null;
-                    plan_exit = null;
-                  };
-                  volumes = {
-                    permission = 1;
-                    complete = 1;
-                    subagent_complete = 1;
-                    error = 1;
-                    question = 1;
-                    user_cancelled = 1;
-                    plan_exit = 1;
-                  };
-                };
               };
-
-            home.sessionVariables = {
-              OPENCODE_ENABLE_EXA = "1";
-            };
           }
           // lib.optionalAttrs isLinux {
-            sops.secrets.context7_api_key = { };
             sops.templates."opencode-config" = {
               content = builtins.toJSON opencodeConfig;
             };
@@ -314,7 +270,7 @@ in
       #         User = username;
       #         Group = "users";
       #         WorkingDirectory = "/home/${username}";
-      #         ExecStart = "${toolchain.npm.binDir}/opencode web --hostname 0.0.0.0 --port 4096";
+      #         ExecStart = "${toolchain.npm.binDir}/opencode serve --hostname 0.0.0.0 --port 4096";
       #         Restart = "always";
       #         RestartSec = 5;
       #         NoNewPrivileges = true;

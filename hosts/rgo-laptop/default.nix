@@ -31,7 +31,6 @@
   apps.fish.enable = false;
   apps.nushell.enable = false;
   apps.ollama.enable = false;
-  apps.opencode.enable = false;
   apps.vscode.enable = false;
   apps.zsh.enable = false;
 

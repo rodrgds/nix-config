@@ -101,7 +101,6 @@
       OLLAMA_KV_CACHE_TYPE = "q8_0";
     };
   };
-  apps.opencode.enable = false;
   apps.vscode.enable = false;
   apps.zsh.enable = false;
 
