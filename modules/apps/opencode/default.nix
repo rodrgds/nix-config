@@ -63,6 +63,20 @@ in
             bootstrapFiles = [
               "lib/node_modules/@vectorize-io/hindsight-coding-agents/package.json"
             ];
+            # Upstream 0.7.0 registers its companion skill without the
+            # `path` key opencode v2's skill schema requires, so the whole
+            # plugin gets disabled (skill.transform failure). Supply the
+            # packaged SKILL.md path until upstream fixes it. Guarded by a
+            # marker comment so re-runs are no-ops; remove when upstream
+            # ships the fix.
+            postUpdate = [
+              ''
+                skill_runtime="$install_root/lib/node_modules/@vectorize-io/hindsight-coding-agents/dist/opencode2.js"
+                if [ -f "$skill_runtime" ] && ! grep -q 'nix: opencode v2 Info.path workaround' "$skill_runtime"; then
+                  sed -i -e 's/location: srcDir,/location: srcDir, path: join14(srcDir, "SKILL.md"), \/\* nix: opencode v2 Info.path workaround \*\//g' "$skill_runtime" || true
+                fi
+              ''
+            ];
           };
         };
 
@@ -256,16 +270,14 @@ in
             # apiToken is deliberately absent: the file wins where it sets
             # a value, so the token stays in HINDSIGHT_API_TOKEN from shell
             # init below instead of landing in the Nix store. bankId rodrigo
-            # shares Pi's bank; retains carry per-repo project tags plus
-            # source:opencode, mirroring Pi's project:/source: tagging.
-            # autoUpdate is pinned off; rebuilds move the runtime forward.
+            # shares Pi's bank; retains carry the per-repo project tag.
+            # (`source:` tags are server-reserved; attribution is stamped
+            # by the integration itself.) autoUpdate is pinned off;
+            # rebuilds move the runtime forward.
             home.file.".hindsight/coding-agent.json".text = builtins.toJSON {
               apiUrl = "http://rgo-nas:8888";
               bankId = "rodrigo";
-              retainTags = [
-                "project:{gitProject}"
-                "source:opencode"
-              ];
+              retainTags = [ "project:{gitProject}" ];
               autoUpdate = false;
             };
           }
