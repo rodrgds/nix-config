@@ -90,7 +90,17 @@
   apps.lamp.enable = false;
   apps.lunarclient.enable = false;
   apps.nushell.enable = false;
-  apps.ollama.enable = false;
+  apps.ollama = {
+    enable = true;
+    environmentVariables = {
+      # RTX 2070 (Turing) supports flash attention: faster prompt
+      # processing, slightly lower VRAM use, more layers fit on GPU.
+      OLLAMA_FLASH_ATTENTION = "true";
+      # q8 KV cache halves the ~500MB GPU KV cost of a 12B model at 4k
+      # context, freeing room for roughly one more model layer on GPU.
+      OLLAMA_KV_CACHE_TYPE = "q8_0";
+    };
+  };
   apps.opencode.enable = false;
   apps.vscode.enable = false;
   apps.zsh.enable = false;
