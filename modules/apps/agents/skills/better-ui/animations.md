@@ -27,6 +27,7 @@ Users change intent mid-interaction. Animations that cannot be interrupted make 
 
 /* Clicking again mid-animation smoothly reverses, no jank */
 ```
+
 ```css
 /* Bad: keyframe animation for interactive element */
 .drawer.open {
@@ -201,3 +202,4 @@ Motion is a budget, not a garnish. Three rules decide whether an animation belon
   animation: bounceIn 500ms;
 }
 ```
+
