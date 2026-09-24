@@ -188,12 +188,12 @@ in
              alt-period = "exec-and-forget ${homeDir}/.local/state/nix/profiles/home-manager/home-path/bin/vicinae-launcher 'vicinae://launch/core/search-emojis'"
 
              # Screenshot annotation, OCR, and screen color picker.
-             cmd-ctrl-alt-shift-s = 'exec-and-forget /usr/bin/open "macshot://capture"'
-             alt-shift-s = 'exec-and-forget /usr/bin/open "macshot://capture"'
+             cmd-ctrl-alt-shift-s = 'exec-and-forget ${homeDir}/.local/libexec/macshot-launch capture'
+             alt-shift-s = 'exec-and-forget ${homeDir}/.local/libexec/macshot-launch capture'
              cmd-ctrl-alt-shift-c = 'exec-and-forget /usr/bin/open "pika://pick/foreground/hex"'
              alt-shift-c = 'exec-and-forget /usr/bin/open "pika://pick/foreground/hex"'
-             cmd-ctrl-alt-shift-t = 'exec-and-forget /usr/bin/open "macshot://ocr"'
-             alt-shift-t = 'exec-and-forget /usr/bin/open "macshot://ocr"'
+             cmd-ctrl-alt-shift-t = 'exec-and-forget ${homeDir}/.local/libexec/macshot-launch ocr'
+             alt-shift-t = 'exec-and-forget ${homeDir}/.local/libexec/macshot-launch ocr'
 
                # Match the desktop input-source toggle. Requires the keyboard-layout module.
                ${

@@ -9,6 +9,8 @@
 let
   cfg = config.apps.screenshot-tools;
   inherit (constants) isLinux isDarwin;
+  launcher = "/Users/${username}/.local/libexec/macshot-launch";
+  launcherBuildId = builtins.hashString "sha256" (builtins.readFile ./macshot-launch.swift);
 in
 {
   options.apps.screenshot-tools = {
@@ -45,16 +47,27 @@ in
           slot: "hotkeyDisabled_${toString slot}"
         ) (lib.range 1 12)) (_: true);
 
-        # Macshot's first URL-triggered capture after login can leave an
-        # invisible overlay that blocks later captures. Start it before use.
-        home-manager.users.${username}.launchd.agents.macshot = {
-          enable = true;
-          config = {
-            ProgramArguments = [ "/Applications/macshot.app/Contents/MacOS/macshot" ];
-            RunAtLoad = true;
-            ProcessType = "Interactive";
+        # A login-only prewarm does not cover later exits. Every shortcut must
+        # wait for AppKit launch completion before delivering its capture URL.
+        home-manager.users.${username} =
+          { lib, ... }:
+          {
+            home.activation.compileMacshotLauncher = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              stamp="${launcher}.source"
+              if [ ! -x ${launcher} ] || [ ! -f "$stamp" ] || [ "$(/bin/cat "$stamp")" != ${lib.escapeShellArg launcherBuildId} ]; then
+              (
+                set -eu
+                /bin/mkdir -p /Users/${username}/.local/libexec
+                build_dir="$(/usr/bin/mktemp -d /tmp/macshot-launch.XXXXXX)"
+                trap '/bin/rm -rf "$build_dir"' EXIT
+                /usr/bin/xcrun swiftc -O ${./macshot-launch.swift} -o "$build_dir/macshot-launch"
+                /usr/bin/codesign --force --sign - --identifier dev.rgo.macshot-launch "$build_dir/macshot-launch"
+                /bin/mv "$build_dir/macshot-launch" ${launcher}
+                printf '%s\n' ${lib.escapeShellArg launcherBuildId} > "$stamp"
+              )
+              fi
+            '';
           };
-        };
       })
     ]
   );

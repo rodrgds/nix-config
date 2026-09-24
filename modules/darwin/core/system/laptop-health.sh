@@ -105,7 +105,11 @@ else
 fi
 
 if "$health_macshot"; then
-  check_launchd_agent org.nix-community.home.macshot Macshot 262144
+  if [ -x /Applications/macshot.app/Contents/MacOS/macshot ] && [ -x "$HOME/.local/libexec/macshot-launch" ]; then
+    ok "Macshot and its launch-safe screenshot command are installed"
+  else
+    fail "Macshot or its screenshot command is missing"
+  fi
 else
   check_absent_agent org.nix-community.home.macshot Macshot macshot
 fi
