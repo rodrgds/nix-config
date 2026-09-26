@@ -86,6 +86,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    apps.gnhf.enable = true;
     apps.javascript-toolchain = {
       enable = true;
       npm.cliPackages = {
@@ -110,7 +111,6 @@ in
             ''
           ];
         };
-        gnhf.package = "gnhf@latest";
       };
     };
 
