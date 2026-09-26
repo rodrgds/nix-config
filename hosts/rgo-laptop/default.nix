@@ -63,6 +63,7 @@
   apps.vicu.enable = true;
 
   apps.mpv.enable = true;
+  apps.blender.enable = true;
   apps.stremio.enable = true;
   apps.cake-wallet.enable = false;
 
