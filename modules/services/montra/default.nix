@@ -185,7 +185,13 @@ in
           VISUAL_SEARCH_PROVIDER=external
           VISUAL_INDEX_BACKEND=postgres
           VISUAL_EMBEDDING_URL=http://montra-embedding:8811/embed-image
-          VISUAL_EMBEDDING_MODEL=openai/clip-vit-base-patch32
+          VISUAL_EMBEDDING_MODEL=Marqo/marqo-fashionSigLIP
+          VISUAL_MATCH_RANKER=embedding
+          VISUAL_EMBEDDING_BATCH_SIZE=2
+          VISUAL_EMBEDDING_CONCURRENCY=2
+          VISUAL_POSTGRES_LIMIT=500
+          VISUAL_POSTGRES_CANDIDATE_LIMIT=1000
+          VISUAL_BEST_EFFORT_SCORE_THRESHOLD=0.72
           VISUAL_APPEARANCE_PUBLIC_IMAGE_BASE_URL=http://127.0.0.1:9000/fashion-radar
           VISUAL_APPEARANCE_INTERNAL_IMAGE_BASE_URL=https://media.${cfg.domain}
           IMAGE_ITEM_DETECTOR=yolo-world
@@ -388,6 +394,8 @@ in
         image = "ghcr.io/rodrgds/montra-embedding:latest";
         environment = {
           FASHION_APPEARANCE_INTERNAL_ORIGINS = "https://media.${cfg.domain}";
+          FASHION_EMBEDDING_MODEL = "Marqo/marqo-fashionSigLIP";
+          FASHION_EMBEDDING_CPU_THREADS = "2";
         };
         extraOptions = [
           "--network=podman"
