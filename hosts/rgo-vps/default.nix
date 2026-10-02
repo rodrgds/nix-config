@@ -13,6 +13,7 @@ in
   imports = [
     ./hardware-configuration.nix
     ./disko.nix
+    ../../modules/shared/nas-backup
   ];
 
   networking.hostName = "rgo-vps";
