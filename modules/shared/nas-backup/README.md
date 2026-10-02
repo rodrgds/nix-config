@@ -1,17 +1,33 @@
 # Direct NAS backups
 
-`hosts/rgo-vps/default.nix` imports this VPS-only module. Enabled jobs retain their existing timers, dependencies and alerts; ExecStart streams to the NAS rather than writing local dumps/media mirrors. No old backup or retired app data is removed.
+The VPS streams eight backup datasets over Tailscale to `/volume1/homes/kraktoos/Backups/rgo-vps`. Daily backup timers, weekly OpenPost and Directus restore checks, service dependencies and failure alerts remain in their owning service modules. Full dumps and media mirrors are no longer written to the VPS.
 
-Parent provisioning must install `receiver.py` with a trusted Python 3 interpreter, create `/volume1/homes/kraktoos/Backups/rgo-vps`, and authorize `/var/lib/nas-backup/id_ed25519.pub` in the NAS root-owned `/etc/ssh/authorized_keys/kraktoos`. Use an absolute forced command plus `restrict` (or explicit no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty,no-user-rc where restrict is unsupported). The receiver only accepts its eight allowlisted datasets with their fixed SQL-gzip or tar-gzip formats. Archive links and special files are rejected before publication. Do not put this key in the home authorized_keys file: Synology home ACLs reject it.
+## Access
 
-The runtime oneshot preserves the existing private key and generates one only if absent. SSH pins the supplied NAS host key, uses rgo-nas, and falls back to 100.88.5.41 when name resolution fails. The producer runs with bash pipefail. Only successful producer exit permits a checksum/size commit; the receiver checks SHA256, gzip CRC and tar framing before atomic publication. Retention keeps seven successful snapshots per dataset. Failed uploads never prune successful snapshots. Montra status is atomically replaced only after a matching NAS success receipt.
+The dedicated SSH identity is encrypted as `nas_backup_ssh_key` in `secrets/vps-secrets.yaml` and installed by sops-nix. It is separate from the laptop and desktop login keys. SSH pins the NAS host key and falls back from `rgo-nas` to its Tailscale address `100.88.5.41` when DNS is unavailable.
 
-Snapshot directories contain `data.gz` and `manifest.json`. Database-only snapshots contain gzipped SQL. Media snapshots contain `media/` files. Vaultwarden/Directus contain `database/00000000.sql` and subsequent ordered SQL chunks plus `files/` application data (excluding live SQLite database/WAL files). Concatenate ordered database SQL chunks into sqlite3 on a clean restore database; restore app files separately. These are streaming logical SQLite snapshots, not raw SQLite database copies.
+Install `receiver.py` as root-owned `/usr/local/lib/nas-backup/receiver.py` on the NAS. Create the backup root owned by `kraktoos`. Authorize the dedicated public key in `/etc/ssh/authorized_keys/kraktoos` with:
 
-This isolated candidate preserves scheduled OpenPost restore-drill and Directus backup-check with NAS-backed implementations in restore_check.py. Its receiver supports exact allowlisted download commands in addition to upload; provision this receiver revision, not the upload-only draft. Clients verify snapshot identity/hash/size before restoring SQLite in temporary runtime state or OpenPost SQL into a disposable PostgreSQL database. Existing historical backups are untouched.
+```text
+restrict,command="/usr/bin/python3 -I /usr/local/lib/nas-backup/receiver.py" ssh-ed25519 PUBLIC_KEY rgo-vps-nas-backup
+```
 
-Production readiness blockers: independent candidate review and NAS receiver/access confirmation are required. Crucially, checkout baseline 45c3a09 does NOT match the active generation: the built candidate resurrects LiteLLM and removes OpenPost credential-reconcile dependency/failure alerts, plus package reversions. DO NOT ACTIVATE this generation. Reconstruct active source baseline and reapply only migration before switching.
+Synology rejects this home's ACL during normal key lookup. Its SSH configuration therefore uses the root-owned key file for `kraktoos`. Preserve existing login keys when updating it. Install the receiver before rebuilding the VPS; restore checks need its restricted download command as well as upload.
 
-For a narrow patch on production baseline `45c3a09c4fa14430702b6a481af9c7525962b8c5`, the module creates Montra's status directory itself. That baseline has no Montra application status-file gate, no OpenPost failure-alert unit, and no OpenPost encrypted offsite option. Do not deploy current HEAD's unrelated service/flake changes to obtain those features. Existing backup unit names, producer credentials, and schedules match that baseline.
+## Integrity and recovery
 
-Fixtures: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`. No SSH to a real NAS is needed.
+A snapshot is published only after the whole producer succeeds and the NAS verifies its SHA-256, size, gzip checksum and, for archives, tar framing. Failed uploads cannot rotate successful backups. Each dataset retains seven successful snapshots. Montra's status file is replaced only after a matching NAS receipt.
+
+Each snapshot directory contains `data.gz` and `manifest.json`. Database datasets contain gzipped SQL. Media archives contain `media/` files. Vaultwarden and Directus archives contain ordered `database/00000000.sql` chunks and `files/` application data, excluding the live SQLite database and its WAL files. Concatenate the SQL chunks into sqlite3 on a new restore database, then restore the application files separately.
+
+The weekly checks download and verify NAS snapshots, restore Directus into a temporary SQLite database, and restore OpenPost into a disposable PostgreSQL database. OpenPost also checks its media archive and updates `/var/backup/openpost/restore-drill-latest.json`. Interrupted drills clean up their temporary database.
+
+OpenPost's older encrypted offsite job requires local backup files and cannot be enabled with this transport. A third-copy policy must consume NAS snapshots instead. Historical backups and retired app data are not removed by activation.
+
+## Validation
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+```
+
+After receiver changes, install the matching receiver and run one backup plus its restore check. After transport or producer changes, run the affected jobs once and inspect their systemd results and NAS manifests. Existing timers cover subsequent runs.

@@ -1,16 +1,19 @@
 """Retrieve the latest NAS snapshot, checksum it, and restore in ephemeral state."""
 import gzip
+import datetime
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import signal
 import socket
 import sqlite3
 import subprocess
 import sys
 import tarfile
 import tempfile
+import uuid
 
 
 def fetch(dataset, destination):
@@ -24,7 +27,7 @@ def fetch(dataset, destination):
             '-oGlobalKnownHostsFile=/dev/null', '-oHostKeyAlias=rgo-nas',
             '-oHostKeyAlgorithms=ssh-ed25519', '-oConnectTimeout=30',
             '-oServerAliveInterval=30', '-oServerAliveCountMax=3',
-            '-i', '/var/lib/nas-backup/id_ed25519', 'kraktoos@' + host,
+            '-i', os.environ.get('NAS_BACKUP_SSH_KEY', '/var/lib/nas-backup/id_ed25519'), 'kraktoos@' + host,
             'download ' + dataset]
     remote = subprocess.Popen(args, stdout=subprocess.PIPE)
     try:
@@ -89,11 +92,11 @@ def sqlite_check(archive, directory):
 
 
 def openpost_check(archive, media):
-    database = 'openpost_restore_drill_' + str(os.getpid())
+    database = 'openpost_restore_drill_' + uuid.uuid4().hex
     def run(*args, **kwargs):
         return subprocess.run(['podman', 'exec', 'openpost-postgres', *args], check=True, **kwargs)
-    run('createdb', '-U', 'openpost', database)
     try:
+        run('createdb', '-U', 'openpost', database)
         proc = subprocess.Popen(['podman', 'exec', '-i', 'openpost-postgres', 'psql', '-v',
                                  'ON_ERROR_STOP=1', '-U', 'openpost', '-d', database], stdin=subprocess.PIPE,
                                 stdout=subprocess.DEVNULL)
@@ -114,20 +117,30 @@ def openpost_check(archive, media):
         def count(query):
             return int(run('psql', '-Atqc', query, '-U', 'openpost', '-d', database,
                            capture_output=True, text=True).stdout.strip())
-        if count("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'") < 10:
+        tables = count("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
+        if tables < 10:
             raise ValueError('too few restored public tables')
-        for table in ('users', 'workspaces', 'posts'):
-            count('SELECT count(*) FROM ' + table)
+        counts = {table: count('SELECT count(*) FROM ' + table)
+                  for table in ('users', 'workspaces', 'posts')}
         records = count('SELECT count(*) FROM media_attachments')
         with tarfile.open(media, 'r:gz') as source:
             files = sum(member.isfile() for member in source)
         if records and not files:
             raise ValueError('media records without media snapshot files')
+        return dict(counts, public_tables=tables, database_media=records, media_files=files)
     finally:
         run('dropdb', '--if-exists', '-U', 'openpost', database)
 
 
 def main():
+    def interrupted(signum, frame):
+        # A service stop must unwind the restore and drop its temporary database.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        raise InterruptedError('restore interrupted')
+
+    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGINT, interrupted)
     os.umask(0o077)
     dataset = sys.argv[1]
     with tempfile.TemporaryDirectory(prefix='nas-restore-', dir=os.environ['RUNTIME_DIRECTORY']) as directory:
@@ -138,7 +151,15 @@ def main():
         elif dataset == 'openpost-db':
             media = Path(directory) / 'media.gz'
             fetch('openpost-media', media)
-            openpost_check(archive, media)
+            checks = openpost_check(archive, media)
+            evidence = dict(checks, status='passed',
+                            checked_at=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                            backup=receipt['label'], backup_bytes=receipt['bytes'])
+            destination = Path('/var/backup/openpost/restore-drill-latest.json')
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            temporary = destination.with_suffix('.json.tmp')
+            temporary.write_text(json.dumps(evidence) + '\n')
+            os.replace(temporary, destination)
         else:
             raise ValueError('unsupported restore check')
         print(json.dumps({'status': 'passed', 'snapshot': receipt['label']}), flush=True)

@@ -20,7 +20,7 @@ def send(dataset, kind, command):
            '-oStrictHostKeyChecking=yes', '-oUserKnownHostsFile=/etc/nas-backup/known_hosts',
            '-oGlobalKnownHostsFile=/dev/null', '-oHostKeyAlias=rgo-nas', '-oHostKeyAlgorithms=ssh-ed25519',
            '-oConnectTimeout=30', '-oServerAliveInterval=30', '-oServerAliveCountMax=3',
-           '-i', '/var/lib/nas-backup/id_ed25519', 'kraktoos@' + host,
+           '-i', os.environ.get('NAS_BACKUP_SSH_KEY', '/var/lib/nas-backup/id_ed25519'), 'kraktoos@' + host,
            'upload ' + dataset + ' ' + kind]
     remote = subprocess.Popen(ssh, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     producer = subprocess.Popen(['bash', '-euo', 'pipefail', '-c', command], stdout=subprocess.PIPE,

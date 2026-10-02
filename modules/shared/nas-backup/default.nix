@@ -1,4 +1,4 @@
-# VPS-only transport; parent provisions the NAS receiver and restricted authorized key.
+# VPS-only transport; the NAS uses the restricted receiver documented alongside it.
 {
   config,
   lib,
@@ -26,10 +26,9 @@ let
   job = name: dataset: kind: producer: status: {
     after = [
       "network-online.target"
-      "nas-backup-key.service"
     ];
     wants = [ "network-online.target" ];
-    requires = [ "nas-backup-key.service" ];
+    environment.NAS_BACKUP_SSH_KEY = config.sops.secrets.nas_backup_ssh_key.path;
     path = runtime;
     # Explicit ExecStart overrides must not retain a generated script command.
     script = lib.mkForce "";
@@ -56,6 +55,8 @@ let
       );
       Type = "oneshot";
       UMask = "0077";
+      StateDirectory = "nas-backup";
+      StateDirectoryMode = "0700";
       ReadWritePaths = [
         "/var/lib/nas-backup"
       ]
@@ -68,51 +69,34 @@ let
   restoreJob = name: dataset: {
     after = [
       "network-online.target"
-      "nas-backup-key.service"
     ];
     wants = [ "network-online.target" ];
-    requires = [ "nas-backup-key.service" ];
+    environment.NAS_BACKUP_SSH_KEY = config.sops.secrets.nas_backup_ssh_key.path;
     path = runtime;
     serviceConfig = {
       ExecStart = lib.mkForce "${pkgs.python3}/bin/python3 ${./restore_check.py} ${dataset}";
       RuntimeDirectory = name;
-      ReadWritePaths = [ "/run/${name}" ];
+      ReadWritePaths = [
+        "/run/${name}"
+      ]
+      ++ lib.optional (dataset == "openpost-db") "/var/backup/openpost";
       UMask = "0077";
       TimeoutStartSec = "7h";
     };
   };
 in
 {
+  sops.secrets.nas_backup_ssh_key.mode = "0600";
+  assertions = [
+    {
+      assertion = !config.vps.openpost.offsiteBackup.enable;
+      message = "NAS streaming backups cannot use OpenPost's local-file offsite job. Back up NAS snapshots separately before enabling a third-copy policy.";
+    }
+  ];
   environment.etc."nas-backup/known_hosts".text = ''
     rgo-nas,100.88.5.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMyZkJe7c8stOA3jvquyqzrn89utxNq/MeHrmiemAltG
   '';
-  # The production baseline predates Montra's status directory declaration.
-  systemd.tmpfiles.rules = lib.optionals config.vps.montra.enable [
-    "d /var/lib/montra/backup-status 0755 root root -"
-    "z /var/lib/montra/backup-status/status.json 0644 root root -"
-  ];
   systemd.services = lib.mkMerge [
-    {
-      nas-backup-key = {
-        description = "Create runtime NAS backup identity if absent";
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          StateDirectory = "nas-backup";
-          StateDirectoryMode = "0700";
-          UMask = "0077";
-        };
-        script = ''
-          set -euo pipefail
-          key=/var/lib/nas-backup/id_ed25519
-          if [ ! -e "$key" ]; then
-            ${pkgs.openssh}/bin/ssh-keygen -q -t ed25519 -N "" -C rgo-vps-nas-backup -f "$key"
-          fi
-          ${pkgs.coreutils}/bin/chmod 0600 "$key"
-          ${pkgs.openssh}/bin/ssh-keygen -y -f "$key" > "$key.pub"
-        '';
-      };
-    }
     (lib.mkIf config.vps.montra.enable {
       montra-postgres-backup =
         job "montra-postgres-backup" "montra-db" "gzip"

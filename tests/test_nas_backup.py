@@ -5,7 +5,7 @@ def wire(p, commit=True, digest=None):
  return struct.pack("!I",len(p))+p+struct.pack("!I",0)+(json.dumps({"sha256":digest or hashlib.sha256(p).hexdigest(),"bytes":len(p)}).encode()+b"\n" if commit else b"")
 class Tests(unittest.TestCase):
  def setUp(self):
-  self.t=tempfile.TemporaryDirectory(); self.root=Path(self.t.name)/"backup"; self.root.mkdir()
+  self.t=tempfile.TemporaryDirectory(); self.root=Path(self.t.name).resolve()/"backup"; self.root.mkdir()
  def tearDown(self): self.t.cleanup()
  def runrx(self,data,name="montra-db",kind="gzip"):
   return subprocess.run([sys.executable,str(R),"--root",str(self.root)],input=data,capture_output=True,env=dict(os.environ,SSH_ORIGINAL_COMMAND=f"upload {name} {kind}"))
@@ -39,9 +39,9 @@ class Tests(unittest.TestCase):
   (self.root/"montra-db").symlink_to(self.t.name); self.assertNotEqual(self.runrx(wire(gzip.compress(b"x"))).returncode,0)
 
 
-class StreamingTests(unittest.TestCase):
+class StreamingFixture(unittest.TestCase):
  def setUp(self):
-  self.t=tempfile.TemporaryDirectory(); self.dir=Path(self.t.name); self.root=self.dir/"backups"; self.root.mkdir()
+  self.t=tempfile.TemporaryDirectory(); self.dir=Path(self.t.name).resolve(); self.root=self.dir/"backups"; self.root.mkdir()
   self.bin=self.dir/"bin"; self.bin.mkdir()
   shim=self.bin/"ssh"
   shim.write_text("#!/usr/bin/env python3\nimport os,sys\nos.environ['SSH_ORIGINAL_COMMAND']=sys.argv[-1]\nos.execv(sys.executable,[sys.executable,os.environ['RECEIVER'],'--root',os.environ['BACKUP_ROOT']])\n")
@@ -50,6 +50,8 @@ class StreamingTests(unittest.TestCase):
  def tearDown(self): self.t.cleanup()
  def send(self,command,dataset="montra-db",kind="gzip"):
   return subprocess.run([sys.executable,str(R.with_name("sender.py")),dataset,kind,command],env=self.env,capture_output=True,timeout=30)
+
+class StreamingTests(StreamingFixture):
  def test_sender_success(self):
   result=self.send("printf complete | gzip")
   self.assertEqual(result.returncode,0,result.stderr)
@@ -83,6 +85,37 @@ class StreamingTests(unittest.TestCase):
   result=subprocess.run([sys.executable,str(R),'--root',str(self.root)],input=wire(bad),capture_output=True,env=dict(os.environ,SSH_ORIGINAL_COMMAND='upload openpost-media tar-gzip'))
   self.assertNotEqual(result.returncode,0); self.assertEqual(list(self.root.glob('*/snapshot-*')),[])
 
+ def test_restore_stop_drops_temporary_database(self):
+  import signal,time
+  result=self.send("printf 'SELECT 1;\\n' | gzip", "openpost-db")
+  self.assertEqual(result.returncode,0,result.stderr)
+  result=self.send("tar -czf - --files-from /dev/null", "openpost-media", "tar-gzip")
+  self.assertEqual(result.returncode,0,result.stderr)
+  log=self.dir/'commands.log'; runtime=self.dir/'runtime'; runtime.mkdir()
+  podman=self.bin/'podman'
+  podman.write_text("#!/usr/bin/env python3\nimport os,sys,time\nwith open(os.environ['TEST_COMMAND_LOG'],'a') as f: f.write(' '.join(sys.argv[1:])+'\\n')\nif 'psql' in sys.argv: time.sleep(30)\n")
+  podman.chmod(0o700)
+  env=dict(self.env,TEST_COMMAND_LOG=str(log),RUNTIME_DIRECTORY=str(runtime))
+  proc=subprocess.Popen([sys.executable,str(R.with_name('restore_check.py')),'openpost-db'],env=env,start_new_session=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+  try:
+   deadline=time.monotonic()+5
+   while not log.exists() or 'psql' not in log.read_text():
+    if proc.poll() is not None or time.monotonic()>deadline:
+     self.fail('restore did not reach PostgreSQL import')
+    time.sleep(.02)
+   os.killpg(proc.pid,signal.SIGTERM)
+   proc.communicate(timeout=5)
+   self.assertNotEqual(proc.returncode,0)
+   commands=[line.split() for line in log.read_text().splitlines()]
+   created=[line[-1] for line in commands if 'createdb' in line]
+   dropped=[line[-1] for line in commands if 'dropdb' in line]
+   self.assertEqual(dropped,created)
+   self.assertEqual(list(runtime.iterdir()),[])
+  finally:
+   try: os.killpg(proc.pid,signal.SIGKILL)
+   except ProcessLookupError: pass
+   proc.communicate()
+
 
 
 class MediaTests(unittest.TestCase):
@@ -101,7 +134,7 @@ class MediaTests(unittest.TestCase):
    result=subprocess.run(command,env=dict(env,FAIL_DOWNLOAD='8'),capture_output=True)
    self.assertNotEqual(result.returncode,0)
 
-class DownloadTests(StreamingTests):
+class DownloadTests(StreamingFixture):
  def test_download_latest_and_confinement(self):
   payload=gzip.compress(b'restore evidence')
   result=subprocess.run([sys.executable,str(R),'--root',str(self.root)],input=wire(payload),capture_output=True,env=dict(os.environ,SSH_ORIGINAL_COMMAND='upload montra-db gzip'))
