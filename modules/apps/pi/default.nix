@@ -376,18 +376,15 @@ in
           };
           recall = {
             enabled = true;
-            budget = "mid";
-            maxTokens = 1200;
-            userMaxTokens = 1200;
-            types = [
-              "observation"
-              "world"
-              "experience"
-            ];
+            budget = "low";
+            maxTokens = 400;
+            userMaxTokens = 400;
+            types = [ "observation" ];
             includeSourceFacts = false;
             includeRepoHintsInQuery = true;
             preferObservations = true;
           };
+          mentalModels.inject = false;
           retain.enabled = false;
           userRetain.mode = "explicit-only";
           notifications = {
