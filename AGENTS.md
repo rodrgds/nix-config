@@ -51,6 +51,7 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 - **Role profiles first** - shared workstation defaults belong in `modules/profiles/default.nix`. Host files should mostly pick profiles, keep true host-specific apps explicit, and keep explicit `false` toggles for dormant modules the user may re-enable.
 - **Agent skills** - install upstream skills through the declarative mechanism in `modules/apps/agents/default.nix` rather than vendoring them. Project skills live in `modules/apps/agents/skills/` (symlinked to `~/.agents/skills/`).
 - **Rebuild commits** - the wizard owns commit semantics (default `<target>: generation <n>` or `<target>: rebuild <date>`, plus OpenRouter or manual messages). Document changes there.
+- **Blender MCP** - upgrade the server and bundled add-on together in `modules/apps/blender/default.nix`. After activation, enable `blender_mcp` in Blender and verify scene inspection and viewport capture before claiming a working connection.
 - **One-off tools** - the global file owns this rule. Repo-specific addition: when the nix-config repo itself needs a tool, use `devenv`.
 
 ## Pi configuration

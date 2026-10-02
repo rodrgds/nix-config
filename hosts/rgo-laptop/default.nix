@@ -64,6 +64,7 @@
 
   apps.mpv.enable = true;
   apps.blender.enable = true;
+  apps.blender.mcp.enable = true;
   apps.stremio.enable = true;
   apps.cake-wallet.enable = false;
 
