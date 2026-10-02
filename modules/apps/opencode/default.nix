@@ -97,8 +97,8 @@ in
               websearch = {
                 provider = "exa";
               };
-              # Hindsight memory plugin: session recall injection, auto-retain
-              # on idle, compaction hook, and hindsight_* tools. Points at the
+              # Hindsight explicit memory tools; automatic ingestion is disabled.
+              # The shared bank is managed centrally. Points at the
               # self-hosted server; bank and tags below live in
               # ~/.hindsight/coding-agent.json, token in HINDSIGHT_API_TOKEN.
               plugin = [ hindsightPluginPath ];
@@ -278,6 +278,26 @@ in
               apiUrl = "http://rgo-nas:8888";
               bankId = "rodrigo";
               retainTags = [ "project:{gitProject}" ];
+              manageBankConfig = false;
+              retainSessions = false;
+              autoSeed = false;
+              gitIngest = "none";
+              codebaseSurvey = false;
+              autoInject = "none";
+              pageTriggerType = "manual";
+              pages = {
+                "Component map" = false;
+                "Core concepts" = false;
+                "Conventions and patterns" = false;
+                "Key decisions and rationale" = false;
+                "Initiatives and enhancements" = false;
+              };
+              recallOptions = {
+                types = [ "observation" ];
+                budget = "low";
+                max_tokens = 600;
+              };
+              toolGuideExtra = "This is Rodrigo's shared personal and project memory, not this repository alone. Search only the current project's context. Save durable decisions explicitly; verify current code and task state in their canonical systems.";
               autoUpdate = false;
             };
           }
