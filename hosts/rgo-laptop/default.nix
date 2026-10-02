@@ -77,10 +77,33 @@
     pressureFreeGiB = 16;
     autoPressure.recoveryFreeGiB = 24;
     goBuildCache.extraDirectories = [
+      "/Users/rgo/Library/Caches/go-build"
       "/Users/rgo/dev/openpost/.devenv/state/go-build"
     ];
     bun.extraDirectories = [
       "/Users/rgo/dev/openpost/.devenv/state/bun-cache"
+    ];
+    userCache.boundedDirectories = [
+      {
+        name = "golangci-lint";
+        directory = "/Users/rgo/Library/Caches/golangci-lint";
+        processPattern = "(^|/)(golangci-lint|go)( |$)";
+      }
+      {
+        name = "uv";
+        directory = "/Users/rgo/.cache/uv";
+        processPattern = "(^|/)(uv|uvx)( |$)";
+      }
+      {
+        name = "pip";
+        directory = "/Users/rgo/Library/Caches/pip";
+        processPattern = "(^|/)(pip|pip3|python[^ ]*)( |$)";
+      }
+      {
+        name = "OpenPost Turbo";
+        directory = "/Users/rgo/.cache/openpost/turbo";
+        processPattern = "(^|/)(turbo|bun|node|npm|pnpm)( |$)";
+      }
     ];
   };
 }

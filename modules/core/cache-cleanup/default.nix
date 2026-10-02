@@ -11,7 +11,7 @@ let
   inherit (constants) isDarwin isLinux homeDir;
   logDir =
     if isDarwin then
-      "${homeDir}/Library/Logs/rgo-maintenance"
+      "${homeDir}/Library/Logs/rgo-cache-cleanup"
     else
       "${homeDir}/.local/state/rgo-maintenance";
   stateDir =
@@ -31,6 +31,12 @@ let
     text = ''
       export PATH="/opt/homebrew/bin:/usr/local/bin:${homeDir}/.local/bin:${homeDir}/.nix-profile/bin:/etc/profiles/per-user/${username}/bin:/run/current-system/sw/bin:$PATH"
       export LANG="en_US.UTF-8"
+
+      # User caches must never acquire root-owned logs or maintenance state.
+      if [ "$(id -u)" = 0 ]; then
+        printf 'Run rgo-cache-cleanup as ${username}, not root.\n' >&2
+        exit 1
+      fi
 
       force=0
       pressure=0
@@ -57,7 +63,6 @@ let
       transient_days=${toString cfg.transientRetentionDays}
       npx_days=${toString cfg.npxRetentionDays}
       derived_data_days=${toString cfg.xcodeDerivedDataRetentionDays}
-      user_cache_days=${toString cfg.userCacheRetentionDays}
       do_homebrew=${if cfg.homebrew.enable then "1" else "0"}
       do_beeper_uploads=${if cfg.beeperUploads.enable then "1" else "0"}
       do_bun=${if cfg.bun.enable then "1" else "0"}
@@ -171,22 +176,6 @@ let
         if [ -d "$dir" ]; then
           log "removing top-level entries in $dir older than $days days"
           run find "$dir" -xdev -mindepth 1 -maxdepth 1 -mtime +"$days" -exec rm -rf -- {} +
-        fi
-      }
-
-      prune_cache_files_by_age() {
-        dir=$1
-        days=$2
-        if [ -d "$dir" ]; then
-          log "removing files in $dir not accessed or modified for $days days"
-          # Never prune Nix's own cache directory. It holds bare git repos
-          # whose refs/ tree (often empty) libgit2 requires: deleting those
-          # directories makes the next fetch fail with "could not find
-          # repository". Nix garbage-collects this cache itself.
-          run find "$dir" -xdev -type f -atime +"$days" -mtime +"$days" \
-            -not -path "$nix_cache_dir" -not -path "$nix_cache_dir/*" -delete
-          run find "$dir" -xdev -depth -mindepth 1 -type d -empty \
-            -not -path "$nix_cache_dir" -not -path "$nix_cache_dir/*" -delete
         fi
       }
 
@@ -315,7 +304,15 @@ let
       fi
 
       if [ "$do_user_cache" = "1" ]; then
-        prune_cache_files_by_age "$user_home/.cache" "$user_cache_days"
+        # Keep tool caches behind their writer guards instead of sweeping all
+        # of .cache, which also contains model weights and active runtimes.
+        ${lib.concatMapStringsSep "\n" (cache: ''
+          if process_running ${lib.escapeShellArg cache.processPattern}; then
+            log ${lib.escapeShellArg "keeping ${cache.name} cache while its writer is active"}
+          else
+            clear_cache_dir ${lib.escapeShellArg cache.name} ${lib.escapeShellArg cache.directory} ${toString cache.maxSizeGiB}
+          fi
+        '') cfg.userCache.boundedDirectories}
         if [ "$pressure" = "1" ]; then
           pressure_cache_dirs=(
       ${lib.concatMapStringsSep "\n" (
@@ -344,7 +341,7 @@ let
         fi
       fi
 
-      if [ "$do_go_build_cache" = "1" ] && command -v go >/dev/null 2>&1; then
+      if [ "$do_go_build_cache" = "1" ]; then
         if process_running '(^|/)(go)( |$).*(build|clean|env|generate|install|run|test|tool)'; then
           log "keeping Go build caches while a Go command is active"
         else
@@ -448,12 +445,6 @@ in
       description = "Delete Xcode DerivedData entries older than this many days.";
     };
 
-    userCacheRetentionDays = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 30;
-      description = "Delete cache files that have not been accessed or modified for this many days.";
-    };
-
     goBuildRetentionDays = lib.mkOption {
       type = lib.types.ints.positive;
       default = 1;
@@ -529,7 +520,25 @@ in
     userCache.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Prune stale files and resulting empty directories in the user cache directory.";
+      description = "Prune explicitly listed reproducible caches with size, age and writer guards.";
+    };
+
+    userCache.boundedDirectories = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption { type = lib.types.str; };
+            directory = lib.mkOption { type = lib.types.str; };
+            processPattern = lib.mkOption { type = lib.types.str; };
+            maxSizeGiB = lib.mkOption {
+              type = lib.types.ints.positive;
+              default = 1;
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = "Named disposable caches checked during routine cleanup. Never list databases, browser profiles, installed runtimes or model weights.";
     };
 
     userCache.pressureDirectories = lib.mkOption {
@@ -600,6 +609,10 @@ in
             ProgramArguments = [ "${cleanupScript}/bin/rgo-cache-cleanup" ];
             RunAtLoad = true;
             StartInterval = 86400;
+            EnvironmentVariables.HOME = homeDir;
+            ProcessType = "Background";
+            LowPriorityIO = true;
+            Nice = 10;
             StandardOutPath = "/tmp/rgo-cache-cleanup.log";
             StandardErrorPath = "/tmp/rgo-cache-cleanup.err";
           };
