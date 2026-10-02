@@ -70,6 +70,7 @@
 
   darwin.core.networking.tailscale.enable = true;
   core.docker.enable = true;
+  core.docker.desktopMemoryMiB = 4096;
   core.downloads-cleanup.enable = true;
   core.cache-cleanup = {
     enable = true;
