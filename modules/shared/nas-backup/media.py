@@ -5,8 +5,10 @@ import subprocess
 import sys
 import tarfile
 
+# Credentials are supplied by the unit, never by an interactive rclone profile.
+os.environ['RCLONE_CONFIG'] = '/dev/null'
 source = 'openpost:' + os.environ['OPENPOST_BACKUP_S3_BUCKET']
-objects = json.loads(subprocess.check_output(['rclone', 'lsjson', '--recursive', '--files-only', source]))
+objects = json.loads(subprocess.check_output(['rclone', 'lsjson', '--recursive', '--files-only', '--fast-list', source]))
 with tarfile.open(fileobj=sys.stdout.buffer, mode='w|gz') as archive:
     for item in objects:
         name = item['Path']
@@ -26,7 +28,7 @@ with tarfile.open(fileobj=sys.stdout.buffer, mode='w|gz') as archive:
                 reader.kill()
             reader.wait()
 # Abort rather than publish an object set that changed while it was copied.
-after = json.loads(subprocess.check_output(['rclone', 'lsjson', '--recursive', '--files-only', source]))
+after = json.loads(subprocess.check_output(['rclone', 'lsjson', '--recursive', '--files-only', '--fast-list', source]))
 key = lambda rows: sorted((x['Path'], x['Size'], x['ModTime']) for x in rows)
 if key(objects) != key(after):
     raise RuntimeError('media object set changed during backup; retry later')
