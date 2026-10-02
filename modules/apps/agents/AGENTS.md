@@ -37,9 +37,11 @@
 
 ## Delegation
 
+- Use the existing checkout for exploration, simple tasks, and small bug fixes when unrelated changes can be preserved. Prefer a worktree for large features or work that needs isolation.
 - When delegation is allowed, use subagents for bounded, independent work that improves quality or shortens the critical path. Keep tightly coupled changes local. Give each agent its scope, evidence required, and completion criterion; inspect its results before integrating.
 - Use Worktrunk (`wt`) for all worktree operations. Do not use raw `git worktree` or another worktree manager.
 - Give each parallel editing agent its own branch and Worktrunk-managed worktree. Tell the agent its absolute worktree path and require all edits to stay there.
+- After completing a task, mark it done in Vikunja and remove any worktree created for it through Worktrunk. First preserve or integrate its work and check for active processes, unrelated changes, and needed ignored data. Report any unsafe cleanup blocker instead of forcing removal.
 
 ## Managed machines
 
