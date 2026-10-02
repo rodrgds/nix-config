@@ -1,0 +1,17 @@
+# Direct NAS backups
+
+`hosts/rgo-vps/default.nix` imports this VPS-only module. Enabled jobs retain their existing timers, dependencies and alerts; ExecStart streams to the NAS rather than writing local dumps/media mirrors. No old backup or retired app data is removed.
+
+Parent provisioning must install `receiver.py` with a trusted Python 3 interpreter, create `/volume1/homes/kraktoos/Backups/rgo-vps`, and authorize `/var/lib/nas-backup/id_ed25519.pub` in the NAS root-owned `/etc/ssh/authorized_keys/kraktoos`. Use an absolute forced command plus `restrict` (or explicit no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty,no-user-rc where restrict is unsupported). The receiver only accepts its eight allowlisted datasets with their fixed SQL-gzip or tar-gzip formats. Archive links and special files are rejected before publication. Do not put this key in the home authorized_keys file: Synology home ACLs reject it.
+
+The runtime oneshot preserves the existing private key and generates one only if absent. SSH pins the supplied NAS host key, uses rgo-nas, and falls back to 100.88.5.41 when name resolution fails. The producer runs with bash pipefail. Only successful producer exit permits a checksum/size commit; the receiver checks SHA256, gzip CRC and tar framing before atomic publication. Retention keeps seven successful snapshots per dataset. Failed uploads never prune successful snapshots. Montra status is atomically replaced only after a matching NAS success receipt.
+
+Snapshot directories contain `data.gz` and `manifest.json`. Database-only snapshots contain gzipped SQL. Media snapshots contain `media/` files. Vaultwarden/Directus contain `database/00000000.sql` and subsequent ordered SQL chunks plus `files/` application data (excluding live SQLite database/WAL files). Concatenate ordered database SQL chunks into sqlite3 on a clean restore database; restore app files separately. These are streaming logical SQLite snapshots, not raw SQLite database copies.
+
+This isolated candidate preserves scheduled OpenPost restore-drill and Directus backup-check with NAS-backed implementations in restore_check.py. Its receiver supports exact allowlisted download commands in addition to upload; provision this receiver revision, not the upload-only draft. Clients verify snapshot identity/hash/size before restoring SQLite in temporary runtime state or OpenPost SQL into a disposable PostgreSQL database. Existing historical backups are untouched.
+
+Production readiness blockers: independent candidate review and NAS receiver/access confirmation are required. Crucially, checkout baseline 45c3a09 does NOT match the active generation: the built candidate resurrects LiteLLM and removes OpenPost credential-reconcile dependency/failure alerts, plus package reversions. DO NOT ACTIVATE this generation. Reconstruct active source baseline and reapply only migration before switching.
+
+For a narrow patch on production baseline `45c3a09c4fa14430702b6a481af9c7525962b8c5`, the module creates Montra's status directory itself. That baseline has no Montra application status-file gate, no OpenPost failure-alert unit, and no OpenPost encrypted offsite option. Do not deploy current HEAD's unrelated service/flake changes to obtain those features. Existing backup unit names, producer credentials, and schedules match that baseline.
+
+Fixtures: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`. No SSH to a real NAS is needed.
