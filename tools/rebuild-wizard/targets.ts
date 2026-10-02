@@ -297,11 +297,12 @@ export function rebuildCommand(
     deployArgs.push("--remote-build");
   }
 
+  // Each host owns its GC policy. Forwarded thresholds also override the caller's
+  // temporary NIX_CONFIG settings during deploy-rs evaluation.
   deployArgs.push(
     `path:.#${target.remote.deployNode}`,
     "--",
     "--impure",
-    ...REBUILD_STORE_SPACE_ARGS,
     ...NIXOS_CACHE_ONLY_ARGS,
   );
 

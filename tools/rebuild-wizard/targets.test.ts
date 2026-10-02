@@ -72,12 +72,6 @@ describe("remote VPS rebuilds", () => {
       "--",
       "--impure",
       "--option",
-      "min-free",
-      String(8 * 1024 * 1024 * 1024),
-      "--option",
-      "max-free",
-      String(16 * 1024 * 1024 * 1024),
-      "--option",
       "substituters",
       "https://cache.nixos.org",
     ]);
