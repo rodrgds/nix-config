@@ -119,20 +119,54 @@ class StreamingTests(StreamingFixture):
 
 
 class MediaTests(unittest.TestCase):
- def test_media_stream_and_failed_download(self):
-  import io,tarfile
-  with tempfile.TemporaryDirectory() as directory:
-   root=Path(directory); binary=root/'rclone'
-   binary.write_text("#!/usr/bin/env python3\nimport json,os,sys\nif sys.argv[1]=='lsjson': print(json.dumps([{'Path':'folder/asset','Size':4,'ModTime':'2026-01-01'}]))\nelse:\n sys.stdout.buffer.write(b'data'); sys.exit(int(os.environ.get('FAIL_DOWNLOAD','0')))\n")
-   binary.chmod(0o700)
-   env=dict(os.environ,PATH=str(root)+os.pathsep+os.environ['PATH'],OPENPOST_BACKUP_S3_BUCKET='fixture')
-   command=[sys.executable,str(R.with_name('media.py'))]
-   result=subprocess.run(command,env=env,capture_output=True)
-   self.assertEqual(result.returncode,0,result.stderr)
-   with tarfile.open(fileobj=io.BytesIO(result.stdout),mode='r:gz') as archive:
-    self.assertEqual(archive.extractfile('media/folder/asset').read(),b'data')
-   result=subprocess.run(command,env=dict(env,FAIL_DOWNLOAD='8'),capture_output=True)
-   self.assertNotEqual(result.returncode,0)
+ def test_media_pagination_and_failed_sources(self):
+  import datetime,importlib.util,io,tarfile
+  from types import SimpleNamespace
+  from unittest.mock import patch
+  import boto3
+  from botocore.exceptions import ClientError
+  from botocore.response import StreamingBody
+  from botocore.stub import Stubber
+  spec=importlib.util.spec_from_file_location('media',R.with_name('media.py'))
+  media=importlib.util.module_from_spec(spec); spec.loader.exec_module(media)
+  env={'OPENPOST_BACKUP_S3_BUCKET':'fixture','RCLONE_CONFIG_OPENPOST_ENDPOINT':'https://s3.example.invalid',
+       'RCLONE_CONFIG_OPENPOST_REGION':'auto','RCLONE_CONFIG_OPENPOST_ACCESS_KEY_ID':'fixture',
+       'RCLONE_CONFIG_OPENPOST_SECRET_ACCESS_KEY':'fixture'}
+  modified=datetime.datetime(2026,1,1,tzinfo=datetime.timezone.utc)
+  asset={'Key':'folder/ação file','Size':4,'ETag':'"version-one"','LastModified':modified}
+  empty={'Key':'empty','Size':0,'ETag':'"empty"','LastModified':modified}
+  for mode in ('success','precondition','truncated','changed'):
+   with self.subTest(mode=mode):
+    client=boto3.client('s3',region_name='us-east-1',aws_access_key_id='fixture',aws_secret_access_key='fixture')
+    stub=Stubber(client)
+    def listing(first):
+     stub.add_response('list_objects_v2',{'Contents':[first],'IsTruncated':True,'NextContinuationToken':'next'}, {'Bucket':'fixture'})
+     stub.add_response('list_objects_v2',{'Contents':[empty],'IsTruncated':False}, {'Bucket':'fixture','ContinuationToken':'next'})
+    listing(asset)
+    request={'Bucket':'fixture','Key':asset['Key'],'IfMatch':asset['ETag']}
+    raw=io.BytesIO(b'dat' if mode=='truncated' else b'data')
+    if mode=='precondition':
+     stub.add_client_error('get_object',service_error_code='PreconditionFailed',http_status_code=412,expected_params=request)
+    else:
+     stub.add_response('get_object',{'Body':StreamingBody(raw,4),'ContentLength':4},request)
+     if mode!='truncated':
+      stub.add_response('get_object',{'Body':StreamingBody(io.BytesIO(b''),0),'ContentLength':0},
+                        {'Bucket':'fixture','Key':'empty','IfMatch':'"empty"'})
+      listing(dict(asset,ETag='"version-two"') if mode=='changed' else asset)
+    output=io.BytesIO()
+    with stub,patch.dict(os.environ,env),patch.object(media.boto3,'client',return_value=client),patch.object(sys,'stdout',SimpleNamespace(buffer=output)):
+     if mode=='success':
+      media.main()
+     else:
+      error={'precondition':ClientError,'truncated':OSError,'changed':RuntimeError}[mode]
+      with self.assertRaises(error): media.main()
+     stub.assert_no_pending_responses()
+    if mode!='precondition': self.assertTrue(raw.closed)
+    if mode=='success':
+     with tarfile.open(fileobj=io.BytesIO(output.getvalue()),mode='r:gz') as archive:
+      self.assertEqual(archive.getnames(),['media/folder/ação file','media/empty'])
+      self.assertEqual(archive.extractfile('media/folder/ação file').read(),b'data')
+      self.assertEqual(archive.extractfile('media/empty').read(),b'')
 
 class DownloadTests(StreamingFixture):
  def test_download_latest_and_confinement(self):

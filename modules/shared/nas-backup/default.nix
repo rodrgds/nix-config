@@ -6,6 +6,7 @@
   ...
 }:
 let
+  mediaPython = pkgs.python3.withPackages (ps: [ ps.boto3 ]);
   runtime = [
     pkgs.bash
     pkgs.openssh
@@ -13,7 +14,6 @@ let
     pkgs.podman
     pkgs.gzip
     pkgs.coreutils
-    pkgs.rclone
     pkgs.util-linux
     pkgs.sqlite
   ];
@@ -109,7 +109,7 @@ in
           "podman exec openpost-postgres pg_dump -U openpost -d openpost | gzip"
           "";
       openpost-media-backup =
-        job "openpost-media-backup" "openpost-media" "tar-gzip" "python3 ${./media.py}"
+        job "openpost-media-backup" "openpost-media" "tar-gzip" "${mediaPython}/bin/python3 ${./media.py}"
           "";
       openpost-restore-drill = restoreJob "openpost-restore-drill" "openpost-db";
     })
