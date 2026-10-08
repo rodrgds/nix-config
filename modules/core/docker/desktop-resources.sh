@@ -1,5 +1,5 @@
 if [ -f "$settings_file" ]; then
-  if pgrep -u "$(id -u)" -f '/Applications/Docker.app/Contents/MacOS/com.docker.backend' >/dev/null; then
+  if "${docker_process_probe:-pgrep}" -u "$(id -u)" -f '/Applications/Docker.app/Contents/MacOS/com.docker.backend' >/dev/null; then
     echo "Docker Desktop is running; stop it and rebuild to apply the $desktop_memory_mib MiB memory allowance."
   else
     settings_tmp=$(mktemp "$(dirname "$settings_file")/.settings-store.XXXXXX")

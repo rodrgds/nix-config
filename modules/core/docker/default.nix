@@ -32,17 +32,23 @@ in
 
       (lib.optionalAttrs isDarwin {
         homebrew.casks = [ "docker-desktop" ];
-        home-manager.users.${username} = lib.mkIf (cfg.desktopMemoryMiB != null) (
+        home-manager.users.${username} =
           { lib, ... }:
-          {
-            home.activation.dockerDesktopResources = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-              settings_file=${lib.escapeShellArg "${homeDir}/Library/Group Containers/group.com.docker/settings-store.json"}
-              desktop_memory_mib=${toString cfg.desktopMemoryMiB}
-              docker_settings_jq=${pkgs.jq}/bin/jq
-              ${builtins.readFile ./desktop-resources.sh}
-            '';
-          }
-        );
+          lib.mkMerge [
+            {
+              home.sessionPath = [ "${homeDir}/.docker/bin" ];
+            }
+
+            (lib.mkIf (cfg.desktopMemoryMiB != null) {
+              home.activation.dockerDesktopResources = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                settings_file=${lib.escapeShellArg "${homeDir}/Library/Group Containers/group.com.docker/settings-store.json"}
+                desktop_memory_mib=${toString cfg.desktopMemoryMiB}
+                docker_settings_jq=${pkgs.jq}/bin/jq
+                docker_process_probe=/usr/bin/pgrep
+                ${builtins.readFile ./desktop-resources.sh}
+              '';
+            })
+          ];
       })
     ]
   );
