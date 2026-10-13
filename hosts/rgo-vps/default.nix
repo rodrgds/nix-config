@@ -91,6 +91,8 @@ in
     bootstrapDigest = "sha256:6a7c8d63d24b7ac6d979e20eb5ef0b8ffca89c13ca47e097aa8522c1d1280c01";
     bootstrapRevision = "1246405c69f819221da6c912467efe20f20eb06d";
     extraEnvironment = {
+      # Caddy reaches the container through the verified Podman bridge gateway.
+      OPENPOST_TRUSTED_PROXY_CIDRS = "10.88.0.1/32";
       OPENPOST_FEEDBACK_ENABLED = "true";
       OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";
       OPENPOST_DIAGNOSTICS_INGEST_ENABLED = "true";
