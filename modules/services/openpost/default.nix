@@ -568,6 +568,7 @@ in
           ]
           ++ openpostApplicationUnits;
         };
+        # Each binary owns its policy versions, including rollback images.
         "openpost-cloud-env" = {
           content = ''
             OPENPOST_DATABASE_URL=postgres://${openpostPostgresUser}:${config.sops.placeholder.openpost_postgres_password}@openpost-postgres:5432/${openpostPostgresDatabase}?sslmode=disable
@@ -580,8 +581,6 @@ in
             OPENPOST_LEGAL_ACCEPTANCE_REQUIRED=true
             OPENPOST_TERMS_URL=https://openpo.st/terms
             OPENPOST_PRIVACY_URL=https://openpo.st/privacy
-            OPENPOST_TERMS_VERSION=2026-08-05
-            OPENPOST_PRIVACY_VERSION=2026-09-01
             OPENPOST_TELEMETRY_ENABLED=true
             OPENPOST_POSTHOG_API_HOST=https://eu.i.posthog.com
             OPENPOST_POSTHOG_BROWSER_HOST=https://cool.openpo.st
