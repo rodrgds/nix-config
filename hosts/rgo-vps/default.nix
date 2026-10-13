@@ -88,11 +88,13 @@ in
     pullPolicy = "never";
     # Seed a clean image store from the exact release currently proven live.
     # Signed webhook releases replace the local latest tag after this bootstrap.
-    bootstrapDigest = "sha256:6a7c8d63d24b7ac6d979e20eb5ef0b8ffca89c13ca47e097aa8522c1d1280c01";
-    bootstrapRevision = "1246405c69f819221da6c912467efe20f20eb06d";
+    bootstrapDigest = "sha256:494375155131c0ddeb2b39b5bb5d678b0e65c7fbdb71512996e57e9b46b45eaa";
+    bootstrapRevision = "b1ac08bb6cb611eee1aca41216487e0161484e61";
     extraEnvironment = {
       # Caddy reaches the container through the verified Podman bridge gateway.
       OPENPOST_TRUSTED_PROXY_CIDRS = "10.88.0.1/32";
+      # Applied only after both web and worker run the review-aware release.
+      OPENPOST_CLIENT_REVIEWS_ENABLED = "true";
       OPENPOST_FEEDBACK_ENABLED = "true";
       OPENPOST_FEEDBACK_RECIPIENT = "OpenPost team";
       OPENPOST_DIAGNOSTICS_INGEST_ENABLED = "true";
