@@ -11,14 +11,10 @@ let
   inherit (constants) isDarwin isLinux;
   toolchain = config.apps.javascript-toolchain;
   nineRouterCatalog = import ../../shared/9router.nix;
-  # Global agent skills. Single source of truth, shared with Pi via
-  # ~/.agents/skills. Referenced by absolute path (not a Nix path) so the
-  # config points at the mutable repo, not a /nix/store snapshot.
-  skillsDir = "${constants.homeDir}/.config/home/modules/apps/agents/skills";
-  # Local plugin path for the Hindsight memory runtime (declared in the
-  # toolchain below). Upstream
-  # manual wiring is `{ "plugin": ["/path/to/hindsight-coding-agents"] }`;
-  # one entry serves both CLIs and V2 normalizes `plugin` to `plugins`.
+  # The skills CLI owns upstream installs; local skills are linked here by Nix.
+  skillsDir = "${constants.homeDir}/.agents/skills";
+  # One local package entry resolves the Hindsight OpenCode V2 integration.
+  # The shared toolchain below owns its installation.
   hindsightPluginPath = "${toolchain.npm.installRoot}/lib/node_modules/@vectorize-io/hindsight-coding-agents";
   opencodeSkills = lib.mapAttrs' (
     name: _:
@@ -90,7 +86,7 @@ in
 
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
-              autoupdate = true;
+              update = "auto";
               model = "nine_router/good";
               # Native websearch (V2): Exa key comes from EXA_API_KEY,
               # exported from the sops secret in shell init below.
@@ -101,14 +97,14 @@ in
               # The shared bank is managed centrally. Points at the
               # self-hosted server; bank and tags below live in
               # ~/.hindsight/coding-agent.json, token in HINDSIGHT_API_TOKEN.
-              plugin = [ hindsightPluginPath ];
+              plugins = [ hindsightPluginPath ];
               # Global agent skills, same set Pi uses.
               skills = [ skillsDir ];
-              provider = {
+              providers = {
                 nine_router = {
-                  npm = "@ai-sdk/openai-compatible";
+                  package = "@opencode/ai/providers/openai-compatible";
                   name = "My 9Router (NAS)";
-                  options = {
+                  settings = {
                     baseURL = cfg.nineRouter.baseURL;
                     apiKey = "{env:NINE_ROUTER_API_KEY}";
                   };
@@ -122,45 +118,25 @@ in
                   );
                 };
                 opencode = {
-                  npm = "@ai-sdk/openai-compatible";
+                  package = "@opencode/ai/providers/openai-compatible";
                   name = "Opencode Zen";
-                  options = {
+                  settings = {
                     baseURL = "https://opencode.ai/zen/v1";
                     apiKey = "{env:OPENCODE_GO_API_KEY}";
                   };
-                  models = {
-                    "x-preview-f-free" = {
-                      name = "Ox Alpha Free (0x)";
-                    };
-                    "muse-spark-1.2-contributor-free" = {
-                      name = "Muse Spark 1.2 Free";
-                    };
-                    "muse-spark-1.3-contributor-free" = {
-                      name = "Muse Spark 1.3 Free";
-                    };
-                  };
+                  # Use the live built-in catalog, not retired preview IDs.
                 };
                 opencode-go = {
-                  npm = "@ai-sdk/openai-compatible";
+                  package = "@opencode/ai/providers/openai-compatible";
                   name = "Opencode Go";
-                  options = {
+                  settings = {
                     baseURL = "https://opencode.ai/zen/go/v1";
                     apiKey = "{env:OPENCODE_GO_API_KEY}";
                   };
-                  models = {
-                    "muse-spark-1.2-contributor" = {
-                      name = "Muse Spark 1.2 Contributor";
-                    };
-                    "muse-spark-1.3-contributor" = {
-                      name = "Muse Spark 1.3 Contributor";
-                    };
-                  };
                 };
               };
-              # Native V2 shape. The V1 provider/model fields above are
-              # still accepted and normalized in memory. MCP detail:
-              # executor aggregates the integrations (exa, context7, github,
-              # hindsight tools, vikunja, ...). Uses OAuth: run
+              # Executor aggregates the integrations (exa, context7, github,
+              # and hindsight tools). Uses OAuth: run
               # `opencode mcp auth executor` once per machine. Memory itself
               # is the Hindsight plugin above, not an MCP server.
               mcp = {
@@ -181,44 +157,25 @@ in
               hindsight_api_token.sopsFile = ../../../secrets/hindsight-secrets.yaml;
             };
 
-            programs.opencode = {
-              enable = true;
-              # Note: HM also installs nixpkgs opencode (still V1), but the
-              # managed npm prefix comes first on PATH so `opencode` is V2.
-              # package=null is not an option: the pinned HM module calls
-              # versionAtLeast on null and fails evaluation.
-              commands = {
-                release = ''
-                  # Release Command
+            # Do not enable HM's V1-oriented module: it installs a second CLI
+            # that rejects the V2 config when selected by PATH or a shell hash.
+            # Keep the profile entry point, but route it to the shared npm owner.
+            home.packages = [
+              (pkgs.writeShellScriptBin "opencode" ''
+                exec ${lib.escapeShellArg "${toolchain.npm.binDir}/opencode"} "$@"
+              '')
+            ];
 
-                  Create a new release with conventional commits, tag, and GitHub release.
-
-                  ## Steps
-
-                  1. Run `git status` and `git diff --stat` to see all uncommitted changes
-                  2. Run `git log --oneline -10` to see recent commit history
-                  3. Run `git tag -l --sort=-v:refname | head -3` to find the latest tag
-                  4. If there are uncommitted changes, group them logically and commit using conventional commits:
-                     - Review diffs with `git diff <files>`
-                     - Stage related files: `git add <files>`
-                     - Commit: `git commit -m "type(scope): description\n\nBody"`
-                     - Types: feat, fix, chore, docs, refactor, test, ci
-                  5. Run `git push` to push all commits
-                  6. Determine next version: increment patch from last tag (or minor/major if warranted)
-                  7. Create annotated tag: `git tag -a v<version> -m "Release v<version>\n\n## Changes\n- ..."`
-                  8. Push tag: `git push origin v<version>`
-                  9. Create GitHub release: `gh release create v<version> --title "v<version>" --notes "..."`
-
-                  ## Rules
-
-                  - Group related changes into single commits
-                  - Always push commits before tagging
-                  - If no uncommitted changes, ask user what version to release
-                  - Use `--generate-notes` flag for auto-generated release notes from commits OR, if you prefer, write custom release notes in the tag message body with all relevant changes listed since the last release.
-                  - Never use @ in release notes (GitHub interprets as user mentions)
-                '';
-              };
-            };
+            # V2 owns this mutable client file. Seed our theme only on first
+            # use; later rebuilds must preserve preferences changed in the UI.
+            home.activation.seedOpenCodeCliConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              cli_config=${lib.escapeShellArg "${config.xdg.configHome}/opencode/cli.json"}
+              if [ ! -e "$cli_config" ]; then
+                ${pkgs.coreutils}/bin/install -Dm600 ${
+                  pkgs.writeText "opencode-cli-defaults.json" (builtins.toJSON { theme.name = "flexoki"; })
+                } "$cli_config"
+              fi
+            '';
 
             programs.bash.initExtra = lib.mkAfter ''
               if [ -z "''${NINE_ROUTER_API_KEY:-}" ] && [ -r "${nineRouterApiKeyPath}" ]; then
@@ -261,9 +218,35 @@ in
                 "opencode/opencode.json".text = builtins.toJSON opencodeConfig;
               }
               // {
-                "opencode/tui.json".text = builtins.toJSON {
-                  theme = "flexoki";
-                };
+                "opencode/commands/release.md".text = ''
+                  # Release Command
+
+                  Create a new release with conventional commits, tag, and GitHub release.
+
+                  ## Steps
+
+                  1. Run `git status` and `git diff --stat` to see all uncommitted changes
+                  2. Run `git log --oneline -10` to see recent commit history
+                  3. Run `git tag -l --sort=-v:refname | head -3` to find the latest tag
+                  4. If there are uncommitted changes, group them logically and commit using conventional commits:
+                     - Review diffs with `git diff <files>`
+                     - Stage related files: `git add <files>`
+                     - Commit: `git commit -m "type(scope): description\n\nBody"`
+                     - Types: feat, fix, chore, docs, refactor, test, ci
+                  5. Run `git push` to push all commits
+                  6. Determine next version: increment patch from last tag (or minor/major if warranted)
+                  7. Create annotated tag: `git tag -a v<version> -m "Release v<version>\n\n## Changes\n- ..."`
+                  8. Push tag: `git push origin v<version>`
+                  9. Create GitHub release: `gh release create v<version> --title "v<version>" --notes "..."`
+
+                  ## Rules
+
+                  - Group related changes into single commits
+                  - Always push commits before tagging
+                  - If no uncommitted changes, ask user what version to release
+                  - Use `--generate-notes` flag for auto-generated release notes from commits OR, if you prefer, write custom release notes in the tag message body with all relevant changes listed since the last release.
+                  - Never use @ in release notes (GitHub interprets as user mentions)
+                '';
               };
 
             # Hindsight plugin config (single JSON file per upstream).
