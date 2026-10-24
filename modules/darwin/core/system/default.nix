@@ -7,6 +7,7 @@
 }:
 let
   cfg = config.darwin.core.system;
+  loginShell = lib.getExe pkgs.bashInteractive;
   laptopHealth = pkgs.writeShellScriptBin "rgo-laptop-health" (
     ''
       health_sketchybar=${lib.boolToString config.darwin.apps.sketchybar.enable}
@@ -120,15 +121,15 @@ in
     # Primary user for nix-darwin
     system.primaryUser = username;
 
-    # User configuration - set Bash as the default shell
+    # Login can start before /run/current-system exists after a reboot.
+    # Use a store path so the shell is available as soon as the Nix volume mounts.
     users.users.${username} = {
       name = username;
       home = "/Users/${username}";
-      shell = pkgs.bash;
+      shell = loginShell;
     };
 
-    # Ensure Bash is in /etc/shells and set as login shell
-    environment.shells = [ pkgs.bash ];
+    environment.shells = [ loginShell ];
     environment.systemPackages = [ laptopHealth ];
 
     # Home-manager state version
