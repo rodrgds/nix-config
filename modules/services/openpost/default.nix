@@ -157,6 +157,12 @@ let
       target = "/run/secrets/openpost_openrouter_api_key";
       value = config.sops.placeholder.openpost_openrouter_api_key;
     }
+    {
+      name = "fal-api-key";
+      env = "FAL_KEY_FILE";
+      target = "/run/secrets/openpost_fal_api_key";
+      value = config.sops.placeholder.openpost_fal_api_key;
+    }
   ];
 
   openpostFileSecretEnvironment = lib.listToAttrs (
@@ -406,6 +412,7 @@ in
         "openpost_threads_client_id"
         "openpost_threads_client_secret"
         "openpost_openrouter_api_key"
+        "openpost_fal_api_key"
       ]
       ++ lib.optionals isCloud [
         "openpost_postgres_password"
@@ -580,8 +587,6 @@ in
             OPENPOST_LEGAL_ACCEPTANCE_REQUIRED=true
             OPENPOST_TERMS_URL=https://openpo.st/terms
             OPENPOST_PRIVACY_URL=https://openpo.st/privacy
-            OPENPOST_TERMS_VERSION=2026-08-05
-            OPENPOST_PRIVACY_VERSION=2026-09-01
             OPENPOST_TELEMETRY_ENABLED=true
             OPENPOST_POSTHOG_API_HOST=https://eu.i.posthog.com
             OPENPOST_POSTHOG_BROWSER_HOST=https://cool.openpo.st
