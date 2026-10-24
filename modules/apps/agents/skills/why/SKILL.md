@@ -11,7 +11,7 @@ Companion to the `how` skill. `how` answers what the code does and how it works.
 
 ## How this skill works
 
-Historical context spreads across evidence categories: Hindsight, Vikunja, source control history, public issue tracking, long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics. You cannot predict from the question alone which one holds the answer, so the skill queries all available categories in parallel, then synthesizes with explicit confidence calibration. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings. The default is coverage, not minimalism.
+Historical context can live in Hindsight, GitHub Issues and pull requests, source control history, documents, team chat, observability, and product analytics. Start with the sources closest to the decision, then expand when the evidence leaves a material gap. Distinguish documented reasons from inference and report relevant searches that found no evidence.
 
 ## Operating Posture
 
@@ -91,27 +91,27 @@ gh pr view <number> --json title,body,author,createdAt,mergedAt,labels,closingIs
 
 Capture this as seed context (file paths, symbols, commits, PR numbers, linked ticket IDs). Pass it to the investigators so they don't rediscover it.
 
-## Step 3. Spawn Parallel Investigators (default posture)
+## Step 3. Search Relevant Sources
 
-**Default to the full parallel investigation.** Each evidence category lives in a different kind of system, and you cannot tell from the question alone which one holds the answer without looking. So look across every available category, in parallel, by default.
+Start with git history and linked GitHub Issues and pull requests. Expand to other sources when a reference or unanswered question gives you a reason to search them. Delegate independent investigations when that helps; a focused question can be answered directly.
 
 ### Evidence categories
 
 Source control is always available through git and `gh`. For the other categories, use whatever tools, MCPs, or integrations are available in your environment. Map what you have access to:
 
 1. **Hindsight durable context** - project decisions, constraints, domain language and source-linked history
-2. **Vikunja internal work** - accepted specs, tasks, comments and execution history
+2. **GitHub Issues** - accepted specs, tasks, comments and execution history
 3. **Source control history** - always available via git and `gh`
-4. **Public issue / contributor tracking** - GitHub Issues and PR discussion
+4. **Pull requests** - review discussion and implementation decisions
 5. **Long-form documents** - ADRs, design docs, specs, READMEs and wikis
 6. **Real-time team chat** - Slack, Discord, etc. if accessible
 7. **Infrastructure observability** - Datadog, Grafana, etc. if accessible
 8. **Error / exception tracking** - Sentry, Bugsnag, etc. if accessible
 9. **Product analytics** - warehouses, dashboards, etc. if accessible
 
-Aim for a complete **coverage map**, not a minimal one. A null result from an issue tracker is evidence the decision was not ticketed, a useful fact in itself. Document the null, don't skip the search.
+Record relevant searches that found nothing. A null result does not establish that no decision record exists.
 
-Launch all matching investigators in a single message so they run concurrently. One investigator per category lets each specialize in one tool's query vocabulary and result shape. Don't ask one agent to cover multiple categories.
+When delegating, give each investigator a bounded question and the relevant source access.
 
 Each investigator gets:
 
@@ -123,9 +123,9 @@ Each investigator gets:
 
 ### Investigator roster
 
-Spawn one investigator per available category. Each owns exactly one source.
+Choose investigators for the sources the question needs.
 
-1. **Source control investigator**. Git history, `gh` for PRs, code comments, tests. Always spawn; the only guaranteed source. Best at surfacing _implementation-time rationale captured during review_. PR descriptions stating the problem, review threads debating alternatives, inline comments encoding non-obvious constraints, test names that encode motivating edge cases, and commit messages linking tickets or incidents.
+1. **Source control investigator**. Git history, `gh` for PRs, code comments, tests. Best at surfacing _implementation-time rationale captured during review_. PR descriptions stating the problem, review threads debating alternatives, inline comments encoding non-obvious constraints, test names that encode motivating edge cases, and commit messages linking tickets or incidents.
 
 2. **Issue / ticket tracker investigator**. Tickets, project docs, status updates. Best at surfacing _the product or business forcing function_. Customer requests, compliance deadlines, parent-initiative framing, ticket-level scope changes.
 
@@ -141,12 +141,7 @@ Spawn one investigator per available category. Each owns exactly one source.
 
 ### When to skip an investigator
 
-Only skip with an **explicit, written justification** that goes in the final "Sources Consulted" section. Two valid reasons:
-
-- **No tool is available for that category** in this environment. Flag this as a gap, not a choice.
-- **The source is provably irrelevant**, not just "probably irrelevant." A high bar. Example: "Error / exception tracking skipped. Target is a build-time script with no runtime code path."
-
-Run the search; let the null result speak. The cost of an investigator returning empty is one agent. The cost of missing a design doc that actually exists is a wrong answer.
+Skip sources without a plausible connection to the question. Report inaccessible sources when their absence limits the conclusion.
 
 ## Step 4. Synthesize
 

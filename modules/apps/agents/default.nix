@@ -10,30 +10,47 @@ let
   cfg = config.apps.agents;
   toolchain = config.apps.javascript-toolchain;
 
-  # Declarative global skill sources. `skills add` is idempotent, so the
-  # postUpdate hook re-runs it before `skills update`: this recreates
-  # ~/.agents/.skill-lock.json entries (untracked, outside this repo) on
-  # fresh machines and keeps every source updatable via the daily
-  # update-javascript-toolchain timer. To add a skill: append its source
-  # spec here, run the same `skills add -g -y ...` command manually,
-  # verify `skills list -g`, then commit the new files under ./skills.
-  # To update any time: `skills update --global --yes`, then commit.
-  globalSkillSources = [
-    "jakubkrehel/skills --all"
-    "humanlayer/skills -s show-me"
+  globalSkillSources = import ./_skill-sources.nix;
+  skillAgents = [
+    "codex"
+    "claude-code"
+    "opencode"
+    "pi"
   ];
+
+  # The installer owns upstream content and its lockfile outside the checkout.
   ensureSkillsSnippet = lib.concatMapStringsSep "\n" (spec: ''
-    ${lib.escapeShellArg toolchain.npm.binDir}/skills add -g -y ${spec}
+    ${lib.escapeShellArg toolchain.npm.binDir}/skills add ${lib.escapeShellArg spec.source} \
+      --global --yes --full-depth \
+      --agent ${lib.escapeShellArgs skillAgents} --skill ${lib.escapeShellArgs spec.skills}
   '') globalSkillSources;
 
-  # All skills live in this repo directory. It is the single source of truth.
-  # Edit skills here; the rebuild creates a symlink at ~/.agents/skills/.
-  # The skills CLI writes through the symlink, so `skills add` and `skills update`
-  # install directly into the repo. Commit after updating.
-  # Use an absolute string path (not a Nix path like ./skills) so the
-  # symlink points at the mutable repo, not a read-only /nix/store
-  # snapshot that gets GC'd and breaks.
+  # Local skills stay editable in the repo, with one link per skill.
   skillsDir = "${constants.homeDir}/.config/home/modules/apps/agents/skills";
+  localSkills = builtins.attrNames (
+    lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
+  );
+  linkSkillsSnippet = ''
+    agent_skill_source=${lib.escapeShellArg skillsDir}
+    agent_skill_target="$HOME/.agents/skills"
+    if [ -L "$agent_skill_target" ]; then
+      if [ "$(readlink "$agent_skill_target")" != "$agent_skill_source" ]; then
+        echo "agents: unexpected skills directory symlink: $agent_skill_target" >&2
+        exit 1
+      fi
+      rm "$agent_skill_target"
+    fi
+    for agent_skill_dir in "$agent_skill_target" "$HOME/.claude/skills" "$HOME/.pi/agent/skills"; do
+      mkdir -p "$agent_skill_dir"
+      for skill_name in ${lib.escapeShellArgs localSkills}; do
+        if [ -e "$agent_skill_dir/$skill_name" ] && [ ! -L "$agent_skill_dir/$skill_name" ]; then
+          echo "agents: local skill would overwrite an installed directory: $agent_skill_dir/$skill_name" >&2
+          exit 1
+        fi
+        ln -sfn "$agent_skill_source/$skill_name" "$agent_skill_dir/$skill_name"
+      done
+    done
+  '';
 in
 {
   imports = [
@@ -63,6 +80,7 @@ in
         postUpdate = [
           ''
             if [ -x ${lib.escapeShellArg toolchain.npm.binDir}/skills ]; then
+              ${linkSkillsSnippet}
               ${ensureSkillsSnippet}
               ${lib.escapeShellArg toolchain.npm.binDir}/skills update --global --yes
             fi
@@ -84,18 +102,27 @@ in
           home.file.".claude/AGENTS.md".source = ./AGENTS.md;
           xdg.configFile."opencode/AGENTS.md".source = ./AGENTS.md;
 
-          # Symlink ~/.agents/skills → repo skills directory (mutable, not /nix/store).
-          # Single source of truth. Skills CLI writes through the symlink.
-          home.activation.linkSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-            source=${lib.escapeShellArg skillsDir}
-            target="$HOME/.agents/skills"
-            if [ -d "$target" ] && [ ! -L "$target" ]; then
-              chmod -R u+w "$target" 2>/dev/null || true
-              rm -rf "$target"
-            fi
-            mkdir -p "$(dirname "$target")"
-            ln -sfn "$source" "$target"
-          '';
+          home.activation.linkSkills =
+            lib.hm.dag.entryAfter
+              [
+                "writeBoundary"
+                "bootstrapJavascriptToolchain"
+              ]
+              ''
+                ${linkSkillsSnippet}
+                if [ -x ${lib.escapeShellArg toolchain.npm.binDir}/skills ]; then
+                  (
+                    # Activation does not inherit the interactive shell's PATH.
+                    export PATH="${
+                      lib.makeBinPath [
+                        toolchain.node.package
+                        pkgs.git
+                      ]
+                    }:$PATH"
+                    ${ensureSkillsSnippet}
+                  )
+                fi
+              '';
         }
       ];
   };
