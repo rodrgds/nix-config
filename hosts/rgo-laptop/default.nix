@@ -27,7 +27,6 @@
   apps.virtualization.enable = false;
 
   # Dormant tools kept for intentional, temporary opt-in.
-  apps.claude.enable = false;
   apps.fish.enable = false;
   apps.nushell.enable = false;
   apps.ollama.enable = false;

@@ -575,6 +575,7 @@ in
           ]
           ++ openpostApplicationUnits;
         };
+        # Each binary owns its policy versions, including rollback images.
         "openpost-cloud-env" = {
           content = ''
             OPENPOST_DATABASE_URL=postgres://${openpostPostgresUser}:${config.sops.placeholder.openpost_postgres_password}@openpost-postgres:5432/${openpostPostgresDatabase}?sslmode=disable

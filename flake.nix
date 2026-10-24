@@ -284,6 +284,21 @@
       };
 
       checks.x86_64-linux = deploy-rs.lib.x86_64-linux.deployChecks self.deploy // {
+        claude-configuration =
+          nixpkgs.legacyPackages.x86_64-linux.runCommand "check-claude-configuration"
+            {
+              nativeBuildInputs = with nixpkgs.legacyPackages.x86_64-linux; [
+                bash
+                coreutils
+                diffutils
+                jq
+                python3
+              ];
+            }
+            ''
+              python3 ${./modules/apps/claude}/test_configure.py
+              touch "$out"
+            '';
         montra-deploy-payloads =
           nixpkgs.legacyPackages.x86_64-linux.runCommand "check-montra-deploy-payloads"
             {
