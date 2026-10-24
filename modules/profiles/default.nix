@@ -87,6 +87,7 @@ in
       apps.agents.enable = lib.mkDefault true;
       apps.pi.enable = lib.mkDefault true;
       apps.gnhf.enable = lib.mkDefault true;
+      apps.deepseek-harness.enable = lib.mkDefault true;
       apps.codex.enable = lib.mkDefault true;
       apps.claude.enable = lib.mkDefault true;
       apps.muse.enable = lib.mkDefault true;

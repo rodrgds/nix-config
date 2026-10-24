@@ -79,6 +79,7 @@ in
           # Deployed to every harness so instructions stay consistent
           # regardless of which CLI is driving the session.
           home.file.".pi/agent/AGENTS.md".source = ./AGENTS.md;
+          home.file.".dsh/AGENTS.md".source = ./AGENTS.md;
           home.file.".codex/AGENTS.md".source = ./AGENTS.md;
           home.file.".claude/CLAUDE.md".source = ./AGENTS.md;
           home.file.".claude/AGENTS.md".source = ./AGENTS.md;
