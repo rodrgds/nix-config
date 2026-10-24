@@ -1,54 +1,75 @@
 ---
 name: to-spec
-description: Turn the current conversation into an implementation-ready spec in Vikunja and retain durable decisions in Hindsight.
+description: "Turn the current conversation into a spec and publish it to the project issue tracker: no interview, just synthesis of what you've already discussed."
 disable-model-invocation: true
 ---
 
-# To spec
+This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
-Synthesize what is already known. Resolve routine implementation details from current code. Ask only about missing decisions that change the outcome, scope, or compatibility.
+The issue tracker and triage label vocabulary should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
 
 ## Process
 
-1. Inspect the repo and recall Hindsight for the project, feature and relevant decisions.
-2. Verify recalled claims against current code. Respect deterministic contracts in `AGENTS.md` and public docs.
-3. Identify the highest useful testing seam and confirm it with the user only when the choice is genuinely ambiguous.
-4. Write the spec using the template below.
-5. Create or update one task in the matching Vikunja project. Apply `ready-for-agent` when the spec is complete. Read the task back and verify its description and links.
-6. Retain only the durable implementation/testing decisions in Hindsight with `project:<slug>`, `source:<agent>` and `kind:decision`. Do not retain task status or copy the full spec as undifferentiated memory.
+1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary throughout the spec, and respect any ADRs in the area you're touching.
 
-Never create an internal GitHub Issue or repo-local spec/context file. A public GitHub report may be linked as evidence; it remains the public conversation while Vikunja owns internal execution.
+2. Sketch out the seams at which you're going to test the feature. Existing seams should be preferred to new ones. Use the highest seam possible. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better - the ideal number is one.
 
-## Vikunja description
+Check with the user that these seams match their expectations.
 
-```markdown
-## Problem
+3. Write the spec using the template below, then publish it to the project issue tracker. Apply the `ready-for-agent` triage label - no need for additional triage.
 
-<user-visible problem>
+<spec-template>
+
+## Problem Statement
+
+The problem that the user is facing, from the user's perspective.
 
 ## Solution
 
-<user-visible result>
+The solution to the problem, from the user's perspective.
 
-## User stories
+## User Stories
 
-1. As <actor>, I want <capability>, so that <benefit>.
+A LONG, numbered list of user stories. Each user story should be in the format of:
 
-## Implementation decisions
+1. As an <actor>, I want a <feature>, so that <benefit>
 
-- <decision and why>
+<user-story-example>
+1. As a mobile bank customer, I want to see balance on my accounts, so that I can make better informed decisions about my spending
+</user-story-example>
 
-## Testing decisions
+This list of user stories should be extremely extensive and cover all aspects of the feature.
 
-- <external behavior and seam>
+## Implementation Decisions
 
-## Out of scope
+A list of implementation decisions that were made. This can include:
 
-- <explicit boundary>
+- The modules that will be built/modified
+- The interfaces of those modules that will be modified
+- Technical clarifications from the developer
+- Architectural decisions
+- Schema changes
+- API contracts
+- Specific interactions
 
-## Useful links
+Do NOT include specific file paths or code snippets. They may end up being outdated very quickly.
 
-- <public issue, PR, design, source or evidence URL>
-```
+Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it within the relevant decision and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits.
 
-Descriptions must be actionable. Include source paths, migration constraints, and verification commands when they are needed to implement safely. Keep raw logs, secrets, and unrelated audit notes out.
+## Testing Decisions
+
+A list of testing decisions that were made. Include:
+
+- A description of what makes a good test (only test external behavior, not implementation details)
+- Which modules will be tested
+- Prior art for the tests (i.e. similar types of tests in the codebase)
+
+## Out of Scope
+
+A description of the things that are out of scope for this spec.
+
+## Further Notes
+
+Any further notes about the feature.
+
+</spec-template>

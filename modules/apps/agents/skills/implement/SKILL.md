@@ -4,12 +4,14 @@ description: "Implement a piece of work based on a spec or set of tickets."
 disable-model-invocation: true
 ---
 
-Implement the authorized spec or tickets through the owning code and public interfaces. Resolve routine details from current code; ask only about decisions that change the requested outcome or compatibility.
+Implement the work described by the user in the spec or tickets.
 
-Use `tdd` for changed behavior that needs regression coverage. Select the test boundary from the acceptance criteria and existing tests.
+If the user passes a ticket reference, fetch it from the issue tracker and state its title before starting. If the reference is ambiguous, ask.
 
-Run focused checks during implementation and the repository's required gates for the changed surfaces before delivery. Broaden or repeat them only when edits, failures, or unresolved risks justify it.
+Call the Skill tool with "tdd" where possible, at pre-agreed seams.
 
-Review the final diff against the request and repository standards. Use `code-review` for substantial changes or when explicitly requested; a small change can be reviewed locally.
+Run typechecking regularly, single test files regularly, and the full test suite once at the end.
 
-Follow the repository's branch and commit policy. Report the result, verification, and any remaining blocker. Push or deploy only with the required authorization.
+Once done, call the Skill tool with "code-review" to review the work.
+
+Commit your work to the current branch.

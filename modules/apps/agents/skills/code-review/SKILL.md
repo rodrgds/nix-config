@@ -1,42 +1,39 @@
 ---
 name: code-review
-description: "Review committed or uncommitted changes against repository standards and the requested behavior."
+description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
 ---
 
-Two-axis review of the requested committed or working-tree changes:
+Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
 - **Standards**: does the code conform to this repo's documented coding standards?
 - **Spec**: does the code faithfully implement the originating issue / spec?
 
 Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
 
-Vikunja is the source for internal specs and tasks; public GitHub Issues/PRs are evidence when the change originated from public intake. Recall Hindsight for durable project decisions before reviewing against intent.
+The issue tracker should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
 
 ## Process
 
 ### 1. Pin the fixed point
 
-Honor an explicit base ref. Otherwise infer the boundary from the request: use `git diff HEAD` for all tracked uncommitted changes, `git diff --cached` for staged changes, or the verified target branch's merge-base for branch work. Inspect relevant untracked files separately. Ask only when multiple plausible boundaries would review different work.
+Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one, ask for it.
 
-Resolve refs with `git rev-parse --verify` and record their SHAs. For committed changes, use `git diff <base-sha>...<head-sha>` and `git log <base-sha>..<head-sha> --oneline`. For working-tree changes, capture the patch and file list once so both reviewers see the same candidate. Include untracked content when it belongs to the request.
+Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
 
-An invalid ref is a blocker; an empty diff means there is nothing to review. Report either before delegation.
+Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
 
 ### 2. Identify the spec source
 
 Look for the originating spec, in this order:
 
-1. The current user request and its accepted requirements, including later corrections.
-2. A linked or matching Vikunja spec/task in the current project.
-3. Public GitHub Issue/PR references when the work came from public intake.
-4. A path or URL the user supplied, or a versioned repository contract.
-5. Relevant Hindsight decisions, verified against their sources.
-
-If intent remains unavailable, report "no spec available" and continue the Standards review. Ask only when a missing requirement prevents a material finding from being assessed.
+1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.), fetched via the workflow in the tracker doc.
+2. A path the user passed as an argument.
+3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
+4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
 
 ### 3. Identify the standards sources
 
-Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
+Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
 
 On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
 
@@ -58,19 +55,19 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 - **Middle Man**: a class or function that mostly just delegates onward. → cut it, call the real target direct.
 - **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
 
-### 4. Review both axes
+### 4. Spawn both sub-agents in parallel
 
-Use parallel read-only subagents when available and permitted. Otherwise perform both axes locally and state that limitation. Keep reviewers on the same captured candidate.
+Issue both sub-agent calls together, in the foreground, and aggregate the reports they return.
 
 **Standards sub-agent prompt** should include:
 
-- The captured patch or immutable diff command, relevant untracked content, and commit list.
+- The full diff command and commit list.
 - The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the sub-agent has no other access to it).
 - The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
 **Spec sub-agent prompt** should include:
 
-- The same candidate evidence supplied to the Standards reviewer.
+- The diff command and commit list.
 - The path or fetched contents of the spec.
 - The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
 

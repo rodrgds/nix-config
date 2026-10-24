@@ -56,6 +56,7 @@ All agent harnesses and skills are configured through the Nix source. Edit their
 ## Project operating stack
 
 - Use Vikunja through Executor for private active work. Create and update internal tasks there, not in private GitHub Issues nor repo-local task boards. Keep public reports and contributor discussions in GitHub Issues and pull requests.
+- Before the final reply, mark each completed Vikunja task done through Executor and verify the update succeeded. Leave unfinished or blocked tasks open with their remaining work recorded.
 - Use Hindsight bank `rodrigo` for durable cross-agent context, decisions, preferences, constraints, and project history. Recall relevant memory before substantial work. Retain only verified durable facts tagged `project:<slug>` and `source:<agent>`. Never retain secrets, raw logs, temporary task state, completed-work reports, or unverified assistant claims.
 - Repositories own code, tests, build commands, public docs, and engineering contracts that must travel with the code. Keep project `AGENTS.md` files small and current.
 
