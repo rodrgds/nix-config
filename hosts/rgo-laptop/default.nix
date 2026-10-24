@@ -31,6 +31,7 @@
   apps.fish.enable = false;
   apps.nushell.enable = false;
   apps.ollama.enable = false;
+  apps.syncthing.enable = false;
   apps.vscode.enable = false;
   apps.zsh.enable = false;
 
@@ -49,7 +50,7 @@
 
   apps.cursor.enable = false;
   apps.clion.enable = false;
-  apps.cap.enable = true;
+  apps.cap.enable = false;
   apps.affinity.enable = false;
 
   apps.telegram.enable = true;

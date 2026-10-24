@@ -64,7 +64,7 @@
   core.peripherals.enable = true;
 
   networking.wireless.enable = lib.mkForce false;
-  apps.syncthing.enable = true;
+  apps.syncthing.enable = false;
   core.printing.enable = true;
   core.docker.enable = true;
   apps.virtualization.enable = false;
