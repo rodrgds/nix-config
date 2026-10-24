@@ -173,15 +173,6 @@ in
             path.mode = "basename";
             model.display = "name";
             git.hostIcon = true;
-            customItems = [
-              {
-                id = "gnhf";
-                statusKey = "gnhf";
-                position = "right";
-                prefix = "gnhf";
-                color = "accent";
-              }
-            ];
           };
 
           retry = {
