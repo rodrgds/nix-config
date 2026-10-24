@@ -84,14 +84,13 @@
   profiles.agentWorkstation.enable = true;
 
   # Dormant tools kept for intentional, temporary opt-in.
-  apps.claude.enable = false;
   apps.davinci-resolve.enable = false;
   apps.fish.enable = false;
   apps.lamp.enable = false;
   apps.lunarclient.enable = false;
   apps.nushell.enable = false;
   apps.ollama = {
-    enable = true;
+    enable = false;
     environmentVariables = {
       # RTX 2070 (Turing) supports flash attention: faster prompt
       # processing, slightly lower VRAM use, more layers fit on GPU.

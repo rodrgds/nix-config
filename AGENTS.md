@@ -61,6 +61,16 @@ Agents (global `AGENTS.md` + skills) are configured in `modules/apps/agents/defa
 
 Model preferences are configuration, not rules. The default provider/model and picker ordering live in the Pi module; change them where they are defined rather than restating them in a doc.
 
+## Claude Code
+
+The Claude module uses the shared npm updater, agent instructions, and skills. Activation merges Executor into `~/.claude.json`, which also holds account and project state; preserve every unrelated key. Keep Claude-only skill directories and mutable settings intact. Run `python3 modules/apps/claude/test_configure.py` after changing activation.
+
+## DeepSeek Harness
+
+`modules/apps/deepseek-harness/default.nix` owns `dsh`, its home-level Cordis patch, the shared 9Router model list, and Executor through `mcp-remote` OAuth. Global instructions come from the agents module; DSH discovers `~/.agents/skills` itself. Launch with `dsh web`. Profile state and OAuth grants stay mutable.
+
+The Nix launcher loads the 9Router key at runtime and supplies a Node internals compatibility preload because upstream's native loader probe fails on Nix Node builds. Run `modules/apps/deepseek-harness/test-launch.sh` after changing the launcher or adopting an upstream loader fix.
+
 ## Darwin desktop runtime
 
 - Caps Lock is Super on `rgo-laptop`: hold sends Command+Control+Option, tap sends Escape. Keep both the Super bindings and the user's direct Option aliases. Leave Option+Arrow to apps and text editors.
