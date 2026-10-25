@@ -1,6 +1,6 @@
 # Direct NAS backups
 
-The VPS streams eight backup datasets over Tailscale to `/volume1/homes/kraktoos/Backups/rgo-vps`. Daily backup timers, weekly OpenPost and Directus restore checks, service dependencies and failure alerts remain in their owning service modules. Full dumps and media mirrors are no longer written to the VPS.
+The VPS streams eight backup datasets over Tailscale to `/volume1/homes/kraktoos/Backups/rgo-vps`. Daily backup timers, weekly OpenPost and Directus restore checks, service dependencies and existing owner-specific failure alerts remain in their owning service modules. Full dumps and media mirrors are no longer written to the VPS. There is not yet a human alert route covering every dataset.
 
 ## Access
 
@@ -70,6 +70,28 @@ replacing an archive and its checksum together. See SQLite's
 The PostgreSQL server and psql client run in a disposable digest-pinned Alpine container, with no network, production volumes, host mounts or credentials. Its root filesystem is read-only, it runs as postgres with no capabilities, and temporary storage, memory, CPU and process counts are bounded. A separate database inside a production container is not an acceptable substitute. See the dated audit reports for isolation regression evidence and current host-side staging limits.
 
 OpenPost's older encrypted offsite job requires local backup files and cannot be enabled with this transport. A third-copy policy must consume NAS snapshots instead. Historical backups and retired app data are not removed by activation.
+
+## Freshness monitoring
+
+Successful transfers atomically publish private receipts for all eight enabled
+datasets under `/var/lib/nas-backup/receipts`. The hourly
+`nas-backup-freshness.timer` checks for missing, malformed, future-dated or
+older-than-36-hour receipts. Its first check runs 15 minutes after activation.
+A receipt confirms the transfer, not a restore or an independent retained copy.
+
+The monitor currently reports through its systemd result and journal. Human
+delivery needs an approved destination and a separately provisioned credential;
+do not reuse an application's webhook without authorization. A monitor outside
+the VPS is also needed to detect the VPS itself being offline. Until those are
+configured, run this check and inspect the result at least daily:
+
+```bash
+ssh rgo@rgo-vps 'sudo systemctl start nas-backup-freshness.service && sudo journalctl -u nas-backup-freshness.service -n 20 --no-pager'
+```
+
+On failure, inspect the named dataset's backup unit and latest NAS manifest,
+repair the cause and rerun the ordinary job. Do not replace a failed receipt
+manually or reset failures to imply that a backup succeeded.
 
 ## Validation
 
