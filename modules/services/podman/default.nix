@@ -185,8 +185,8 @@ in
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
         Type = "oneshot";
-        # Stay inactive after success so refreshing credentials cannot stop
-        # running services that require this login helper.
+        # Authentication prepares pulls. Cached runtime units must not Require
+        # this helper: even restarting an inactive oneshot propagates stops.
         ExecStart = pkgs.writeShellScript "packages-registry-login" ''
           exec ${pkgs.podman}/bin/podman login ghcr.io \
             --username rodrgds \

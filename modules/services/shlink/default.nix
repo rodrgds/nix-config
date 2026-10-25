@@ -27,6 +27,14 @@
 }:
 let
   cfg = config.vps.shlink;
+  databaseRoles = import ../_postgres-roles.nix {
+    inherit lib pkgs;
+    service = "shlink";
+    applicationRoleFile = "/run/secrets/db_user";
+    applicationDatabaseFile = "/run/secrets/db_name";
+    applicationPasswordFile = "/run/secrets/db_password";
+    adminPasswordFile = "/run/secrets/admin_password";
+  };
 
   shlinkPort = 8087;
   webClientPort = 8088;
@@ -104,6 +112,7 @@ in
   config = lib.mkIf cfg.enable {
     sops.secrets = lib.genAttrs (
       [
+        "shlink_postgres_admin_password"
         "shlink_db_password"
         "shlink_db_user"
         "shlink_db_name"
@@ -131,9 +140,9 @@ in
       image = "docker.io/postgres:16-alpine";
 
       environment = {
-        POSTGRES_USER_FILE = "/run/secrets/db_user";
+        POSTGRES_USER = "shlink_cluster_admin";
         POSTGRES_DB_FILE = "/run/secrets/db_name";
-        POSTGRES_PASSWORD_FILE = "/run/secrets/db_password";
+        POSTGRES_PASSWORD_FILE = "/run/secrets/admin_password";
       };
 
       volumes = [
@@ -146,15 +155,31 @@ in
 
       extraOptions = [
         "--network=podman"
+        "--mount=type=bind,source=${config.sops.templates.shlink-postgres-admin-password.path},target=/run/secrets/admin_password,ro"
         "--mount=type=bind,source=${config.sops.templates.shlink-db-password.path},target=/run/secrets/db_password,ro"
         "--mount=type=bind,source=${config.sops.templates.shlink-db-user.path},target=/run/secrets/db_user,ro"
         "--mount=type=bind,source=${config.sops.templates.shlink-db-name.path},target=/run/secrets/db_name,ro"
-        "--health-cmd=pg_isready -U shlink -d shlink"
+        "--health-cmd=sh -ec 'pg_isready -h 127.0.0.1 -U shlink_cluster_admin -d \"$(cat /run/secrets/db_name)\"'"
         "--health-interval=5s"
         "--health-timeout=20s"
         "--health-retries=10"
       ];
     };
+
+    systemd.services.shlink-postgres-roles = {
+      description = "Separate shlink PostgreSQL cluster administration";
+      requires = [ "podman-shlink-postgres.service" ];
+      after = [ "podman-shlink-postgres.service" ];
+      before = [ "podman-shlink.service" ];
+      requiredBy = [ "podman-shlink.service" ];
+      restartTriggers = [ databaseRoles ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = databaseRoles;
+      };
+    };
+    systemd.services.podman-shlink.restartTriggers = [ databaseRoles ];
 
     # -------------------------------------------------------------------------
     # Redis  (visit buffering, cache, async task queue)
@@ -298,18 +323,42 @@ in
     # Secrets (sops-nix)
     # -------------------------------------------------------------------------
     sops.templates = {
+      "shlink-postgres-admin-password" = {
+        content = config.sops.placeholder.shlink_postgres_admin_password;
+        mode = "0400";
+        restartUnits = [
+          "podman-shlink-postgres.service"
+          "shlink-postgres-roles.service"
+          "podman-shlink.service"
+        ];
+      };
       "shlink-db-password" = {
         content = config.sops.placeholder.shlink_db_password;
         # The rootful PostgreSQL entrypoint reads _FILE secrets before gosu.
         mode = "0400";
+        restartUnits = [
+          "podman-shlink-postgres.service"
+          "shlink-postgres-roles.service"
+          "podman-shlink.service"
+        ];
       };
       "shlink-db-user" = {
         content = config.sops.placeholder.shlink_db_user;
         mode = "0400";
+        restartUnits = [
+          "podman-shlink-postgres.service"
+          "shlink-postgres-roles.service"
+          "podman-shlink.service"
+        ];
       };
       "shlink-db-name" = {
         content = config.sops.placeholder.shlink_db_name;
         mode = "0400";
+        restartUnits = [
+          "podman-shlink-postgres.service"
+          "shlink-postgres-roles.service"
+          "podman-shlink.service"
+        ];
       };
 
       # Main env file injected into the shlink container
@@ -333,13 +382,13 @@ in
       serviceConfig = {
         Type = "oneshot";
         ExecStart = pkgs.writeShellScript "shlink-backup" ''
-          set -e
+          set -euo pipefail
           TIMESTAMP=$(${pkgs.coreutils}/bin/date +%Y%m%d_%H%M%S)
           BACKUP_DIR="/var/backup/shlink"
           ${pkgs.coreutils}/bin/mkdir -p "$BACKUP_DIR"
 
-          ${pkgs.podman}/bin/podman exec shlink-postgres \
-            pg_dumpall -U shlink \
+          ${pkgs.podman}/bin/podman exec shlink-postgres sh -ec \
+            'exec pg_dump --no-owner --no-privileges -U "$(cat /run/secrets/db_user)" -d "$(cat /run/secrets/db_name)"' \
             | ${pkgs.gzip}/bin/gzip > "$BACKUP_DIR/shlink_$TIMESTAMP.sql.gz"
 
           # Keep last 7 days

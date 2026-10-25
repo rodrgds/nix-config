@@ -8,6 +8,15 @@ let
   cfg = config.vps.montra;
   postgresUser = "montra";
   postgresDatabase = "montra";
+  databaseRoles = import ../_postgres-roles.nix {
+    inherit lib pkgs;
+    service = "montra";
+    extensions = [
+      "vector"
+      "unaccent"
+      "pg_trgm"
+    ];
+  };
   apiPort = 8788;
   webPort = 8091;
   apiImage = "ghcr.io/rodrgds/montra-api:latest";
@@ -57,7 +66,8 @@ let
   '';
   initializeScript = pkgs.writeShellScript "montra-initialize" ''
     set -euo pipefail
-    until ${pkgs.podman}/bin/podman exec montra-postgres pg_isready -U ${postgresUser} -d ${postgresDatabase}; do sleep 2; done
+    until ${pkgs.podman}/bin/podman exec montra-postgres pg_isready -h 127.0.0.1 -U ${postgresUser} -d ${postgresDatabase}; do sleep 2; done
+    ${databaseRoles}
     # The existing production image predates /health/ready. Keep the boot-time
     # transition probe shallow; candidate deploy verification below requires
     # the new model-loading readiness endpoint before reporting success.
@@ -115,6 +125,7 @@ in
   config = lib.mkIf cfg.enable {
     sops.secrets = lib.genAttrs [
       "montra_postgres_password"
+      "montra_postgres_admin_password"
       "montra_better_auth_secret"
       "montra_admin_emails"
       "montra_google_client_id"
@@ -146,11 +157,20 @@ in
     sops.templates = {
       "montra-postgres-env" = {
         content = ''
-          POSTGRES_USER=${postgresUser}
+          POSTGRES_USER=montra_cluster_admin
           POSTGRES_DB=${postgresDatabase}
-          POSTGRES_PASSWORD=${config.sops.placeholder.montra_postgres_password}
+          POSTGRES_PASSWORD=${config.sops.placeholder.montra_postgres_admin_password}
+          APP_POSTGRES_PASSWORD=${config.sops.placeholder.montra_postgres_password}
         '';
         mode = "0400";
+        restartUnits = [
+          "podman-montra-postgres.service"
+          "montra-initialize.service"
+          "podman-montra-api.service"
+          "podman-montra-worker.service"
+          "podman-montra-integration-worker.service"
+          "podman-montra-web.service"
+        ];
       };
       "montra-env" = {
         content = ''
@@ -251,7 +271,6 @@ in
 
     systemd.services.podman-montra-postgres = {
       after = [ "packages-registry-login.service" ];
-      requires = [ "packages-registry-login.service" ];
       serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-postgres"}";
     };
     systemd.services.podman-montra-meilisearch = {
@@ -259,33 +278,30 @@ in
     };
     systemd.services.podman-montra-embedding = {
       after = [ "packages-registry-login.service" ];
-      requires = [ "packages-registry-login.service" ];
       serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-embedding"}";
     };
     systemd.services.podman-montra-detector = {
       after = [ "packages-registry-login.service" ];
-      requires = [ "packages-registry-login.service" ];
       serviceConfig.ExecStop = lib.mkForce "${stopManagedContainer "montra-detector"}";
     };
     systemd.services.podman-montra-api = {
+      restartTriggers = [ databaseRoles ];
       after = [ "packages-registry-login.service" ];
-      requires = [ "packages-registry-login.service" ];
       serviceConfig = {
         ExecStop = lib.mkForce "${stopManagedContainer "montra-api"}";
         ExecStopPost = lib.mkAfter [ config.services.podman.healthUnitCleanupCommand ];
       };
     };
     systemd.services.podman-montra-worker = {
+      restartTriggers = [ databaseRoles ];
       after = [ "packages-registry-login.service" ];
-      requires = [ "packages-registry-login.service" ];
     };
     systemd.services.podman-montra-integration-worker = {
+      restartTriggers = [ databaseRoles ];
       after = [ "packages-registry-login.service" ];
-      requires = [ "packages-registry-login.service" ];
     };
     systemd.services.podman-montra-web = {
       after = [ "packages-registry-login.service" ];
-      requires = [ "packages-registry-login.service" ];
     };
 
     systemd.services.montra-images = {
@@ -374,7 +390,7 @@ in
           "--network=podman"
           "--pull=never"
           "--shm-size=1g"
-          "--health-cmd=pg_isready -U montra -d montra"
+          "--health-cmd=pg_isready -h 127.0.0.1 -U montra -d montra"
           "--health-interval=10s"
           "--health-retries=18"
         ];
@@ -501,6 +517,7 @@ in
 
     systemd.services.montra-initialize = {
       description = "Restore, migrate, and index the Montra catalog";
+      restartTriggers = [ databaseRoles ];
       after = [
         "podman-montra-postgres.service"
         "podman-montra-meilisearch.service"

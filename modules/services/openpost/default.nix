@@ -24,6 +24,10 @@ let
   openpostPostgresUser = "openpost";
   openpostPostgresDatabase = "openpost";
   openpostPostgresImage = "docker.io/library/postgres:17-alpine@sha256:0a8a1e76503c091f0feb387d51b10fcd746c2d61cf6cdd6e8356973a45e40a0f";
+  databaseRoles = import ../_postgres-roles.nix {
+    inherit lib pkgs;
+    service = "openpost";
+  };
   openpostImageRepository = lib.removeSuffix ":latest" cfg.image;
   openpostApplicationUnits = [
     "podman-openpost.service"
@@ -416,6 +420,7 @@ in
       ]
       ++ lib.optionals isCloud [
         "openpost_postgres_password"
+        "openpost_postgres_admin_password"
         "openpost_s3_endpoint"
         "openpost_s3_region"
         "openpost_s3_bucket"
@@ -546,7 +551,7 @@ in
 
       extraOptions = [
         "--network=podman"
-        "--health-cmd=sh -ec 'attempt=0; until pg_isready -U ${openpostPostgresUser} -d ${openpostPostgresDatabase}; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
+        "--health-cmd=sh -ec 'attempt=0; until pg_isready -h 127.0.0.1 -U ${openpostPostgresUser} -d ${openpostPostgresDatabase}; do attempt=$((attempt + 1)); [ \"$attempt\" -ge 60 ] && exit 1; sleep 1; done'"
         "--health-interval=10s"
         "--health-timeout=75s"
         "--health-retries=12"
@@ -564,9 +569,10 @@ in
       // lib.optionalAttrs isCloud {
         "openpost-postgres-env" = {
           content = ''
-            POSTGRES_USER=${openpostPostgresUser}
+            POSTGRES_USER=openpost_cluster_admin
             POSTGRES_DB=${openpostPostgresDatabase}
-            POSTGRES_PASSWORD=${config.sops.placeholder.openpost_postgres_password}
+            POSTGRES_PASSWORD=${config.sops.placeholder.openpost_postgres_admin_password}
+            APP_POSTGRES_PASSWORD=${config.sops.placeholder.openpost_postgres_password}
           '';
           mode = "0400";
           restartUnits = [
@@ -686,7 +692,8 @@ in
     };
 
     systemd.services.openpost-postgres-credential-reconcile = lib.mkIf isCloud {
-      description = "Reconcile the authoritative OpenPost PostgreSQL credential";
+      description = "Separate OpenPost cluster administration and reconcile credentials";
+      restartTriggers = [ databaseRoles ];
       after = [ "podman-openpost-postgres.service" ];
       requires = [ "podman-openpost-postgres.service" ];
       before = openpostApplicationUnits;
@@ -695,32 +702,12 @@ in
         Type = "oneshot";
         EnvironmentFile = config.sops.templates.openpost-postgres-env.path;
         UMask = "0077";
-        ExecStart = pkgs.writeShellScript "openpost-postgres-credential-reconcile" ''
-          set -euo pipefail
-          for attempt in $(${pkgs.coreutils}/bin/seq 1 60); do
-            if ${pkgs.podman}/bin/podman exec openpost-postgres pg_isready \
-              -U ${openpostPostgresUser} -d ${openpostPostgresDatabase} >/dev/null; then
-              break
-            fi
-            if [ "$attempt" = 60 ]; then
-              echo "OpenPost PostgreSQL did not become ready for credential reconciliation" >&2
-              exit 1
-            fi
-            ${pkgs.coreutils}/bin/sleep 1
-          done
-
-          encoded_password="$(printf '%s' "$POSTGRES_PASSWORD" | ${pkgs.coreutils}/bin/base64 | ${pkgs.coreutils}/bin/tr -d '\n')"
-          printf "SELECT format('ALTER ROLE ${openpostPostgresUser} PASSWORD %%L', convert_from(decode('%s', 'base64'), 'UTF8')) \\gexec\n" "$encoded_password" \
-            | ${pkgs.podman}/bin/podman exec -i openpost-postgres psql \
-                -v ON_ERROR_STOP=1 -U ${openpostPostgresUser} -d ${openpostPostgresDatabase} >/dev/null
-          ${pkgs.podman}/bin/podman exec --env POSTGRES_PASSWORD openpost-postgres sh -ec \
-            'PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -v ON_ERROR_STOP=1 -U ${openpostPostgresUser} -d ${openpostPostgresDatabase} -Atqc "SELECT 1"' \
-            | ${pkgs.gnugrep}/bin/grep -Fx 1 >/dev/null
-        '';
+        ExecStart = databaseRoles;
       };
     };
 
     systemd.services.podman-openpost = {
+      restartTriggers = lib.optionals isCloud [ databaseRoles ];
       after = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
       requires = lib.optionals isCloud [ "openpost-postgres-credential-reconcile.service" ];
       serviceConfig = {
@@ -732,6 +719,7 @@ in
     };
 
     systemd.services.podman-openpost-worker = lib.mkIf isCloud {
+      restartTriggers = [ databaseRoles ];
       after = [ "openpost-postgres-credential-reconcile.service" ];
       requires = [ "openpost-postgres-credential-reconcile.service" ];
       serviceConfig = {
@@ -953,7 +941,7 @@ in
           cleanup() {
             if [ "$database_created" = true ]; then
               ${pkgs.podman}/bin/podman exec openpost-postgres dropdb \
-                --if-exists -U ${openpostPostgresUser} "$restore_database" >/dev/null
+                --if-exists -U openpost_cluster_admin "$restore_database" >/dev/null
             fi
             ${lib.optionalString cfg.offsiteBackup.enable ''
               if [ -n "$offsite_restore_root" ]; then
@@ -990,7 +978,7 @@ in
           restore_database="openpost_restore_drill_$(${pkgs.coreutils}/bin/date -u +%Y%m%d_%H%M%S)"
 
           ${pkgs.podman}/bin/podman exec openpost-postgres createdb \
-            -U ${openpostPostgresUser} "$restore_database"
+            -U openpost_cluster_admin -O ${openpostPostgresUser} "$restore_database"
           database_created=true
           ${pkgs.gzip}/bin/gzip -dc "$latest_backup" | ${pkgs.podman}/bin/podman exec -i \
             openpost-postgres psql -v ON_ERROR_STOP=1 \

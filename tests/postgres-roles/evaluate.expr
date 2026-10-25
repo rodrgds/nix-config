@@ -1,0 +1,50 @@
+# Declarative data only. No secret decryption or image realization.
+let
+  flake = builtins.getFlake (toString ../..);
+  config = flake.nixosConfigurations.rgo-vps.config;
+  inherit (flake.inputs.nixpkgs) lib;
+  services = [
+    "montra"
+    "openpost"
+    "umami"
+    "shlink"
+  ];
+  owned = name: builtins.any (service: lib.hasPrefix service name) services;
+in
+{
+  roleScripts = lib.genAttrs services (
+    service:
+    (builtins.head
+      config.systemd.services.${
+        if service == "montra" then "podman-montra-api" else "podman-" + service
+      }.restartTriggers
+    ).text
+  );
+  containers = lib.filterAttrs (name: _: owned name) config.virtualisation.oci-containers.containers;
+  templates = lib.mapAttrs (_: template: {
+    inherit (template)
+      path
+      content
+      mode
+      restartUnits
+      ;
+  }) (lib.filterAttrs (name: _: owned name) config.sops.templates);
+  placeholders = lib.filterAttrs (name: _: owned name) config.sops.placeholder;
+  units =
+    lib.mapAttrs
+      (_: unit: {
+        inherit (unit)
+          after
+          before
+          requires
+          requiredBy
+          restartTriggers
+          ;
+        script = if unit.serviceConfig ? ExecStart then unit.serviceConfig.ExecStart.text or "" else "";
+      })
+      (
+        lib.filterAttrs (
+          name: _: owned name || builtins.any (service: lib.hasPrefix ("podman-" + service) name) services
+        ) config.systemd.services
+      );
+}

@@ -206,9 +206,11 @@ in
       '' "";
     })
     (lib.mkIf config.vps.shlink.enable {
-      shlink-backup =
-        job "shlink-backup" "shlink-db" "gzip" "podman exec shlink-postgres pg_dumpall -U shlink | gzip"
-          "";
+      shlink-backup = job "shlink-backup" "shlink-db" "gzip" ''
+        user=$(cat ${config.sops.templates.shlink-db-user.path})
+        database=$(cat ${config.sops.templates.shlink-db-name.path})
+        podman exec shlink-postgres pg_dump -U "$user" -d "$database" --no-owner --no-privileges | gzip
+      '' "";
     })
     (lib.mkIf config.vps.unprompted.enable {
       unprompted-postgres-backup =

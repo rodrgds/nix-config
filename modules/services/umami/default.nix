@@ -8,6 +8,15 @@
 }:
 let
   cfg = config.vps.umami;
+  databaseRoles = import ../_postgres-roles.nix {
+    inherit lib pkgs;
+    service = "umami";
+    applicationRoleFile = "/run/secrets/db_user";
+    applicationDatabaseFile = "/run/secrets/db_name";
+    applicationPasswordFile = "/run/secrets/postgres_password";
+    adminPasswordFile = "/run/secrets/admin_password";
+    extensions = [ "pgcrypto" ];
+  };
 
   umamiPort = 3000;
   postgresPort = 5433; # Different from n8n
@@ -25,6 +34,7 @@ in
 
   config = lib.mkIf cfg.enable {
     sops.secrets = lib.genAttrs [
+      "umami_postgres_admin_password"
       "umami_db_password"
       "umami_db_user"
       "umami_db_name"
@@ -43,9 +53,9 @@ in
       image = "docker.io/postgres:16-alpine";
 
       environment = {
-        POSTGRES_USER_FILE = "/run/secrets/db_user";
+        POSTGRES_USER = "umami_cluster_admin";
         POSTGRES_DB_FILE = "/run/secrets/db_name";
-        POSTGRES_PASSWORD_FILE = "/run/secrets/postgres_password";
+        POSTGRES_PASSWORD_FILE = "/run/secrets/admin_password";
       };
 
       volumes = [
@@ -59,11 +69,11 @@ in
       # Health check
       extraOptions = [
         "--network=podman"
+        "--mount=type=bind,source=${config.sops.templates.umami-postgres-admin-password.path},target=/run/secrets/admin_password,ro"
         "--mount=type=bind,source=${config.sops.templates.umami-postgres-password.path},target=/run/secrets/postgres_password,ro"
         "--mount=type=bind,source=${config.sops.templates.umami-db-user.path},target=/run/secrets/db_user,ro"
         "--mount=type=bind,source=${config.sops.templates.umami-db-name.path},target=/run/secrets/db_name,ro"
-        # Can't use placeholders in health-cmd, using hardcoded default values
-        "--health-cmd=pg_isready -U umami -d umami"
+        "--health-cmd=sh -ec 'pg_isready -h 127.0.0.1 -U umami_cluster_admin -d \"$(cat /run/secrets/db_name)\"'"
         "--health-interval=5s"
         "--health-timeout=20s"
         "--health-retries=10"
@@ -97,20 +107,59 @@ in
       ];
     };
 
+    systemd.services.umami-postgres-roles = {
+      description = "Separate umami PostgreSQL cluster administration";
+      requires = [ "podman-umami-postgres.service" ];
+      after = [ "podman-umami-postgres.service" ];
+      before = [ "podman-umami.service" ];
+      requiredBy = [ "podman-umami.service" ];
+      restartTriggers = [ databaseRoles ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = databaseRoles;
+      };
+    };
+    systemd.services.podman-umami.restartTriggers = [ databaseRoles ];
+
     # Secrets
     sops.templates = {
+      "umami-postgres-admin-password" = {
+        content = config.sops.placeholder.umami_postgres_admin_password;
+        mode = "0400";
+        restartUnits = [
+          "podman-umami-postgres.service"
+          "umami-postgres-roles.service"
+          "podman-umami.service"
+        ];
+      };
       "umami-postgres-password" = {
         content = config.sops.placeholder.umami_db_password;
         # Podman and the PostgreSQL entrypoint read this as root before dropping privileges.
         mode = "0400";
+        restartUnits = [
+          "podman-umami-postgres.service"
+          "umami-postgres-roles.service"
+          "podman-umami.service"
+        ];
       };
       "umami-db-user" = {
         content = config.sops.placeholder.umami_db_user;
         mode = "0400";
+        restartUnits = [
+          "podman-umami-postgres.service"
+          "umami-postgres-roles.service"
+          "podman-umami.service"
+        ];
       };
       "umami-db-name" = {
         content = config.sops.placeholder.umami_db_name;
         mode = "0400";
+        restartUnits = [
+          "podman-umami-postgres.service"
+          "umami-postgres-roles.service"
+          "podman-umami.service"
+        ];
       };
       "umami-env" = {
         content = ''
