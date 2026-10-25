@@ -53,7 +53,7 @@ let
       --retry-delay 2 \
       --retry-max-time 120 \
       --max-time 5 \
-      http://127.0.0.1:8055/server/health
+      http://127.0.0.1:8055/server/ping
   '';
 
   mkSyncService = source: {
@@ -196,17 +196,32 @@ in
       wantedBy = [ "multi-user.target" ];
       wants = [ "personal-site.service" ];
 
-      path = [ pkgs.bun ];
+      path = [
+        pkgs.bun
+        pkgs.typst
+      ];
 
-      environment.LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
+      environment = {
+        LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
+        TYPST_PACKAGE_CACHE_PATH = "/var/cache/personal-site-runtime/typst";
+      };
 
       serviceConfig = {
         Type = "simple";
+        # Runtime only reads the root-owned checkout and talks to Directus.
+        # Keep source builds/syncs separate from the public server identity.
+        DynamicUser = true;
+        User = "personal-site-runtime";
         EnvironmentFile = config.sops.templates."personal-site-env".path;
-        StateDirectory = "personal-site";
+        CacheDirectory = "personal-site-runtime";
         WorkingDirectory = "/var/lib/personal-site";
         ExecStart = "${pkgs.bun}/bin/bun run dist/server/entry.mjs";
         Restart = "always";
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        ProtectHome = true;
+        ProtectSystem = "strict";
+        UMask = "0077";
       };
     };
 
@@ -217,6 +232,13 @@ in
     services.caddy.virtualHosts."rgo.pt" = {
       logFormat = config.vps.caddy.accessLogFor "rgo.pt";
       extraConfig = ''
+        header {
+          Strict-Transport-Security "max-age=31536000"
+          X-Content-Type-Options "nosniff"
+          Referrer-Policy "strict-origin-when-cross-origin"
+          defer
+        }
+
         handle /_astro/* {
           root * /var/lib/personal-site/dist/client
           header Cache-Control "public, max-age=31536000, immutable"

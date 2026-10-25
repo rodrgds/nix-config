@@ -10,6 +10,35 @@ let
   directusPort = 8055;
   backupDirectory = "/var/backup/directus";
 
+  # Use the pinned image's SQLite driver, but never Directus's pooled connection.
+  # SELECT 1 and HTTP ping can succeed while a failed COMMIT blocks new readers.
+  sqliteHealthCommand =
+    "node -e "
+    + lib.escapeShellArg ''
+      const { createRequire } = require('node:module');
+      const { realpathSync } = require('node:fs');
+      const api = createRequire(realpathSync('/directus/node_modules/@directus/api/package.json'));
+      const sqlite = createRequire(api.resolve('knex/package.json'))('sqlite3');
+      const deadline = setTimeout(() => process.exit(1), 3000);
+      const db = new sqlite.Database(process.env.DB_FILENAME, sqlite.OPEN_READONLY, (error) => {
+        if (error) process.exit(1);
+        db.configure('busyTimeout', 1000);
+        db.get('SELECT count(*) FROM sqlite_schema', (error) => {
+          db.close((closeError) => {
+            clearTimeout(deadline);
+            if (error || closeError) console.error('Directus independent SQLite read failed');
+            process.exit(error || closeError ? 1 : 0);
+          });
+        });
+      });
+    '';
+  startupHealthCommand =
+    "node -e "
+    + lib.escapeShellArg ''
+      fetch('http://127.0.0.1:8055/server/ping', { signal: AbortSignal.timeout(1000) })
+        .then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1));
+    '';
+
   backupDirectus = pkgs.writeShellScript "backup-directus" ''
     set -euo pipefail
 
@@ -103,13 +132,22 @@ in
 
     virtualisation.oci-containers.containers.directus = {
       # Keep upgrades explicit so a container restart cannot silently migrate the database.
-      image = "directus/directus:11.15.3";
+      # Fresh-data/Core post-grace proof: docs/security-audit-2026-10-25-directus-fresh.md.
+      image = "directus/directus:12.5.1@sha256:1a660be4c3634aae7b46153589e72c7ce02f2094ff061049ca1a5789c600e5da";
 
       environment = {
         DB_CLIENT = "sqlite3";
         DB_FILENAME = "/directus/database/data.db";
+        # Knex 3.1 can return a failed SQLite COMMIT with its transaction still open.
+        # Retire idle connections so that transaction rolls back and releases its locks.
+        # Continued traffic can prevent retirement; independent DB health below
+        # bounds recovery then. See the SQLite lock audit and real-image fixture.
+        DB_POOL__MIN = "0";
+        DB_POOL__MAX = "1";
         PUBLIC_URL = "https://${cfg.domain}";
         CORS_ENABLED = "false";
+        # Unused by the website's server-side REST client. Keep the default explicit.
+        WEBSOCKETS_ENABLED = "false";
       };
 
       environmentFiles = [
@@ -128,8 +166,27 @@ in
 
       extraOptions = [
         "--network=podman"
+        "--cap-drop=ALL"
+        "--security-opt=no-new-privileges"
+        "--health-cmd=${sqliteHealthCommand}"
+        "--health-interval=30s"
+        "--health-timeout=5s"
+        "--health-retries=6"
+        "--health-start-period=0s"
+        # The separate startup gate provides migration grace. Podman 5.8 counts
+        # no failures during a start-period, even after an earlier successful read.
+        # Do not interrupt a legitimate migration before HTTP startup completes.
+        # Startup failures are observable as 'starting', without a restart loop.
+        "--health-startup-cmd=${startupHealthCommand}"
+        "--health-startup-interval=10s"
+        "--health-startup-timeout=5s"
+        "--health-startup-retries=0"
+        # Let the existing systemd Restart=on-failure own process replacement.
+        "--health-on-failure=kill"
       ];
     };
+
+    systemd.services.podman-directus.serviceConfig.RestartSec = "5s";
 
     sops.templates."directus-env" = {
       content = ''
