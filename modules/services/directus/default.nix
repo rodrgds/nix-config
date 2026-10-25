@@ -133,7 +133,7 @@ in
     virtualisation.oci-containers.containers.directus = {
       # Wait through the startup probe before switch-to-configuration inspects
       # failed transient units. An expected pre-readiness probe is not a failed
-      # deployment, and the independent database check must pass before READY.
+      # deployment. Keep the independent database health check after startup.
       podman.sdnotify = "healthy";
       # Keep upgrades explicit so a container restart cannot silently migrate the database.
       # Fresh-data/Core post-grace proof: docs/security-audit-2026-10-25-directus-fresh.md.
