@@ -16,7 +16,7 @@ Every webhook request is HMAC-checked over the exact raw body before parsing. Th
 - `delivery_id` - unique per run-attempt.
 - repository, exact revision, image digests.
 
-The receiver accepts payloads no more than five minutes old or 60 seconds in the future and records delivery IDs atomically before deploying. A failed or ambiguous delivery is retried only by a new CI attempt with a new ID and timestamp. Deploy logs stay in the systemd journal; the webhook returns only the `DEPLOY_OK` line CI expects.
+The receiver accepts payloads no more than five minutes old or 60 seconds in the future and records delivery IDs atomically before deploying. A failed or ambiguous delivery is retried only by a new CI attempt with a new ID and timestamp. It waits for the handler before returning the generic JSON `{"status":"completed"}` response. Exact `DEPLOY_OK <revision>` evidence stays in the systemd journal; verify that revision and the running image labels separately.
 
 ## Unprompted
 

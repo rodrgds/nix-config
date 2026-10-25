@@ -7,7 +7,44 @@
 }:
 let
   cfg = config.vps.unprompted;
-  runtimeEnvFile = config.sops.templates."unprompted-production-env".path;
+  postgresEnvFile = config.sops.templates."unprompted-postgres-env".path;
+  migrateEnvFile = config.sops.templates."unprompted-migrate-env".path;
+  apiEnvFile = config.sops.templates."unprompted-api-env".path;
+  workerEnvFile = config.sops.templates."unprompted-worker-env".path;
+  # Share values at their owner, but grant each runtime only its own credentials.
+  postgresEnvironment = ''
+    POSTGRES_USER=unprompted_cluster_admin
+    POSTGRES_DB=unprompted
+    POSTGRES_PASSWORD=${config.sops.placeholder.unprompted_postgres_admin_password}
+    APP_POSTGRES_PASSWORD=${config.sops.placeholder.unprompted_postgres_password}
+  '';
+  databaseEnvironment = ''
+    POSTGRES_USER=unprompted
+    POSTGRES_DB=unprompted
+    POSTGRES_PASSWORD=${config.sops.placeholder.unprompted_postgres_password}
+    NODE_ENV=production
+    POSTGRES_HOST=unprompted-postgres
+    POSTGRES_PORT=5432
+  '';
+  evaluationEnvironment = ''
+    AI_PROVIDER=openrouter
+    AI_API_KEY=${config.sops.placeholder.unprompted_openrouter_api_key}
+    AI_BASE_URL=https://openrouter.ai/api/v1
+    AI_MODEL=deepseek/deepseek-v4-flash
+    AI_EVALUATION_TIMEOUT_MS=30000
+  '';
+  emailEnvironment = ''
+    SMTP_HOST=smtp.purelymail.com
+    SMTP_PORT=465
+    SMTP_SECURE=true
+    SMTP_USERNAME=hello@unprompted.to
+    SMTP_PASSWORD=${config.sops.placeholder.unprompted_smtp_password}
+    EMAIL_FROM="Unprompted <hello@unprompted.to>"
+    EMAIL_TOKEN_SECRET=${config.sops.placeholder.unprompted_email_token_secret}
+  '';
+  operationsEnvironment = ''
+    OPERATIONS_TOKEN=${config.sops.placeholder.unprompted_operations_token}
+  '';
   apiImage = "ghcr.io/rodrgds/unprompted-api:latest";
   workerImage = "ghcr.io/rodrgds/unprompted-worker:latest";
   webImage = "ghcr.io/rodrgds/unprompted-web:latest";
@@ -28,10 +65,92 @@ let
     until ${pkgs.podman}/bin/podman exec unprompted-postgres pg_isready -U unprompted -d unprompted; do
       sleep 2
     done
+    # Local socket access is restricted to the PostgreSQL container. Existing
+    # clusters initially have only the old bootstrap login; fresh ones have admin.
+    initial_role=unprompted_cluster_admin
+    if ! ${pkgs.podman}/bin/podman exec -u postgres unprompted-postgres \
+      psql -X -U unprompted_cluster_admin -d unprompted -Atqc 'SELECT 1' >/dev/null 2>&1; then
+      initial_role=unprompted
+    fi
     ${pkgs.podman}/bin/podman exec -i -u postgres unprompted-postgres \
-      psql -U unprompted -d unprompted -v ON_ERROR_STOP=1 <<'SQL'
-    \getenv configured_password POSTGRES_PASSWORD
-    ALTER ROLE unprompted PASSWORD :'configured_password';
+      psql -X -q -U "$initial_role" -d unprompted -v ON_ERROR_STOP=1 -v VERBOSITY=terse <<'SQL'
+    BEGIN;
+    -- The application owns the database and can persist its search_path. Never
+    -- resolve privileged catalog access through app-owned schemas or temp tables.
+    SET LOCAL search_path = pg_catalog, pg_temp;
+    -- Do not log password-bearing statements, even on an initialization error.
+    SET LOCAL log_statement = 'none';
+    SET LOCAL log_min_error_statement = 'panic';
+    \getenv admin_password POSTGRES_PASSWORD
+    \getenv application_password APP_POSTGRES_PASSWORD
+    SELECT NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'unprompted_cluster_admin') AS needs_admin \gset
+    \if :needs_admin
+      SELECT oid = 10 AS is_bootstrap FROM pg_roles WHERE rolname = 'unprompted' \gset
+      \if :is_bootstrap
+        -- PostgreSQL forbids demoting OID 10 or renaming the session user.
+        -- A transaction-local NOLOGIN helper permits the rename without leaving
+        -- a third role, or moving ownership of template/system objects to the app.
+        CREATE ROLE unprompted_role_transition SUPERUSER NOLOGIN;
+        SET SESSION AUTHORIZATION unprompted_role_transition;
+        ALTER ROLE unprompted RENAME TO unprompted_cluster_admin;
+        SET SESSION AUTHORIZATION unprompted_cluster_admin;
+        DROP ROLE unprompted_role_transition;
+      \else
+        CREATE ROLE unprompted_cluster_admin SUPERUSER LOGIN;
+        SET SESSION AUTHORIZATION unprompted_cluster_admin;
+      \endif
+    \endif
+    SELECT NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'unprompted') AS needs_application \gset
+    \if :needs_application
+      CREATE ROLE unprompted LOGIN;
+    \endif
+    ALTER ROLE unprompted_cluster_admin SUPERUSER LOGIN PASSWORD :'admin_password';
+    ALTER ROLE unprompted LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD :'application_password';
+    ALTER DATABASE unprompted OWNER TO unprompted;
+    -- Scope ownership to the application's schemas in this database. Never
+    -- REASSIGN OWNED from the bootstrap role: it also owns shared/system objects.
+    DO $ownership$
+    DECLARE item record;
+    BEGIN
+      FOR item IN SELECT nspname FROM pg_namespace
+        WHERE nspname IN ('public', 'drizzle', 'pgboss')
+          AND nspowner = 'unprompted_cluster_admin'::regrole
+      LOOP
+        EXECUTE format('ALTER SCHEMA %I OWNER TO unprompted', item.nspname);
+      END LOOP;
+      FOR item IN SELECT n.nspname, c.relname, c.relkind FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname IN ('public', 'drizzle', 'pgboss')
+          AND c.relowner = 'unprompted_cluster_admin'::regrole
+          AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+        ORDER BY c.relkind = 'S'
+      LOOP
+        EXECUTE format('ALTER %s %I.%I OWNER TO unprompted',
+          CASE item.relkind WHEN 'S' THEN 'SEQUENCE' WHEN 'v' THEN 'VIEW'
+            WHEN 'm' THEN 'MATERIALIZED VIEW' WHEN 'f' THEN 'FOREIGN TABLE' ELSE 'TABLE' END,
+          item.nspname, item.relname);
+      END LOOP;
+      FOR item IN SELECT p.oid::regprocedure AS signature FROM pg_proc p
+        JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname IN ('public', 'drizzle', 'pgboss')
+          AND p.proowner = 'unprompted_cluster_admin'::regrole
+      LOOP
+        EXECUTE format('ALTER ROUTINE %s OWNER TO unprompted', item.signature);
+      END LOOP;
+      FOR item IN SELECT n.nspname, t.typname, t.typtype FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        LEFT JOIN pg_class c ON c.oid = t.typrelid
+        WHERE n.nspname IN ('public', 'drizzle', 'pgboss')
+          AND t.typowner = 'unprompted_cluster_admin'::regrole
+          AND (t.typtype IN ('e', 'd', 'r') OR (t.typtype = 'c' AND c.relkind = 'c'))
+      LOOP
+        EXECUTE format('ALTER %s %I.%I OWNER TO unprompted',
+          CASE item.typtype WHEN 'd' THEN 'DOMAIN' ELSE 'TYPE' END,
+          item.nspname, item.typname);
+      END LOOP;
+    END
+    $ownership$;
+    COMMIT;
     SQL
     migrate_image_id="$(${pkgs.podman}/bin/podman image inspect ${migrateImage} --format '{{.Id}}')"
     [[ "$migrate_image_id" =~ ^(sha256:)?[0-9a-f]{64}$ ]] || {
@@ -39,7 +158,8 @@ let
       exit 1
     }
     ${pkgs.podman}/bin/podman run --rm --pull=never --network=podman \
-      --env-file=${runtimeEnvFile} "$migrate_image_id"
+      --user=1000:1000 --cap-drop=ALL --security-opt=no-new-privileges \
+      --env-file=${migrateEnvFile} "$migrate_image_id"
   '';
   bootInitializeScript = pkgs.writeShellScript "unprompted-boot-initialize" ''
     set -euo pipefail
@@ -95,6 +215,7 @@ in
   config = lib.mkIf cfg.enable {
     sops.secrets = lib.genAttrs [
       "unprompted_postgres_password"
+      "unprompted_postgres_admin_password"
       "unprompted_better_auth_secret"
       "unprompted_openrouter_api_key"
       "unprompted_smtp_password"
@@ -102,59 +223,64 @@ in
       "unprompted_operations_token"
     ] (_: { });
 
-    sops.templates."unprompted-production-env" = {
-      content = ''
-        NODE_ENV=production
-        PORT=${toString cfg.apiPort}
-        API_ORIGIN=http://unprompted-api:${toString cfg.apiPort}
-        API_URL=https://${cfg.apiDomain}
-        NEXT_PUBLIC_API_URL=https://${cfg.apiDomain}
-        EXPO_PUBLIC_API_URL=https://${cfg.apiDomain}
+    sops.templates = {
+      "unprompted-postgres-env" = {
+        content = postgresEnvironment;
+        mode = "0400";
+        restartUnits = [
+          "podman-unprompted-postgres.service"
+          "unprompted-initialize.service"
+        ];
+      };
+      "unprompted-migrate-env" = {
+        content = databaseEnvironment;
+        mode = "0400";
+        restartUnits = [ "unprompted-initialize.service" ];
+      };
+      "unprompted-api-env" = {
+        content =
+          databaseEnvironment
+          + evaluationEnvironment
+          + emailEnvironment
+          + operationsEnvironment
+          + ''
+            PORT=${toString cfg.apiPort}
+            BETTER_AUTH_SECRET=${config.sops.placeholder.unprompted_better_auth_secret}
+            BETTER_AUTH_URL=https://${cfg.apiDomain}
+            WEB_ORIGIN=https://${cfg.domain}
+            AI_EXTRACTION_PROVIDER=openrouter
+            AI_VISION_MODEL=google/gemini-3.5-flash
+            AI_EXTRACTION_TIMEOUT_MS=45000
+            AI_STT_MODEL=openai/whisper-large-v3-turbo
+            AI_STT_TIMEOUT_MS=60000
+            AI_STT_MAX_DURATION_SECONDS=300
+            EAGER_EVALUATION=false
 
-        POSTGRES_USER=unprompted
-        POSTGRES_DB=unprompted
-        POSTGRES_PASSWORD=${config.sops.placeholder.unprompted_postgres_password}
-        POSTGRES_HOST=unprompted-postgres
-        POSTGRES_PORT=5432
-
-        BETTER_AUTH_SECRET=${config.sops.placeholder.unprompted_better_auth_secret}
-        BETTER_AUTH_URL=https://${cfg.apiDomain}
-        WEB_ORIGIN=https://${cfg.domain}
-
-        AI_PROVIDER=openrouter
-        AI_API_KEY=${config.sops.placeholder.unprompted_openrouter_api_key}
-        AI_BASE_URL=https://openrouter.ai/api/v1
-        AI_MODEL=deepseek/deepseek-v4-flash
-        AI_EVALUATION_TIMEOUT_MS=30000
-        AI_EXTRACTION_PROVIDER=openrouter
-        AI_VISION_MODEL=google/gemini-3.5-flash
-        AI_EXTRACTION_TIMEOUT_MS=45000
-        AI_STT_MODEL=openai/whisper-large-v3-turbo
-        AI_STT_TIMEOUT_MS=60000
-        AI_STT_MAX_DURATION_SECONDS=300
-        EAGER_EVALUATION=false
-
-        SMTP_HOST=smtp.purelymail.com
-        SMTP_PORT=465
-        SMTP_SECURE=true
-        SMTP_USERNAME=hello@unprompted.to
-        SMTP_PASSWORD=${config.sops.placeholder.unprompted_smtp_password}
-        EMAIL_FROM="Unprompted <hello@unprompted.to>"
-        EMAIL_TOKEN_SECRET=${config.sops.placeholder.unprompted_email_token_secret}
-
-        DISCUSSIONS_ENABLED=false
-        EXTRACTION_ENABLED=false
-        NOTIFICATIONS_ENABLED=false
-        API_VERSION=1.0.0
-        MIN_WEB_VERSION=0.1.0
-        MIN_NATIVE_VERSION=0.1.0
-        OPERATIONS_TOKEN=${config.sops.placeholder.unprompted_operations_token}
-      '';
-      mode = "0400";
-      restartUnits = [
-        "unprompted-initialize.service"
-      ]
-      ++ unpromptedUnits;
+            DISCUSSIONS_ENABLED=false
+            EXTRACTION_ENABLED=false
+            NOTIFICATIONS_ENABLED=false
+            API_VERSION=1.0.0
+            MIN_WEB_VERSION=0.1.0
+            MIN_NATIVE_VERSION=0.1.0
+          '';
+        mode = "0400";
+        restartUnits = [ "podman-unprompted-api.service" ];
+      };
+      "unprompted-worker-env" = {
+        # EMAIL_TOKEN_SECRET is explicit, so the worker needs no auth-signing fallback.
+        content =
+          databaseEnvironment
+          + evaluationEnvironment
+          + emailEnvironment
+          + operationsEnvironment
+          + ''
+            API_ORIGIN=http://unprompted-api:${toString cfg.apiPort}
+            WEB_ORIGIN=https://${cfg.domain}
+            NOTIFICATIONS_ENABLED=false
+          '';
+        mode = "0400";
+        restartUnits = [ "podman-unprompted-worker.service" ];
+      };
     };
 
     systemd.tmpfiles.rules = [
@@ -166,12 +292,10 @@ in
 
     virtualisation.oci-containers.containers = {
       unprompted-postgres = {
+        # Wait for pg_isready before boot migrations or deployment acceptance.
+        podman.sdnotify = "healthy";
         image = "docker.io/library/postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193";
-        environment = {
-          POSTGRES_USER = "unprompted";
-          POSTGRES_DB = "unprompted";
-        };
-        environmentFiles = [ runtimeEnvFile ];
+        environmentFiles = [ postgresEnvFile ];
         volumes = [ "/var/lib/unprompted/postgres:/var/lib/postgresql/data" ];
         ports = [ "127.0.0.1:${toString cfg.postgresPort}:5432" ];
         extraOptions = [
@@ -184,27 +308,39 @@ in
       };
       unprompted-api = {
         image = apiImage;
-        environmentFiles = [ runtimeEnvFile ];
+        user = "1000:1000";
+        environmentFiles = [ apiEnvFile ];
         ports = [ "127.0.0.1:${toString cfg.apiPort}:${toString cfg.apiPort}" ];
         dependsOn = [ "unprompted-postgres" ];
         extraOptions = [
           "--network=podman"
           "--pull=never"
+          "--cap-drop=ALL"
+          "--security-opt=no-new-privileges"
         ];
       };
       unprompted-worker = {
         image = workerImage;
-        environmentFiles = [ runtimeEnvFile ];
+        user = "1000:1000";
+        environmentFiles = [ workerEnvFile ];
         dependsOn = [ "unprompted-postgres" ];
         extraOptions = [
           "--network=podman"
           "--pull=never"
+          "--cap-drop=ALL"
+          "--security-opt=no-new-privileges"
         ];
       };
       unprompted-web = {
         image = webImage;
-        environmentFiles = [ runtimeEnvFile ];
+        user = "1000:1000";
+        # The standalone Next server only needs public routing configuration.
+        # Keep this out of SOPS so no credential file is granted to the web tier.
         environment = {
+          NODE_ENV = "production";
+          API_URL = "https://${cfg.apiDomain}";
+          NEXT_PUBLIC_API_URL = "https://${cfg.apiDomain}";
+          WEB_ORIGIN = "https://${cfg.domain}";
           HOSTNAME = "0.0.0.0";
           PORT = "3000";
           NEXT_TELEMETRY_DISABLED = "1";
@@ -214,12 +350,16 @@ in
         extraOptions = [
           "--network=podman"
           "--pull=never"
+          "--cap-drop=ALL"
+          "--security-opt=no-new-privileges"
+          # Next image optimization writes here. Do not grant writes to /app.
+          "--tmpfs=/app/apps/web/.next/cache:rw,mode=1777,size=128m"
         ];
       };
     };
 
     systemd.services.podman-unprompted-postgres = {
-      unitConfig.ConditionPathExists = runtimeEnvFile;
+      unitConfig.ConditionPathExists = postgresEnvFile;
     };
 
     systemd.services.unprompted-images = {
@@ -306,11 +446,11 @@ in
         "podman-unprompted-api.service"
         "podman-unprompted-worker.service"
       ];
-      unitConfig.ConditionPathExists = runtimeEnvFile;
+      unitConfig.ConditionPathExists = migrateEnvFile;
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        EnvironmentFile = runtimeEnvFile;
+        EnvironmentFile = migrateEnvFile;
         TimeoutStartSec = "15min";
         ExecStart = bootInitializeScript;
       };
@@ -324,20 +464,24 @@ in
       # inside the locked deployment would deadlock if it were inactive.
       after = [ "podman-unprompted-postgres.service" ];
       requires = [ "podman-unprompted-postgres.service" ];
-      unitConfig.ConditionPathExists = runtimeEnvFile;
+      unitConfig.ConditionPathExists = migrateEnvFile;
       serviceConfig = {
         Type = "oneshot";
-        EnvironmentFile = runtimeEnvFile;
+        EnvironmentFile = migrateEnvFile;
         TimeoutStartSec = "15min";
         ExecStart = initializeScript;
       };
     };
 
     systemd.services.podman-unprompted-api = {
+      # Existing sessions keep the bootstrap role's OID across its rename.
+      # Reconnect both app processes when the role transition changes.
+      restartTriggers = [ initializeScript ];
       after = [ "unprompted-initialize.service" ];
       requires = [ "unprompted-initialize.service" ];
     };
     systemd.services.podman-unprompted-worker = {
+      restartTriggers = [ initializeScript ];
       after = [ "unprompted-initialize.service" ];
       requires = [ "unprompted-initialize.service" ];
     };

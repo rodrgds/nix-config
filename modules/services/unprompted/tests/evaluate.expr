@@ -1,0 +1,26 @@
+# Evaluate only declarative data. SOPS placeholders are not decrypted secrets.
+let
+  flake = builtins.getFlake (toString ../../../..);
+  config = flake.nixosConfigurations.rgo-vps.config;
+  inherit (flake.inputs.nixpkgs) lib;
+in
+{
+  directus = config.virtualisation.oci-containers.containers.directus;
+  containers = lib.filterAttrs (
+    name: _: lib.hasPrefix "unprompted-" name
+  ) config.virtualisation.oci-containers.containers;
+  templates = lib.mapAttrs (_: template: {
+    inherit (template)
+      path
+      content
+      mode
+      restartUnits
+      ;
+  }) (lib.filterAttrs (name: _: lib.hasPrefix "unprompted-" name) config.sops.templates);
+  placeholders = lib.filterAttrs (name: _: lib.hasPrefix "unprompted_" name) config.sops.placeholder;
+  initialize = config.systemd.services.unprompted-initialize.serviceConfig.EnvironmentFile;
+  deployInitialize =
+    config.systemd.services.unprompted-deploy-initialize.serviceConfig.EnvironmentFile;
+  initializeScript =
+    config.systemd.services.unprompted-deploy-initialize.serviceConfig.ExecStart.text;
+}

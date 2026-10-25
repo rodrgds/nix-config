@@ -571,10 +571,21 @@ let
     exec 9>/run/podman-maintenance.lock
     flock --exclusive 9
 
-    if [ ! -f ${config.sops.templates."unprompted-production-env".path} ]; then
-      echo "Unprompted production env is not configured" >&2
-      exit 1
-    fi
+    for env_file in ${
+      lib.escapeShellArgs (
+        map (name: config.sops.templates.${name}.path) [
+          "unprompted-postgres-env"
+          "unprompted-migrate-env"
+          "unprompted-api-env"
+          "unprompted-worker-env"
+        ]
+      )
+    }; do
+      if [ ! -f "$env_file" ]; then
+        echo "Unprompted runtime env is not configured: $env_file" >&2
+        exit 1
+      fi
+    done
 
     components=(api worker web migrate)
     declare -A previous_images=()
