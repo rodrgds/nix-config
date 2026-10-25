@@ -14,15 +14,60 @@ restrict,command="/usr/bin/python3 -I /usr/local/lib/nas-backup/receiver.py" ssh
 
 Synology rejects this home's ACL during normal key lookup. Its SSH configuration therefore uses the root-owned key file for `kraktoos`. Preserve existing login keys when updating it. Install the receiver before rebuilding the VPS; restore checks need its restricted download command as well as upload.
 
+### NAS permissions
+
+The backup tree must have a private DSM ACL as well as private Unix modes. The
+October 2026 audit found that inheritance from the home folder gave
+`sc-syncthing` full access to every snapshot, overriding the privacy intended by
+`mkdir(..., 0700)` and file mode `0600`. A `0777` result from `stat` on Synology
+does not alone establish effective access. Inspect `synoacltool -get` on the
+root, a dataset, a snapshot directory and `data.gz`.
+
+In DSM File Station's permission editor, disable inheritance specifically on
+`/volume1/homes/kraktoos/Backups/rgo-vps`, convert the inherited rules, and remove
+the Syncthing service and every unrelated principal. Keep backup account
+`kraktoos` and administrators, and apply the private policy to existing child
+folders and files. Review any explicit child rules as well. Do not change the
+whole home folder or delete snapshots. Verify the effective ACL on all eight
+datasets and representative files afterwards. The root-owned receiver and
+root-owned authorized key file remain outside this writable data tree.
+
+The forced key restricts commands, but still runs as an administrator who is in
+the Docker group. A future separate backup account needs no Docker membership,
+sudo, DSM applications or interactive login. Synology's restrictions on SSH
+accounts must be verified before changing that identity. Keep the existing
+forced command and host-key pinning until the replacement is proven.
+
 ## Integrity and recovery
 
 A snapshot is published only after the whole producer succeeds and the NAS verifies its SHA-256, size, gzip checksum and, for archives, tar framing. Failed uploads cannot rotate successful backups. Each dataset retains seven successful snapshots. Montra's status file is replaced only after a matching NAS receipt.
 
 Each snapshot directory contains `data.gz` and `manifest.json`. Database datasets contain gzipped SQL. Media archives contain `media/` files. Vaultwarden and Directus archives contain ordered `database/00000000.sql` chunks and `files/` application data, excluding the live SQLite database and its WAL files. Concatenate the SQL chunks into sqlite3 on a new restore database, then restore the application files separately.
 
+The receiver accepts at most 16 GiB compressed and 128 GiB expanded per upload.
+It rejects a transfer before writing the frame that exceeds the compressed
+limit, and bounds gzip verification reads at the expanded limit. Rejection
+removes only the failed partial and leaves successful snapshots untouched.
+These budgets leave headroom over the October 2026 largest snapshot, about
+4 GiB compressed. Review legitimate growth before raising them. They supplement
+the six-hour timeout; they do not replace a NAS storage quota, a private ACL or
+an independent backup copy. The Linux receiver also enforces a hard 512 MiB
+address-space ceiling, 64 descriptors and disabled core dumps before reading
+input. Tar parsing bounds physical headers, metadata, recursion and paths, and
+does not retain every parsed member. These are per-process budgets, not an
+aggregate SSH/NAS resource quota. See the receiver-resource audit supplement
+for exact capacities and Python 3.8 compatibility evidence.
+
 Media uses one boto3 client for paginated listings and streaming reads. Each read requires the listed ETag, and a final inventory comparison rejects changes made during the export.
 
-The weekly checks download and verify NAS snapshots, restore Directus into a temporary SQLite database, and restore OpenPost into a disposable PostgreSQL database. OpenPost also checks its media archive and updates `/var/backup/openpost/restore-drill-latest.json`. Interrupted drills clean up their temporary database.
+The weekly checks download and verify NAS snapshots, restore Directus into a temporary SQLite database, and restore OpenPost into a disposable PostgreSQL database. OpenPost also checks its media archive and updates `/var/backup/openpost/restore-drill-latest.json`. Interrupted drills remove their disposable container; systemd also has a CID-based stop fallback.
+
+The SQLite checker runs the CLI with `--safe`, suppresses SQL diagnostics and
+results, and rejects shell directives, database attachment and external output
+files. Never add a safe-mode escape nonce. This protects against a NAS writer
+replacing an archive and its checksum together. See SQLite's
+[safe-mode contract](https://sqlite.org/cli.html#the_safe_command_line_option).
+The PostgreSQL server and psql client run in a disposable digest-pinned Alpine container, with no network, production volumes, host mounts or credentials. Its root filesystem is read-only, it runs as postgres with no capabilities, and temporary storage, memory, CPU and process counts are bounded. A separate database inside a production container is not an acceptable substitute. See the dated audit reports for isolation regression evidence and current host-side staging limits.
 
 OpenPost's older encrypted offsite job requires local backup files and cannot be enabled with this transport. A third-copy policy must consume NAS snapshots instead. Historical backups and retired app data are not removed by activation.
 

@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import resource
 import signal
 import stat
 import struct
@@ -25,9 +26,70 @@ DATASETS = {'montra-db', 'openpost-db', 'openpost-media', 'umami-db',
             'shlink-db', 'unprompted-db', 'directus', 'vaultwarden'}
 ARCHIVE_DATASETS = {'openpost-media', 'directus', 'vaultwarden'}
 MAX_FRAME = 1024 * 1024
+# Bound each transfer even when its dedicated SSH identity is compromised.
+# Keep growth headroom over the October 2026 baseline (about 4 GiB compressed),
+# while bounding upload storage and gzip verification work.
+MAX_UPLOAD_BYTES = 16 * 1024 ** 3
+MAX_EXPANDED_BYTES = 128 * 1024 ** 3
+MAX_ADDRESS_SPACE = 512 * 1024 ** 2
+MAX_OPEN_FILES = 64
+MAX_TAR_HEADERS = 1000000
+MAX_TAR_METADATA_BYTES = 64 * 1024
+MAX_TAR_TOTAL_METADATA_BYTES = 16 * 1024 ** 2
 KEEP = 7
 DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
 FILE = os.O_NOFOLLOW | os.O_CLOEXEC
+
+
+def resource_limits(root):
+    # DSM's Linux kernel enforces RLIMIT_AS without a cgroup or privileges.
+    # Darwin has different address-space semantics; explicit alternate roots
+    # remain usable for local fixtures, but the production root fails closed.
+    if sys.platform != 'linux':
+        if root == ROOT:
+            raise RuntimeError('production receiver requires Linux resource limits')
+        return
+    for kind, maximum in ((resource.RLIMIT_AS, MAX_ADDRESS_SPACE),
+                          (resource.RLIMIT_NOFILE, MAX_OPEN_FILES),
+                          (resource.RLIMIT_CORE, 0)):
+        current = resource.getrlimit(kind)
+        limit = min([maximum] + [value for value in current
+                                 if value != resource.RLIM_INFINITY])
+        # Never raise an inherited limit. Lower both so parsing cannot relax it.
+        resource.setrlimit(kind, (limit, limit))
+
+
+class ReceiverTarInfo(tarfile.TarInfo):
+    def _proc_member(self, archive):
+        # Python 3.8 streaming tar still allocates extension payloads and
+        # recursively follows their chains before yielding a logical member.
+        archive.receiver_headers = getattr(archive, 'receiver_headers', 0) + 1
+        if archive.receiver_headers > MAX_TAR_HEADERS:
+            raise ValueError('tar header limit exceeded')
+        if self.size < 0 or self.size > MAX_EXPANDED_BYTES:
+            raise ValueError('tar member size limit exceeded')
+        if self.type in (tarfile.XHDTYPE, tarfile.XGLTYPE, tarfile.SOLARIS_XHDTYPE,
+                         tarfile.GNUTYPE_LONGNAME, tarfile.GNUTYPE_LONGLINK):
+            archive.receiver_metadata = getattr(archive, 'receiver_metadata', 0) + self.size
+            if (self.size > MAX_TAR_METADATA_BYTES or
+                    archive.receiver_metadata > MAX_TAR_TOTAL_METADATA_BYTES):
+                raise ValueError('tar metadata limit exceeded')
+        elif self.type not in (tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE):
+            raise ValueError('archive links and special files are not restorable safely')
+        depth = getattr(archive, 'receiver_depth', 0)
+        if depth >= 8:
+            raise ValueError('tar extension depth limit exceeded')
+        archive.receiver_depth = depth + 1
+        try:
+            return super()._proc_member(archive)
+        finally:
+            archive.receiver_depth = depth
+
+    def _proc_gnusparse_00(self, *args):
+        raise ValueError('sparse archives are not restorable safely')
+
+    _proc_gnusparse_01 = _proc_gnusparse_00
+    _proc_gnusparse_10 = _proc_gnusparse_00
 
 
 def open_root(path):
@@ -81,10 +143,12 @@ def verify(fd, kind):
         size = 0
         tail = b''
         while True:
-            chunk = zipped.read(MAX_FRAME)
+            chunk = zipped.read(min(MAX_FRAME, MAX_EXPANDED_BYTES - size + 1))
             if not chunk:
                 break
             size += len(chunk)
+            if size > MAX_EXPANDED_BYTES:
+                raise ValueError('expanded byte limit exceeded')
             tail = (tail + chunk)[-1024:]
     if not size:
         raise ValueError('empty uncompressed backup')
@@ -93,10 +157,19 @@ def verify(fd, kind):
     if size % 512 or tail != b'\0' * 1024:
         raise ValueError('missing tar end blocks')
     os.lseek(fd, 0, os.SEEK_SET)
-    with os.fdopen(os.dup(fd), 'rb') as raw, tarfile.open(fileobj=raw, mode='r|gz') as archive:
-        for member in archive:
+    with os.fdopen(os.dup(fd), 'rb') as raw, gzip.GzipFile(fileobj=raw) as zipped, \
+            tarfile.open(fileobj=zipped, mode='r|', tarinfo=ReceiverTarInfo) as archive:
+        while True:
+            member = archive.next()
+            if member is None:
+                break
+            # r|gz alone retains every TarInfo on Python 3.8. We only need the
+            # current member, and cannot use Python 3.13's stream=True on DSM.
+            archive.members.clear()
             path = member.name
-            if path.startswith('/') or '..' in path.split('/'):
+            if len(path.encode('utf-8', 'surrogateescape')) > 4096:
+                raise ValueError('archive path limit exceeded')
+            if path.startswith('/') or '..' in path.split('/') or member.size < 0:
                 raise ValueError('unsafe archive member')
             if not (member.isfile() or member.isdir()):
                 raise ValueError('archive links and special files are not restorable safely')
@@ -148,6 +221,8 @@ def receive(root, command, stream):
                     break
                 if size > MAX_FRAME:
                     raise ValueError('frame too large')
+                if count + size > MAX_UPLOAD_BYTES:
+                    raise ValueError('compressed byte limit exceeded')
                 chunk = exact(stream, size)
                 out.write(chunk)
                 digest.update(chunk)
@@ -241,6 +316,7 @@ def main():
     signal.signal(signal.SIGTERM, expired)
     signal.alarm(6 * 3600)
     try:
+        resource_limits(args.root)
         command = os.environ.get('SSH_ORIGINAL_COMMAND', '')
         match = re.fullmatch(r'download ([a-z-]+)', command)
         if match:

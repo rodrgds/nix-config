@@ -24,6 +24,29 @@ class Tests(unittest.TestCase):
  def test_wrong_dataset_kind(self):
   self.assertNotEqual(self.runrx(wire(gzip.compress(b"sql")), "vaultwarden", "gzip").returncode, 0)
   self.assertEqual(list(self.root.glob('*/snapshot-*')), [])
+ def test_oversized_upload_preserves_successful_snapshot(self):
+  import importlib.util, io
+  from unittest.mock import patch
+  spec = importlib.util.spec_from_file_location('receiver', R)
+  receiver = importlib.util.module_from_spec(spec); spec.loader.exec_module(receiver)
+  previous = gzip.compress(b'previous backup')
+  good = self.runrx(wire(previous))
+  self.assertEqual(good.returncode, 0, good.stderr)
+  before = self.snaps()
+  # Small test budgets exercise the real streaming and publication boundary.
+  # The valid payloads differ only in which resource budget they exceed.
+  for payload, message in [(bytes(range(256)), 'compressed byte limit'),
+                           (b'x' * 2048, 'expanded byte limit')]:
+   with self.subTest(message=message), patch.dict(receiver.__dict__, MAX_UPLOAD_BYTES=128, MAX_EXPANDED_BYTES=1024):
+    with self.assertRaisesRegex(ValueError, message):
+     receiver.receive(str(self.root), 'upload montra-db gzip', io.BytesIO(wire(gzip.compress(payload))))
+    self.assertEqual(self.snaps(), before)
+    self.assertEqual((before[0] / 'data.gz').read_bytes(), previous)
+    self.assertEqual(list((self.root / 'montra-db').glob('.partial-*')), [])
+  boundary = gzip.compress(b'x' * 1024)
+  with patch.dict(receiver.__dict__, MAX_UPLOAD_BYTES=len(boundary), MAX_EXPANDED_BYTES=1024):
+   receipt = receiver.receive(str(self.root), 'upload montra-db gzip', io.BytesIO(wire(boundary)))
+  self.assertEqual(gzip.decompress((self.root / receipt['label'] / 'data.gz').read_bytes()), b'x' * 1024)
  def test_unsafe_tar_links(self):
   import io, tarfile
   for kind in (tarfile.SYMTYPE, tarfile.LNKTYPE, tarfile.FIFOTYPE):
@@ -44,7 +67,7 @@ class StreamingFixture(unittest.TestCase):
   self.t=tempfile.TemporaryDirectory(); self.dir=Path(self.t.name).resolve(); self.root=self.dir/"backups"; self.root.mkdir()
   self.bin=self.dir/"bin"; self.bin.mkdir()
   shim=self.bin/"ssh"
-  shim.write_text("#!/usr/bin/env python3\nimport os,sys\nos.environ['SSH_ORIGINAL_COMMAND']=sys.argv[-1]\nos.execv(sys.executable,[sys.executable,os.environ['RECEIVER'],'--root',os.environ['BACKUP_ROOT']])\n")
+  shim.write_text("#!"+sys.executable+"\nimport os,sys\nos.environ['SSH_ORIGINAL_COMMAND']=sys.argv[-1]\nos.execv(sys.executable,[sys.executable,os.environ['RECEIVER'],'--root',os.environ['BACKUP_ROOT']])\n")
   shim.chmod(0o700)
   self.env=dict(os.environ,PATH=str(self.bin)+os.pathsep+os.environ['PATH'],RECEIVER=str(R),BACKUP_ROOT=str(self.root))
  def tearDown(self): self.t.cleanup()
@@ -85,31 +108,43 @@ class StreamingTests(StreamingFixture):
   result=subprocess.run([sys.executable,str(R),'--root',str(self.root)],input=wire(bad),capture_output=True,env=dict(os.environ,SSH_ORIGINAL_COMMAND='upload openpost-media tar-gzip'))
   self.assertNotEqual(result.returncode,0); self.assertEqual(list(self.root.glob('*/snapshot-*')),[])
 
- def test_restore_stop_drops_temporary_database(self):
+ def test_restore_stop_removes_disposable_state(self):
   import signal,time
   result=self.send("printf 'SELECT 1;\\n' | gzip", "openpost-db")
   self.assertEqual(result.returncode,0,result.stderr)
   result=self.send("tar -czf - --files-from /dev/null", "openpost-media", "tar-gzip")
   self.assertEqual(result.returncode,0,result.stderr)
-  log=self.dir/'commands.log'; runtime=self.dir/'runtime'; runtime.mkdir()
+  containers=self.dir/'containers'; containers.mkdir()
+  ready=self.dir/'import.started'; runtime=self.dir/'runtime'; runtime.mkdir()
   podman=self.bin/'podman'
-  podman.write_text("#!/usr/bin/env python3\nimport os,sys,time\nwith open(os.environ['TEST_COMMAND_LOG'],'a') as f: f.write(' '.join(sys.argv[1:])+'\\n')\nif 'psql' in sys.argv: time.sleep(30)\n")
+  podman.write_text('#!'+sys.executable+'\n'+'''import os,sys,time
+from pathlib import Path
+args=sys.argv[1:]; registry=Path(os.environ['TEST_CONTAINERS'])
+if args[0]=='create':
+ (registry/args[args.index('--name')+1]).touch()
+elif args[0]=='exec' and 'psql' in args:
+ Path(os.environ['TEST_IMPORT_STARTED']).touch()
+ time.sleep(30)
+elif args[0]=='rm':
+ for argument in args[1:]:
+  (registry/argument).unlink(missing_ok=True)
+''')
   podman.chmod(0o700)
-  env=dict(self.env,TEST_COMMAND_LOG=str(log),RUNTIME_DIRECTORY=str(runtime))
+  env=dict(self.env,TEST_CONTAINERS=str(containers),TEST_IMPORT_STARTED=str(ready),
+           RUNTIME_DIRECTORY=str(runtime),
+           NAS_RESTORE_POSTGRES_IMAGE='docker.io/library/postgres:17-alpine@sha256:'+'a'*64)
   proc=subprocess.Popen([sys.executable,str(R.with_name('restore_check.py')),'openpost-db'],env=env,start_new_session=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   try:
    deadline=time.monotonic()+5
-   while not log.exists() or 'psql' not in log.read_text():
+   while not ready.exists():
     if proc.poll() is not None or time.monotonic()>deadline:
      self.fail('restore did not reach PostgreSQL import')
     time.sleep(.02)
+   self.assertEqual(len(list(containers.iterdir())),1)
    os.killpg(proc.pid,signal.SIGTERM)
    proc.communicate(timeout=5)
    self.assertNotEqual(proc.returncode,0)
-   commands=[line.split() for line in log.read_text().splitlines()]
-   created=[line[-1] for line in commands if 'createdb' in line]
-   dropped=[line[-1] for line in commands if 'dropdb' in line]
-   self.assertEqual(dropped,created)
+   self.assertEqual(list(containers.iterdir()),[])
    self.assertEqual(list(runtime.iterdir()),[])
   finally:
    try: os.killpg(proc.pid,signal.SIGKILL)
@@ -182,6 +217,24 @@ class DownloadTests(StreamingFixture):
    self.assertNotEqual(failed.returncode,0)
 
 class RestoreTests(unittest.TestCase):
+ def test_sqlite_restore_rejects_external_file_operations(self):
+  import importlib.util, io, shlex, tarfile
+  spec=importlib.util.spec_from_file_location('restore_check',R.with_name('restore_check.py'))
+  module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+  for operation in ('shell', 'attach', 'vacuum'):
+   with self.subTest(operation=operation), tempfile.TemporaryDirectory() as directory:
+    root=Path(directory).resolve(); marker=root/'external-file'; runtime=root/'runtime'; runtime.mkdir()
+    sql='CREATE TABLE test(value TEXT);\n'
+    if operation=='shell': sql+=f'.shell printf unsafe > {shlex.quote(str(marker))}\n'
+    elif operation=='attach': sql+=f"ATTACH DATABASE '{marker}' AS outside;\nCREATE TABLE outside.leak(value TEXT);\n"
+    else: sql+=f"VACUUM INTO '{marker}';\n"
+    archive=root/'snapshot.gz'
+    with tarfile.open(archive,'w:gz') as output:
+     payload=sql.encode(); member=tarfile.TarInfo('database/00000000.sql'); member.size=len(payload)
+     output.addfile(member,io.BytesIO(payload))
+    with self.assertRaises(ValueError): module.sqlite_check(archive,str(runtime))
+    self.assertFalse(marker.exists(), operation+' escaped the restore database')
+
  def test_sqlite_restore_check(self):
   import importlib.util,sqlite3
   spec=importlib.util.spec_from_file_location('restore_check',R.with_name('restore_check.py'))
@@ -195,5 +248,177 @@ class RestoreTests(unittest.TestCase):
    module.sqlite_check(archive,directory)
    with sqlite3.connect(root/'database.sqlite') as db:
     self.assertEqual(db.execute('select value from test').fetchone()[0],'evidence')
+
+class RestoreResourceTests(unittest.TestCase):
+ def setUp(self):
+  import importlib.util
+  spec=importlib.util.spec_from_file_location('resource_restore',R.with_name('restore_check.py'))
+  self.restore=importlib.util.module_from_spec(spec); spec.loader.exec_module(self.restore)
+  self.temp=tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+  self.root=Path(self.temp.name)
+
+ def fetch(self, payload, claimed=None, **changes):
+  import io
+  from unittest.mock import patch
+  destination=self.root/'download.gz'
+  manifest=dict(label='directus/snapshot-20261025T140000000000Z-'+'a'*32,
+                bytes=len(payload) if claimed is None else claimed,
+                checksum=hashlib.sha256(payload).hexdigest(),kind='tar-gzip',verifiedAt='2026-10-25T14:00:00Z')
+  manifest.update(changes)
+  class Pipe(io.BytesIO):
+   high_water=0
+   def read(pipe, size=-1):
+    if destination.exists(): pipe.high_water=max(pipe.high_water,destination.stat().st_size)
+    return super().read(size)
+  pipe=Pipe(json.dumps(manifest).encode()+b'\n'+payload)
+  from types import SimpleNamespace
+  process=SimpleNamespace(stdout=pipe,wait=lambda:0,poll=lambda:0)
+  with patch.object(self.restore.socket,'getaddrinfo',return_value=[]), patch.object(self.restore.subprocess,'Popen',return_value=process):
+   try: return self.restore.fetch('directus',destination)
+   finally:
+    self.assertLessEqual(pipe.high_water,4096,'NAS stream grew the staging file beyond its actual byte budget')
+
+ def test_download_real_byte_cap_and_failure_cleanup(self):
+  from unittest.mock import patch
+  with patch.dict(self.restore.__dict__,DATASET_LIMITS={'directus':(4096,16384)}):
+   with self.assertRaises(ValueError): self.fetch(b'x'*131072,claimed=4096)
+  self.assertFalse((self.root/'download.gz').exists(),'failed download left staging bytes')
+
+ def test_download_exact_boundary_and_invalid_receipts(self):
+  from unittest.mock import patch
+  with patch.dict(self.restore.__dict__,DATASET_LIMITS={'directus':(4096,16384)}):
+   self.fetch(b'x'*4096)
+   self.assertEqual((self.root/'download.gz').read_bytes(),b'x'*4096)
+   (self.root/'download.gz').unlink()
+   for changes in ({'bytes':4097},{'bytes':True},{'bytes':-1},{'bytes':'4096'},
+                   {'checksum':'private-bad-hash'},{'kind':'gzip'},{'extra':'private-field'}):
+    with self.subTest(changes=changes), self.assertRaises(ValueError) as error:
+     self.fetch(b'x'*4096,**changes)
+    self.assertNotIn('private-',str(error.exception))
+    self.assertFalse((self.root/'download.gz').exists(),'invalid manifest created a staging file')
+   for changes in ({'checksum':'0'*64},{'bytes':4096}):
+    with self.subTest(changes=changes), self.assertRaises(ValueError): self.fetch(b'x'*4095,**changes)
+    self.assertFalse((self.root/'download.gz').exists(),'checksum/truncated download left staging bytes')
+
+ def archive(self, metadata=None, files=0):
+  import io,tarfile
+  data=io.BytesIO()
+  with tarfile.open(fileobj=data,mode='w',format=tarfile.PAX_FORMAT) as archive:
+   sql=b'CREATE TABLE fixture(value TEXT);\nINSERT INTO fixture VALUES (\'preserved\');\n'
+   member=tarfile.TarInfo('database/00000000.sql'); member.size=len(sql)
+   if metadata: member.pax_headers={'comment':metadata}
+   archive.addfile(member,io.BytesIO(sql))
+   for index in range(files): archive.addfile(tarfile.TarInfo('files/'+str(index)))
+  path=self.root/'archive.gz'; path.write_bytes(gzip.compress(data.getvalue()))
+  return path,len(data.getvalue())
+
+ def test_expansion_boundary_and_bomb_including_tar_trailer(self):
+  from unittest.mock import patch
+  from contextlib import closing
+  import sqlite3
+  path,expanded=self.archive()
+  with patch.dict(self.restore.__dict__,DATASET_LIMITS={'directus':(4096,expanded)}):
+   self.restore.sqlite_check(path,self.root)
+  with closing(sqlite3.connect(self.root/'database.sqlite')) as db:
+   self.assertEqual(db.execute('SELECT value FROM fixture').fetchall(),[('preserved',)])
+  (self.root/'database.sqlite').unlink()
+  # The extra gzip member is valid and lies after tar's logical EOF. It must
+  # still count, rather than disappearing when the tar iterator finishes.
+  path.write_bytes(path.read_bytes()+gzip.compress(b'\0'*65536))
+  with patch.dict(self.restore.__dict__,DATASET_LIMITS={'directus':(4096,expanded)}):
+   with self.assertRaisesRegex(ValueError,'expanded byte limit'):
+    self.restore.sqlite_check(path,self.root)
+  self.assertFalse((self.root/'database.sqlite').exists())
+
+ def test_tar_metadata_and_entry_budgets_before_restore(self):
+  from unittest.mock import patch
+  for metadata,files,budget in [('x'*32768,0,{'MAX_TAR_METADATA_BYTES':1024}),
+                                (None,20,{'MAX_TAR_HEADERS':10})]:
+   with self.subTest(budget=budget):
+    (self.root/'database.sqlite').unlink(missing_ok=True)
+    path,_=self.archive(metadata,files)
+    with patch.dict(self.restore.__dict__,**budget):
+     with self.assertRaisesRegex(ValueError,'tar .* limit'):
+      self.restore.sqlite_check(path,self.root)
+    self.assertFalse((self.root/'database.sqlite').exists())
+
+ def test_sqlite_actual_file_growth_is_bounded(self):
+  import io,tarfile
+  from unittest.mock import patch
+  path=self.root/'growth.gz'
+  payload=b'CREATE TABLE growth(value); INSERT INTO growth VALUES (zeroblob(1048576));\n'
+  with tarfile.open(path,'w:gz') as archive:
+   member=tarfile.TarInfo('database/00000000.sql'); member.size=len(payload)
+   archive.addfile(member,io.BytesIO(payload))
+  with patch.dict(self.restore.__dict__,SQLITE_FILE_BYTES=16384):
+   with self.assertRaises(ValueError): self.restore.sqlite_check(path,self.root)
+  self.assertLessEqual((self.root/'database.sqlite').stat().st_size,16384)
+
+ def test_tar_metadata_rejection_precedes_large_allocation(self):
+  import tracemalloc
+  path,_=self.archive('x'*(16*1024**2))
+  tracemalloc.start()
+  try:
+   with self.assertRaisesRegex(ValueError,'tar metadata limit'):
+    self.restore.sqlite_check(path,self.root)
+   _,peak=tracemalloc.get_traced_memory()
+  finally: tracemalloc.stop()
+  self.assertLess(peak,2*1024**2,'parser allocated the hostile metadata before rejecting it')
+  self.assertFalse((self.root/'database.sqlite').exists())
+
+ def test_cli_private_cache_success_failure_and_interruption(self):
+  import signal,time
+  path,_=self.archive('normal bounded PAX metadata')
+  cache=self.root/'cache'; cache.mkdir()
+  runtime=self.root/'runtime'; runtime.mkdir()
+  binary=self.root/'bin'; binary.mkdir()
+  shim=binary/'ssh'
+  shim.write_text('#!'+sys.executable+'''
+import hashlib,json,os,sys,time
+from pathlib import Path
+data=Path(os.environ['FIXTURE_ARCHIVE']).read_bytes()
+manifest=dict(label='directus/snapshot-20261025T140000000000Z-'+'a'*32,
+              bytes=len(data), checksum=hashlib.sha256(data).hexdigest())
+if os.environ['FIXTURE_MODE']=='checksum': manifest['checksum']='0'*64
+sys.stdout.buffer.write(json.dumps(manifest).encode()+b'\\n'+data)
+sys.stdout.buffer.flush()
+if os.environ['FIXTURE_MODE']=='interrupt':
+ Path(os.environ['FIXTURE_READY']).touch()
+ time.sleep(30)
+''')
+  shim.chmod(0o700)
+  for mode in ('success','checksum','interrupt'):
+   with self.subTest(mode=mode):
+    # systemd creates CacheDirectory and removes staging in ExecStopPost. Here
+    # we exercise CLI success/error/TERM cleanup before that fallback is needed.
+    staging=cache/'staging'
+    if staging.exists(): staging.rmdir()
+    ready=self.root/'ready'
+    env=dict(os.environ,PATH=str(binary)+os.pathsep+os.environ['PATH'],
+             CACHE_DIRECTORY=str(cache),RUNTIME_DIRECTORY=str(runtime),
+             FIXTURE_ARCHIVE=str(path),FIXTURE_MODE=mode,FIXTURE_READY=str(ready))
+    proc=subprocess.Popen([sys.executable,str(R.with_name('restore_check.py')),'directus'],
+                          env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    try:
+     if mode=='interrupt':
+      deadline=time.monotonic()+5
+      while not ready.exists():
+       self.assertIsNone(proc.poll(),'CLI exited before interruptible download')
+       if time.monotonic()>deadline: self.fail('fixture download did not start')
+       time.sleep(.02)
+      self.assertEqual(list(runtime.iterdir()),[],'archive staging used shared runtime tmpfs')
+      self.assertTrue(list(staging.iterdir()),'private cache staging was not used')
+      proc.send_signal(signal.SIGTERM)
+     stdout,stderr=proc.communicate(timeout=5)
+     if mode=='success': self.assertEqual(proc.returncode,0,stderr)
+     else:
+      self.assertNotEqual(proc.returncode,0)
+      self.assertNotIn(b'preserved',stdout+stderr)
+     self.assertEqual(list(staging.iterdir()),[],'CLI left disposable staging files')
+     self.assertEqual(list(runtime.iterdir()),[])
+    finally:
+     if proc.poll() is None: proc.kill()
+     proc.communicate()
+
 
 if __name__=="__main__": unittest.main()
