@@ -2,6 +2,7 @@
 /// <reference types="bun" />
 
 import { createCliRenderer } from "@opentui/core";
+import { lstat, stat } from "node:fs/promises";
 
 import { App } from "./app";
 import { generateCommitMessageWithOpenRouter } from "./ai";
@@ -17,6 +18,7 @@ import {
   runCapture,
   runInteractive,
   runLogged,
+  timePhase,
   visibleCommand,
 } from "./command";
 import {
@@ -161,32 +163,44 @@ async function chooseRebuildOptions(app: App): Promise<RebuildOptions | null> {
 }
 
 async function listPlainSecretFiles(): Promise<string[]> {
-  if (!(await dirExists(SECRETS_DIR))) return [];
+  try {
+    try {
+      await lstat(SECRETS_DIR);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+    if (!(await stat(SECRETS_DIR)).isDirectory()) {
+      throw new Error("Secrets path is not a directory.");
+    }
 
-  const output = await runCapture(
-    "find",
+    // path:. imports ignored files too. Match every extension and fail closed
+    // on unreadable directories, broken roots, or symlink traversal errors.
+    const output = await runCapture(
+      "find",
+      ["-L", SECRETS_DIR, "-name", "*_plain*", "-print0"],
+      { cwd: REPO_DIR },
+    );
+    return output.split("\0").filter(Boolean).sort();
+  } catch (error) {
+    throw new Error(
+      `Cannot scan plaintext secrets in ${SECRETS_DIR}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+async function assertNoPlainSecretsForRebuild(): Promise<void> {
+  const files = await listPlainSecretFiles();
+  if (files.length === 0) return;
+  throw new Error(
     [
-      "-L",
-      SECRETS_DIR,
-      "(",
-      "-type",
-      "f",
-      "-o",
-      "-type",
-      "l",
-      ")",
-      "(",
-      "-name",
-      "*_plain*.yaml",
-      "-o",
-      "-name",
-      "*_plain*.yml",
-      ")",
-    ],
-    { cwd: REPO_DIR, check: false },
+      "Refusing to rebuild while plaintext secret paths exist:",
+      ...files.map((file) => `  - ${JSON.stringify(file)}`),
+      "",
+      "path:. copies Git-ignored files into the world-readable Nix store.",
+      "Encrypt or remove these paths using the Secrets manager before rebuilding.",
+    ].join("\n"),
   );
-
-  return output.split("\n").filter(Boolean).sort();
 }
 
 const NINE_ROUTER_MODELS_URL = "http://rgo-nas:20128/v1/models";
@@ -279,14 +293,16 @@ async function runPreparationAndRebuild(
     `Target: ${target.name}. Running flake updates, statix, and nixfmt.`,
     async (append) => {
       append("Refreshing 9Router combo catalog from the proxy...");
-      await refreshNineRouterCombos(append);
+      await timePhase("9Router catalog refresh", append, () =>
+        refreshNineRouterCombos(append),
+      );
 
       if (options.updateInputs.length > 0) {
         await runLogged(
           append,
           "nix",
           ["flake", "update", ...options.updateInputs, "--flake", REPO_DIR],
-          { cwd: REPO_DIR },
+          { cwd: REPO_DIR, phase: "selected input updates" },
         );
       } else {
         append("Skipping flake input updates.");
@@ -306,7 +322,7 @@ async function runPreparationAndRebuild(
             "--all-systems",
             "--impure",
           ],
-          { cwd: REPO_DIR },
+          { cwd: REPO_DIR, phase: "all-system check evaluation (no builds)" },
         );
         append("");
       }
@@ -315,6 +331,7 @@ async function runPreparationAndRebuild(
         await runLogged(append, "statix", ["check", "."], {
           cwd: REPO_DIR,
           check: false,
+          phase: "statix",
         });
       } else {
         append("statix not found; skipping.");
@@ -329,15 +346,21 @@ async function runPreparationAndRebuild(
             "-lc",
             "find . -name '*.nix' -not -path './tools/rebuild-wizard/node_modules/*' -exec nixfmt {} +",
           ],
-          { cwd: REPO_DIR, check: false },
+          { cwd: REPO_DIR, check: false, phase: "nixfmt" },
         );
       } else {
         append("nixfmt not found; skipping.");
         append("");
       }
 
-      append("Checking for a systemd major-version upgrade...");
-      preparation.systemdUpgrade = await detectSystemdMajorUpgrade(target);
+      if (target.kind === "nixos") {
+        append("Checking for a systemd major-version upgrade...");
+        preparation.systemdUpgrade = await timePhase(
+          "systemd version inspection",
+          append,
+          () => detectSystemdMajorUpgrade(target),
+        );
+      }
       append(
         preparation.systemdUpgrade
           ? `systemd ${preparation.systemdUpgrade.currentVersion} -> ${preparation.systemdUpgrade.targetVersion} requires a reboot-safe build.`
@@ -380,7 +403,11 @@ async function runPreparationAndRebuild(
     subtitle,
     cmd,
     args,
-    { cwd: REPO_DIR, retryNixDaemonCrash: true },
+    {
+      cwd: REPO_DIR,
+      retryNixDaemonCrash: true,
+      phase: "rebuild command (evaluation, build and activation)",
+    },
   );
 
   const healthCommand = postRebuildHealthCommand(target, currentHost);
@@ -391,7 +418,7 @@ async function runPreparationAndRebuild(
       `Target: ${target.name}. Checking live desktop services and host security.`,
       healthCmd,
       healthArgs,
-      { cwd: REPO_DIR },
+      { cwd: REPO_DIR, phase: "post-rebuild health" },
     );
     if (!healthy) return false;
   }
@@ -570,6 +597,18 @@ async function rebuildWizard(
   );
   if (!confirmed) return;
 
+  try {
+    await assertNoPlainSecretsForRebuild();
+  } catch (error) {
+    await app.scrollText(
+      "Rebuild blocked",
+      "Plaintext safety preflight",
+      error instanceof Error ? error.message : String(error),
+      { allowBack: false },
+    );
+    return;
+  }
+
   const success = await runPreparationAndRebuild(
     app,
     platform,
@@ -702,7 +741,7 @@ async function secretsWizard(app: App): Promise<void> {
         label: "Decrypt to *_plain.yaml",
         value: "decrypt-file",
         description:
-          "Writes plaintext locally; git commit is blocked until encrypted/removed.",
+          "Writes plaintext locally; rebuild and git commit are blocked until encrypted/removed.",
       },
       {
         label: "Encrypt *_plain.yaml and delete it",
@@ -988,7 +1027,12 @@ async function directRebuild(targetName: string): Promise<void> {
     );
   }
 
-  const systemdUpgrade = await detectSystemdMajorUpgrade(target);
+  await assertNoPlainSecretsForRebuild();
+  const systemdUpgrade = target.kind === "nixos"
+    ? await timePhase("systemd version inspection", console.log, () =>
+        detectSystemdMajorUpgrade(target),
+      )
+    : null;
   const nixosMode = systemdUpgrade ? "boot" : "switch";
   const [cmd, args] = rebuildCommand(target, currentHost, nixosMode);
 
@@ -1005,6 +1049,7 @@ async function directRebuild(targetName: string): Promise<void> {
     cwd: REPO_DIR,
     check: false,
     retryNixDaemonCrash: true,
+    phase: "rebuild command (evaluation, build and activation)",
   });
 
   if (code !== 0) {
@@ -1020,6 +1065,7 @@ async function directRebuild(targetName: string): Promise<void> {
     const healthCode = await runInteractive(healthCmd, healthArgs, {
       cwd: REPO_DIR,
       check: false,
+      phase: "post-rebuild health",
     });
     if (healthCode !== 0) {
       await notify(platform, "Post-rebuild health failed", target.name);

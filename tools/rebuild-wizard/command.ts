@@ -58,6 +58,16 @@ export async function runInteractive(
   args: string[],
   options: CommandOptions = {},
 ): Promise<number> {
+  return timePhase(options.phase ?? cmd, console.log, () =>
+    interactiveCommand(cmd, args, options),
+  );
+}
+
+async function interactiveCommand(
+  cmd: string,
+  args: string[],
+  options: CommandOptions,
+): Promise<number> {
   for (let attempt = 0; ; attempt++) {
     const startedAt = Math.floor(Date.now() / 1000) - 1;
     const proc = Bun.spawn([cmd, ...args], {
@@ -132,6 +142,32 @@ export async function runLogged(
   cmd: string,
   args: string[],
   options: LogCommandOptions = {},
+): Promise<void> {
+  return timePhase(options.phase ?? cmd, append, () =>
+    loggedCommand(append, cmd, args, options),
+  );
+}
+
+export async function timePhase<T>(
+  phase: string,
+  append: (line: string) => void,
+  action: () => Promise<T>,
+): Promise<T> {
+  const startedAt = performance.now();
+  try {
+    return await action();
+  } finally {
+    append(
+      `[timing] ${phase}: ${((performance.now() - startedAt) / 1000).toFixed(2)}s`,
+    );
+  }
+}
+
+async function loggedCommand(
+  append: (line: string) => void,
+  cmd: string,
+  args: string[],
+  options: LogCommandOptions,
 ): Promise<void> {
   append(`$ ${visibleCommand(cmd, args)}`);
 

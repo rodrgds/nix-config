@@ -21,6 +21,7 @@ The three machines are `rgo-desktop` (NixOS), `rgo-laptop` (macOS), `rgo-vps` (N
 - Write OS-agnostic modules: one module works on NixOS and nix-darwin, with systemd/launchd and nixpkgs/Homebrew handled inside it. `modules/apps/ghostty/default.nix` is the model.
 - Keep changes working on every host they apply to. Linux-only modules still exist in the shared tree, so gate platform-specific options; note why when a module is single-platform.
 - The rebuild wizard (`tools/rebuild-wizard`) is the one interface for every machine. Extend it rather than adding per-machine build scripts.
+- `rgo-nas` runs Synology DSM, outside these Nix host configurations. Its owned backup receiver and Montra Compose definitions do not cover the whole NAS. Apply DSM changes through a reviewed procedure and verify effective DSM ACLs, not Unix modes alone.
 
 ## Secrets
 
@@ -30,7 +31,7 @@ macOS uses Home Manager `sops.secrets.<name>.path`; `sops.templates` and `config
 
 Declare each secret in its narrowest consuming module under the same enable condition. `secrets/default.nix` owns only the SOPS backend, default file, and age key. Dormant modules keep encrypted values without creating runtime secret files.
 
-Plaintext secrets never reach a commit; the wizard refuses to commit while `secrets/*_plain*` files exist. Preserve that check if you change the wizard.
+Plaintext secrets never reach a commit or the Nix store. The wizard blocks rebuild preparation and commits while `secrets/**/*_plain*` paths exist, including extensionless files. Preserve both checks: `path:.` includes Git-ignored files, so the commit guard alone is insufficient.
 
 ## Validation
 
@@ -52,6 +53,9 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 - **Agent skills** - declare upstream sources in `modules/apps/agents/_skill-sources.nix`. The skills CLI installs and updates them in `~/.agents/skills/`; keep them out of Git and do not patch them locally. Repo-owned skills live in `modules/apps/agents/skills/` and are linked individually into the shared directory. Add local instructions there or in project `AGENTS.md` files.
 - **Rebuild commits** - the wizard owns commit semantics (default `<target>: generation <n>` or `<target>: rebuild <date>`, plus OpenRouter or manual messages). Document changes there.
 - **VPS backups** - `modules/shared/nas-backup/` owns NAS transport. Keep its restricted receiver, SOPS identity, existing timers and restore checks compatible. Install receiver changes before `rebuild --vps`; see its README for provisioning and one-run verification.
+- **Database major upgrades** - preserve a complete protected cold copy before migration. A binary-only rollback can corrupt compatibility, so prevent automatic old-image rollback during the migration window and restore normal rollback settings after acceptance. Restore the matching data before starting an older major version.
+- **Restore isolation** - a NAS writer can replace both an archive and its checksum. Treat downloads and SQL as untrusted, bound host-side staging/parsing, and keep PostgreSQL restore clients and servers outside production containers, volumes, credentials and networks.
+- **Nix daemon trust** - workstations grant daemon administration only to root. Approve needed signed caches in `modules/core/nix/default.nix`; do not restore user trust or disable signatures to fix cache compatibility. VPS deployment trust is a separate boundary.
 - **Blender MCP** - upgrade the server and bundled add-on together in `modules/apps/blender/default.nix`. After activation, enable `blender_mcp` in Blender and verify scene inspection and viewport capture before claiming a working connection.
 - **One-off tools** - the global file owns this rule. Repo-specific addition: when the nix-config repo itself needs a tool, use `devenv`.
 

@@ -24,6 +24,7 @@ export type Target = TargetBase &
   );
 
 export type CommandOptions = {
+  phase?: string;
   cwd?: string;
   env?: Record<string, string | undefined>;
   check?: boolean;

@@ -4,6 +4,8 @@
   config,
   username,
   constants,
+  inputs,
+  system,
   ...
 }:
 let
@@ -81,6 +83,12 @@ let
 
   mkHomeConfig = aliases: {
     home.file = installedScripts;
+
+    # Root the exact client used by path:.#deploy-rs in workstation generations.
+    # Keep the flake app as the selector when the checkout's lockfile changes.
+    home.packages = lib.optionals (!(config.secrets.isVps or false)) [
+      inputs.deploy-rs.packages.${system}.deploy-rs
+    ];
 
     # Set up shell aliases via home-manager (generic, works with all shells)
     home.shellAliases = aliases;
