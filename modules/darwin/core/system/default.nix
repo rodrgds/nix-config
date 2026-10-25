@@ -18,6 +18,9 @@ let
       health_macshot=${lib.boolToString config.apps.screenshot-tools.enable}
       health_brave=${lib.boolToString config.apps.brave.enable}
       health_vicinae=${lib.boolToString config.apps.vicinae.enable}
+      health_nix_trust=${lib.boolToString config.core.nix.enable}
+      health_nix=${lib.getExe config.nix.package}
+      health_allow_signed_app=${lib.boolToString config.networking.applicationFirewall.allowSignedApp}
     ''
     + builtins.readFile ./laptop-health.sh
   );
@@ -33,7 +36,9 @@ in
       enableStealthMode = true;
       blockAllIncoming = false;
       allowSigned = true;
-      allowSignedApp = true;
+      # Downloaded signatures do not imply permission to listen on the LAN.
+      # Built-in software and existing explicit per-app decisions are separate.
+      allowSignedApp = false;
     };
 
     # Keep sudo fast at the laptop and inside long-lived terminal sessions.

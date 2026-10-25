@@ -9,6 +9,22 @@ let
   cfg = config.core.nix;
   inherit (constants) isLinux isDarwin homeDir;
   isVps = config.secrets.isVps or false;
+  # Approve cache selection without granting users daemon administration.
+  # Devenv enables its cache per project; Vicinae is needed by desktop rebuilds.
+  workstationCaches = lib.optionals (!isVps) (
+    [
+      {
+        url = "https://devenv.cachix.org";
+        key = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=";
+      }
+    ]
+    ++ lib.optionals (isLinux && config.apps.vicinae.enable) [
+      {
+        url = "https://vicinae.cachix.org";
+        key = "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc=";
+      }
+    ]
+  );
 in
 {
   options.core.nix = {
@@ -31,16 +47,21 @@ in
         # whenever this machine hovered around 31 GiB free.
         min-free = 8 * 1024 * 1024 * 1024;
         max-free = 16 * 1024 * 1024 * 1024;
-        trusted-users = [
-          "root"
-          username
-        ];
+        # Trusted users have root-equivalent access. Keep normal build access
+        # separate, and preserve VPS deployment trust until signed transfers
+        # and remote builds have been verified end to end.
+        trusted-users = [ "root" ] ++ lib.optional isVps username;
+        allowed-users = lib.mkDefault [ "*" ];
+        trusted-substituters = map (cache: cache.url) workstationCaches;
+        require-sigs = true;
+        accept-flake-config = false;
         substituters = [
           "https://cache.nixos.org"
         ];
         trusted-public-keys = [
           "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-        ];
+        ]
+        ++ map (cache: cache.key) workstationCaches;
       };
 
       nix.gc = {

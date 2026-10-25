@@ -30,7 +30,7 @@ in
     };
 
     networking.firewall = {
-      enable = false;
+      enable = true;
       trustedInterfaces = [ "tailscale0" ];
     };
 

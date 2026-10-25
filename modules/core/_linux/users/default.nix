@@ -29,8 +29,6 @@ in
       shell = pkgs.bash;
     };
 
-    services.getty.autologinUser = username;
-
     # Home-manager base configuration
     home-manager.users.${username} = {
       home.enableNixpkgsReleaseCheck = false;

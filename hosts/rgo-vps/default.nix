@@ -33,6 +33,10 @@ in
   core.networking.enable = true;
   core.networking.tailscale.acceptDns = false;
 
+  # Workstation console autologin must never grant the server's passwordless
+  # sudo account to a virtual or serial console session.
+  services.getty.autologinUser = lib.mkForce null;
+
   # Deploys flow through the webhook and deploy-rs (rebuild --vps); the
   # generic root-run auto-upgrade poll of main would race that pipeline and
   # re-apply config out of band. Keep the core default disabled here.
@@ -195,7 +199,7 @@ in
 
   security.sudo.wheelNeedsPassword = false;
 
-  # Persistent swap file (VPS has only ~3.7 GiB RAM; builds OOM without this)
+  # Keep persistent swap as a build-pressure fallback on this ~7.6 GiB RAM host.
   swapDevices = [
     {
       device = "/swapfile";

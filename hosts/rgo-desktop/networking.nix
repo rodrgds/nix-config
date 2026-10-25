@@ -2,6 +2,9 @@
 _: {
   networking.hostName = "rgo-desktop";
 
+  # Keep direct encrypted peer connections available with the host firewall on.
+  services.tailscale.openFirewall = true;
+
   # Keep the desktop on the address trusted by the NAS, but let one network
   # stack own the interface. Mixing scripted addresses, dhcpcd, and
   # NetworkManager gave this NIC two IPv4 addresses and two default routes.

@@ -166,10 +166,30 @@ else
   fail "Firewall stealth mode is disabled"
 fi
 
+signed_app_state="$(/usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned 2>/dev/null || true)"
+signed_app_expected=DISABLED
+if "$health_allow_signed_app"; then
+  signed_app_expected=ENABLED
+fi
+if printf '%s\n' "$signed_app_state" | grep -Fq "Automatically allow downloaded signed software $signed_app_expected"; then
+  ok "Downloaded signed-app firewall policy matches configuration ($signed_app_expected)"
+else
+  fail "Downloaded signed-app firewall policy differs from configuration"
+fi
+
 if grep -Fq 'pam_tid.so' /etc/pam.d/sudo_local 2>/dev/null; then
   ok "Touch ID sudo is configured"
 else
   fail "Touch ID sudo is not configured"
+fi
+
+if "$health_nix_trust"; then
+  daemon_info="$("$health_nix" store info --json 2>/dev/null || true)"
+  if printf '%s\n' "$daemon_info" | grep -Eq '"trusted"[[:space:]]*:[[:space:]]*false'; then
+    ok "Nix daemon grants ordinary build access without administrator trust"
+  else
+    fail "Nix daemon still grants administrator trust or could not be inspected"
+  fi
 fi
 
 free_kib="$(df -Pk /System/Volumes/Data | awk 'NR == 2 { print $4 }')"
