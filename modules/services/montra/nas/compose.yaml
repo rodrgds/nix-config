@@ -5,16 +5,29 @@ services:
     container_name: montra-catalog-worker
     restart: unless-stopped
     env_file: worker.env
+    user: bun
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     mem_limit: 3g
     shm_size: 1g
     stop_grace_period: 120s
     volumes:
       - worker-state:/var/lib/montra-catalog-worker
   updater:
+    # This administrative service was deliberately stopped on the NAS. Ordinary
+    # worker maintenance must not silently re-enable Docker-socket automation.
+    profiles: [automatic-updates]
     image: docker:28-cli@sha256:625d9431a9f54c5a2bc90f24f0e1c3d55b1349fd857dd85035f98c2c9acbdd4d
     container_name: montra-catalog-updater
     restart: unless-stopped
     mem_limit: 128m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
     environment:
       DOCKER_HOST: unix:///var/run/docker.sock
     working_dir: /volume1/docker/montra-catalog-worker
