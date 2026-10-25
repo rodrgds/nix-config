@@ -60,9 +60,11 @@ in
 
         TSSERVER_QUERY_HTTP_ENABLED = "true";
         TSSERVER_QUERY_HTTP_PORT = toString webqueryPort;
+        TSSERVER_QUERY_HTTP_ALLOW_GUEST = "0";
 
         TSSERVER_QUERY_SSH_ENABLED = "true";
         TSSERVER_QUERY_SSH_PORT = toString sshqueryPort;
+        TSSERVER_QUERY_SSH_ALLOW_GUEST = "0";
 
         TSSERVER_LOG_PATH = "logs";
       };
@@ -77,13 +79,16 @@ in
       ports = [
         "${toString voicePort}:${toString voicePort}/udp"
         "${toString filetransferPort}:${toString filetransferPort}/tcp"
-        "${toString webqueryPort}:${toString webqueryPort}/tcp"
-        "${toString sshqueryPort}:${toString sshqueryPort}/tcp"
+        # Administrative query access uses an SSH tunnel to the VPS.
+        "127.0.0.1:${toString webqueryPort}:${toString webqueryPort}/tcp"
+        "127.0.0.1:${toString sshqueryPort}:${toString sshqueryPort}/tcp"
       ];
 
       extraOptions = [
         "--network=podman"
-        "--pull=always"
+        # The weekly updater owns tag refreshes. A configuration-only restart
+        # must keep the reviewed local image; an empty store still bootstraps.
+        "--pull=missing"
       ];
     };
 
@@ -118,8 +123,6 @@ in
 
     networking.firewall.allowedTCPPorts = [
       filetransferPort
-      webqueryPort
-      sshqueryPort
     ];
 
     networking.firewall.allowedUDPPorts = [

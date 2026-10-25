@@ -284,6 +284,105 @@
       };
 
       checks.x86_64-linux = deploy-rs.lib.x86_64-linux.deployChecks self.deploy // {
+        vps-security-policy =
+          let
+            vps = self.nixosConfigurations.rgo-vps.config;
+          in
+          assert linuxLib.assertMsg (
+            vps.services.getty.autologinUser == null
+          ) "The VPS must require authentication on virtual and serial consoles";
+          assert linuxLib.assertMsg (
+            vps.networking.firewall.enable
+            && vps.services.openssh.settings.PermitRootLogin == "no"
+            && !vps.services.openssh.settings.PasswordAuthentication
+            && !vps.services.openssh.settings.KbdInteractiveAuthentication
+          ) "The VPS must retain its firewall and key-only, non-root SSH access";
+          assert linuxLib.assertMsg (
+            !vps.vps.adguardhome.enable
+            || (
+              vps.services.adguardhome.host == "127.0.0.1"
+              && vps.services.adguardhome.settings.http.address == "127.0.0.1:3001"
+            )
+          ) "Unauthenticated AdGuard administration must stay on loopback";
+          assert linuxLib.assertMsg (
+            !vps.vps.shlink.enable
+            || vps.virtualisation.oci-containers.containers.shlink.podman.sdnotify == "healthy"
+          ) "Shlink startup must wait for application health before deployment acceptance";
+          assert linuxLib.assertMsg (
+            !vps.vps.unprompted.enable
+            || vps.virtualisation.oci-containers.containers.unprompted-postgres.podman.sdnotify == "healthy"
+          ) "Unprompted PostgreSQL must be ready before deployment acceptance";
+          nixpkgs.legacyPackages.x86_64-linux.runCommand "check-vps-security-policy" { } ''
+            touch "$out"
+          '';
+        umami-proxy-boundary =
+          let
+            pkgs = nixpkgs.legacyPackages.x86_64-linux;
+            route = pkgs.writeText "umami-route.json" (
+              builtins.toJSON {
+                caddy =
+                  self.nixosConfigurations.rgo-vps.config.services.caddy.virtualHosts."cool.rgo.pt".extraConfig;
+                directus =
+                  self.nixosConfigurations.rgo-vps.config.services.caddy.virtualHosts."directus.rgo.pt".extraConfig;
+              }
+            );
+          in
+          pkgs.runCommand "check-umami-proxy-boundary"
+            {
+              nativeBuildInputs = [
+                self.nixosConfigurations.rgo-vps.config.services.caddy.package
+                pkgs.python3
+              ];
+            }
+            ''
+              caddy version
+              caddy adapt --adapter caddyfile \
+                --config ${self.nixosConfigurations.rgo-vps.config.services.caddy.configFile} > /dev/null
+              python3 ${./modules/services/caddy/tests/umami-boundary.py} ${route}
+              touch "$out"
+            '';
+        shlink-private-redis =
+          let
+            pkgs = nixpkgs.legacyPackages.x86_64-linux;
+            command = pkgs.writeText "shlink-redis-command.json" (
+              builtins.toJSON self.nixosConfigurations.rgo-vps.config.virtualisation.oci-containers.containers.shlink-redis.cmd
+            );
+          in
+          pkgs.runCommand "check-shlink-private-redis"
+            {
+              nativeBuildInputs = [
+                pkgs.redis
+                pkgs.python3
+              ];
+            }
+            ''
+              python3 ${./modules/services/shlink/tests/redis-boundary.py} ${command}
+              touch "$out"
+            '';
+        nas-backup-contracts =
+          let
+            pkgs = nixpkgs.legacyPackages.x86_64-linux;
+          in
+          pkgs.runCommand "check-nas-backup-contracts"
+            {
+              nativeBuildInputs = with pkgs; [
+                (python3.withPackages (ps: [ ps.boto3 ]))
+                bash
+                gzip
+                gnutar
+                sqlite
+              ];
+            }
+            ''
+              mkdir -p modules/shared tests
+              cp -R ${./modules/shared/nas-backup} modules/shared/nas-backup
+              cp ${./tests/test_nas_backup.py} tests/test_nas_backup.py
+              cp ${./tests/test_nas_freshness.py} tests/test_nas_freshness.py
+              cp ${./tests/test_nas_receiver_resources.py} tests/test_nas_receiver_resources.py
+              export PYTHONDONTWRITEBYTECODE=1
+              python3 -m unittest discover -s tests -p 'test_nas*.py' -v
+              touch "$out"
+            '';
         claude-configuration =
           nixpkgs.legacyPackages.x86_64-linux.runCommand "check-claude-configuration"
             {

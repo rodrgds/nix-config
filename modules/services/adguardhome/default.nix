@@ -8,9 +8,8 @@
 # (not a podman container) since AdGuard Home is well-packaged in nixpkgs.
 #
 # FIRST-TIME SETUP:
-#   After deployment, the web dashboard is accessible via Tailscale at
-#   http://<tailscale-ip>:3001 (only from the Tailscale network).
-#   The initial setup wizard will run on first access.
+#   The management API has no configured application login. Access it through
+#   ssh -L 3001:127.0.0.1:3001 rgo@rgo-vps, then http://127.0.0.1:3001.
 #   To use your VPS as a DNS resolver, point your devices to the Tailscale IP on port 53.
 #
 {
@@ -35,15 +34,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Only expose AdGuard Home on Tailscale and loopback interfaces.
+    # DNS serves the tailnet. Unauthenticated administration stays on loopback.
     # Port 53  = DNS (TCP+UDP)
     # Port 3001 = Web dashboard
     networking.firewall.interfaces = {
       tailscale0 = {
-        allowedTCPPorts = [
-          53
-          adguardPort
-        ];
+        allowedTCPPorts = [ 53 ];
         allowedUDPPorts = [ 53 ];
       };
       lo = {
@@ -60,11 +56,11 @@ in
       enable = true;
       openFirewall = false; # We manage firewall manually above
       mutableSettings = false;
-      host = "0.0.0.0";
+      host = "127.0.0.1";
       port = adguardPort;
 
       settings = {
-        http.address = "0.0.0.0:${toString adguardPort}";
+        http.address = "127.0.0.1:${toString adguardPort}";
 
         querylog.enabled = true;
         statistics.enabled = true;

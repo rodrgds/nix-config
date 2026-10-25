@@ -3,6 +3,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 let
@@ -123,6 +124,13 @@ let
     # Directus CMS
     "directus.rgo.pt" = {
       extraConfig = ''
+        # Keep CMS administration private across upstream upgrades. Allow only
+        # Tailnet and loopback connection peers, never caller-supplied
+        # forwarding headers.
+        @outsideTailnet {
+          not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48 127.0.0.1 ::1
+        }
+        respond @outsideTailnet 403
         reverse_proxy localhost:${toString (cfg.internalPorts.directus or 8055)}
 
         header {
@@ -192,7 +200,14 @@ let
     # Umami - analytics
     "cool.rgo.pt" = {
       extraConfig = ''
-        reverse_proxy localhost:${toString (cfg.internalPorts.umami or 3000)}
+        reverse_proxy localhost:${toString (cfg.internalPorts.umami or 3000)} {
+          # GHSA-3xx8-742v-m4mq: tracking JWTs are accepted as share tokens.
+          # Disable share-link authorization at the public boundary until
+          # upstream distinguishes these tokens. Normal login and collection
+          # remain available.
+          header_up -X-Umami-Share-Token
+          header_up -X-Umami-Share-Context
+        }
 
         header {
           Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
@@ -204,6 +219,28 @@ let
       '';
     };
   };
+
+  # A disabled service must not leave a proxy to a reusable loopback port.
+  # Registration is owned by each enabled service, including custom domains.
+  staticUpstreams = {
+    "n8n.rgo.pt" = "n8n";
+    "cs.rgo.pt" = "ghost";
+    "vault.rgo.pt" = "vaultwarden";
+    "postiz.rgo.pt" = "postiz";
+    "temporal.rgo.pt" = "postiz-temporal-ui";
+    "webhooks.rgo.pt" = "webhooks.rgo.pt";
+    "app.openpo.st" = "openpost";
+    "directus.rgo.pt" = "directus";
+    "trndb.rgo.pt" = "trndb";
+    "url.rgo.pt" = "url.rgo.pt";
+    "ref.rgo.pt" = "ref.rgo.pt";
+    "shlink-admin.rgo.pt" = "shlink-admin.rgo.pt";
+  };
+  activeStaticVirtualHosts = lib.filterAttrs (
+    domain: _:
+    !(builtins.hasAttr domain staticUpstreams)
+    || builtins.hasAttr staticUpstreams.${domain} cfg.internalPorts
+  ) staticVirtualHosts;
 
   dynamicVirtualHosts =
     lib.mapAttrs'
@@ -260,8 +297,10 @@ in
   config = lib.mkIf cfg.enable {
     services.caddy = {
       enable = true;
+      # GHSA-8qx7-j2v2-x6q5 affects both locked package sets at 2.11.4.
+      package = pkgs.callPackage ./_package.nix { };
 
-      virtualHosts = lib.mapAttrs withAccessLog (staticVirtualHosts // dynamicVirtualHosts);
+      virtualHosts = lib.mapAttrs withAccessLog (activeStaticVirtualHosts // dynamicVirtualHosts);
     };
   };
 }

@@ -40,7 +40,8 @@ in
 
     # Vaultwarden server
     virtualisation.oci-containers.containers.vaultwarden = {
-      image = "vaultwarden/server:latest";
+      # 1.37.4 includes the October 2026 organization and 2FA security fixes.
+      image = "vaultwarden/server:1.37.4@sha256:efb3cde962015fcc036b2ea625242248611943b27212ebf4392841fb30fad055";
 
       environment = {
         DOMAIN = "https://${cfg.domain}";
@@ -48,6 +49,7 @@ in
         SIGNUPS_ALLOWED = if cfg.signupsAllowed then "true" else "false";
         ADMIN_TOKEN_FILE = "/run/secrets/admin_token";
         IP_HEADER = "X-Forwarded-For";
+        IP_HEADER_TRUSTED_PROXIES = "10.88.0.1";
         PUSH_ENABLED = "false";
       };
 

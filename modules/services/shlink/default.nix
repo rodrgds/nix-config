@@ -31,7 +31,7 @@ let
   shlinkPort = 8087;
   webClientPort = 8088;
   postgresPort = 5437;
-  redisPort = 6381;
+  redisSocketDirectory = "/var/lib/shlink/redis-socket";
 
   # Shlink resolves its own domain from DEFAULT_DOMAIN, but extra short-domains
   # must be added via CLI after first start (stored in DB). We expose the list
@@ -118,6 +118,9 @@ in
       "d /var/lib/shlink                 0750 root root  -"
       "d /var/lib/shlink/postgres        0700 70   70    -" # postgres uid
       "d /var/lib/shlink/data            0750 1001 1001  -" # shlink uid inside container
+      # Only Shlink and Redis mount this directory. The 0750 root-owned parent
+      # prevents other host users from reaching the shared writable socket.
+      "d ${redisSocketDirectory}         0777 root root -"
       "d /var/backup/shlink              0750 root root  -"
     ];
 
@@ -157,10 +160,17 @@ in
     # Redis  (visit buffering, cache, async task queue)
     # -------------------------------------------------------------------------
     virtualisation.oci-containers.containers.shlink-redis = {
-      image = "docker.io/redis:7-alpine";
+      # 7.4.9 through 7.4.11 fix command-triggered memory corruption in 7.4.8.
+      image = "docker.io/redis:7.4.11-alpine@sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541";
 
       cmd = [
         "redis-server"
+        "--port"
+        "0"
+        "--unixsocket"
+        "/run/shlink-redis/redis.sock"
+        "--unixsocketperm"
+        "777"
         "--save"
         "60"
         "1"
@@ -168,13 +178,13 @@ in
         "warning"
       ];
 
-      ports = [
-        "127.0.0.1:${toString redisPort}:6379"
+      volumes = [
+        "${redisSocketDirectory}:/run/shlink-redis"
       ];
 
       extraOptions = [
-        "--network=podman"
-        "--health-cmd=redis-cli ping"
+        "--network=none"
+        "--health-cmd=redis-cli -s /run/shlink-redis/redis.sock ping"
         "--health-interval=5s"
         "--health-timeout=5s"
         "--health-retries=10"
@@ -185,6 +195,9 @@ in
     # Shlink application
     # -------------------------------------------------------------------------
     virtualisation.oci-containers.containers.shlink = {
+      # Initialization and migrations finish before the service is considered
+      # started. Early health timers must not make a valid rebuild roll back.
+      podman.sdnotify = "healthy";
       image = "shlinkio/shlink:stable";
 
       environment = {
@@ -194,7 +207,7 @@ in
         DB_PORT = "5432";
 
         # Redis
-        REDIS_SERVERS = "tcp://shlink-redis:6379";
+        REDIS_SERVERS = "unix:/run/shlink-redis/redis.sock";
 
         # Domain / URL
         DEFAULT_DOMAIN = cfg.domain;
@@ -232,6 +245,7 @@ in
 
       volumes = [
         "/var/lib/shlink/data:/etc/shlink/data"
+        "${redisSocketDirectory}:/run/shlink-redis"
       ];
 
       ports = [
@@ -249,6 +263,7 @@ in
         "--health-interval=10s"
         "--health-timeout=20s"
         "--health-retries=10"
+        "--health-start-period=90s"
       ];
     };
 
@@ -285,15 +300,16 @@ in
     sops.templates = {
       "shlink-db-password" = {
         content = config.sops.placeholder.shlink_db_password;
-        mode = "0444";
+        # The rootful PostgreSQL entrypoint reads _FILE secrets before gosu.
+        mode = "0400";
       };
       "shlink-db-user" = {
         content = config.sops.placeholder.shlink_db_user;
-        mode = "0444";
+        mode = "0400";
       };
       "shlink-db-name" = {
         content = config.sops.placeholder.shlink_db_name;
-        mode = "0444";
+        mode = "0400";
       };
 
       # Main env file injected into the shlink container
@@ -304,7 +320,8 @@ in
           DB_PASSWORD=${config.sops.placeholder.shlink_db_password}
           ${lib.optionalString cfg.geoLiteEnabled "GEOLITE_LICENSE_KEY=${config.sops.placeholder.shlink_geolite_license_key}"}
         '';
-        mode = "0444";
+        # --env-file is consumed by rootful Podman, not by the app user.
+        mode = "0400";
       };
     };
 

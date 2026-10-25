@@ -101,22 +101,23 @@ in
     sops.templates = {
       "umami-postgres-password" = {
         content = config.sops.placeholder.umami_db_password;
-        mode = "0444"; # World-readable for container access
+        # Podman and the PostgreSQL entrypoint read this as root before dropping privileges.
+        mode = "0400";
       };
       "umami-db-user" = {
         content = config.sops.placeholder.umami_db_user;
-        mode = "0444";
+        mode = "0400";
       };
       "umami-db-name" = {
         content = config.sops.placeholder.umami_db_name;
-        mode = "0444";
+        mode = "0400";
       };
       "umami-env" = {
         content = ''
           DATABASE_URL=postgres://${config.sops.placeholder.umami_db_user}:${config.sops.placeholder.umami_db_password}@umami-postgres:5432/${config.sops.placeholder.umami_db_name}
           APP_SECRET=${config.sops.placeholder.umami_app_secret}
         '';
-        mode = "0444";
+        mode = "0400";
       };
     };
 
