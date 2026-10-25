@@ -139,13 +139,13 @@ in
     enable = true;
     domain = "unprompted.to";
     apiDomain = "api.unprompted.to";
-    # First four-image release verified and promoted by CI run 31143879834.
-    bootstrapRevision = "1eff53753993ebafdfaf57f66c841a0f89bb4fcf";
+    # Security release revision and digests approved by CI run 40220747425.
+    bootstrapRevision = "d48973bd391ca2d69a8a56004b3db2cbd03364cb";
     bootstrapDigests = {
-      api = "sha256:a100448e53ed9217641248a824b826e3ac3d40d4aabfe905068cf9657cd95d1d";
-      worker = "sha256:8b86621abc25ad5a044fc9ea2511e9434714096ea55d183a5d950ab7850191d9";
-      web = "sha256:1f6d46e995b60b3926efde6f07e766181b77c8938a01547196cbf8ca13e9d0ff";
-      migrate = "sha256:48b42d5615381781eb5643e6094e481e1ca13d696ed400fdc22686dfd1d92fce";
+      api = "sha256:dda0ec53859bb84af741a068f02461f28be97dfdfca0b3723626e39e78f4acab";
+      worker = "sha256:248c511338ba4ea6a9b06daf58f4470a4223f3b3a9f0c869e71c03bc39cbdd01";
+      web = "sha256:ff11993732da830a12f7806999dd235f102636010b9fc991b32d8dfaba547a74";
+      migrate = "sha256:47da54e8424ded7eabea29c69fdc518809cabe0f07df828ba772b93a3b9ca9f9";
     };
   };
 

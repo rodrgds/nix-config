@@ -62,7 +62,7 @@ let
   ];
   initializeScript = pkgs.writeShellScript "unprompted-initialize" ''
     set -euo pipefail
-    until ${pkgs.podman}/bin/podman exec unprompted-postgres pg_isready -U unprompted -d unprompted; do
+    until ${pkgs.podman}/bin/podman exec unprompted-postgres pg_isready -h 127.0.0.1 -U unprompted -d unprompted; do
       sleep 2
     done
     # Local socket access is restricted to the PostgreSQL container. Existing
@@ -292,7 +292,8 @@ in
 
     virtualisation.oci-containers.containers = {
       unprompted-postgres = {
-        # Wait for pg_isready before boot migrations or deployment acceptance.
+        # The entrypoint's temporary bootstrap server is socket-only. Wait for
+        # the final TCP server before boot migrations or deployment acceptance.
         podman.sdnotify = "healthy";
         image = "docker.io/library/postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193";
         environmentFiles = [ postgresEnvFile ];
@@ -300,7 +301,7 @@ in
         ports = [ "127.0.0.1:${toString cfg.postgresPort}:5432" ];
         extraOptions = [
           "--network=podman"
-          "--health-cmd=pg_isready -U unprompted -d unprompted"
+          "--health-cmd=pg_isready -h 127.0.0.1 -U unprompted -d unprompted"
           "--health-interval=10s"
           "--health-timeout=5s"
           "--health-retries=12"
