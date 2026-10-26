@@ -77,6 +77,11 @@ Unknown ACL entries, custom deny rules, links, replaced objects or unexpected
 configuration stop the repair. Root checks actual Syncthing access in the
 disposable fixture, then effective ACLs for the live folders. Root-only
 permission checks have not been claimed from an unprivileged fixture run.
+The synthetic home sits inside a private outer directory with traverse-only
+Syncthing access. DSM derives effective delete permission from a parent's
+delete-child grant, so testing directly beneath the still-unmodified live
+home would fail before the repair. The root fixture also verifies actual
+Syncthing rename denial at the synthetic home and backup ancestors.
 
 Recovery policies are retained under `/volume1/docker/rgo-security-acl/policy-*`.
 A failed acceptance restores the original ACLs. For a later explicit rollback,

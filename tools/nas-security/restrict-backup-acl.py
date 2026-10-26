@@ -282,9 +282,18 @@ def reconcile(home, backups, journal, effective=True):
 
 
 def self_test():
-    temporary = Path(tempfile.mkdtemp(prefix='.rgo-acl-self-test.', dir=str(HOME)))
+    boundary = Path(tempfile.mkdtemp(prefix='.rgo-acl-self-test.', dir=str(HOME)))
+    temporary = boundary / 'home'
     items = []
     try:
+        # DSM derives effective delete permission from the parent's delete-child
+        # grant. The live home still has that grant during preflight, so isolate
+        # our synthetic home behind a private, traverse-only outer boundary.
+        outer = Object(boundary)
+        items.append(outer)
+        outer.private()
+        outer.call('-add', 'user:sc-syncthing:allow:--x----------:----')
+        temporary.mkdir()
         item = Object(temporary)
         items.append(item)
         item.private()
@@ -314,11 +323,18 @@ def self_test():
                 result = subprocess.run(['/usr/bin/python3', '-c',
                     'import pathlib,sys; p=pathlib.Path(sys.argv[1])/"ordinary-write"; p.write_bytes(b"fixture"); p.unlink()', str(path)], preexec_fn=demote)
                 assert result.returncode == 0
+            for path in [temporary, temporary / 'Backups', temporary / 'Backups/rgo-vps']:
+                result = subprocess.run(['/usr/bin/python3', '-c',
+                    'import errno,os,sys\n'
+                    'try: os.rename(sys.argv[1],sys.argv[1]+"-unexpected-move")\n'
+                    'except OSError as error: sys.exit(0 if error.errno in (errno.EACCES,errno.EPERM) else 2)\n'
+                    'sys.exit(1)', str(path)], preexec_fn=demote)
+                assert result.returncode == 0, 'Syncthing ancestor rename protection failed: ' + str(path)
         print('PASS: real DSM baseline exposure reproduced, repaired, payload preserved')
     finally:
         for item in items:
             item.close()
-        shutil.rmtree(str(temporary))
+        shutil.rmtree(str(boundary))
 
 
 def main():

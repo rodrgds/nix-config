@@ -1,6 +1,7 @@
 """Native DSM recovery regression. Uses disposable folders and real ACL tools."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -13,6 +14,13 @@ spec.loader.exec_module(repair)
 
 @unittest.skipUnless(Path(repair.TOOL).exists(), 'requires native DSM ACL tools')
 class Recovery(unittest.TestCase):
+    @unittest.skipUnless(os.geteuid() == 0, 'effective Syncthing checks require administrator authentication')
+    def test_self_test_removes_effective_access_despite_live_home_delete_grants(self):
+        # The real home still grants Syncthing delete-child rights during the
+        # preflight. A fixture directly below it inherits effective delete
+        # authority even after removing all of its own broad grants.
+        repair.self_test()
+
     def test_missing_late_target_leaves_all_live_acl_policies_unchanged(self):
         base = Path(tempfile.mkdtemp(prefix='.rgo-acl-rollback-test.', dir=str(repair.HOME)))
         previous = repair.HOME, repair.BACKUPS, repair.JOURNALS
