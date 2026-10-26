@@ -77,6 +77,7 @@ in
     {
       domain = "directus.rgo.pt";
       answer = tailscaleIPv4;
+      enabled = true;
     }
   ];
 
