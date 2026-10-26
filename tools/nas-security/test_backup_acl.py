@@ -7,6 +7,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import os
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -26,6 +28,26 @@ Owner: [root(user)]
 
 
 class BackupAclTest(unittest.TestCase):
+    def test_linux_mode_legacy_archive_requires_private_actual_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            data = root / 'legacy.tar'
+            data.write_bytes(b'fixture payload is not read by the verifier')
+            for mode, error, expected in [
+                (0o600, "It's Linux mode", 0),
+                (0o640, "It's Linux mode", 1),
+                (0o600, 'unrecognized tool failure', 1),
+            ]:
+                data.chmod(mode)
+                def metadata(command, **kwargs):
+                    return (subprocess.CompletedProcess(command, 255, '', error)
+                            if Path(command[-1]) == data else subprocess.CompletedProcess(command, 0, PRIVATE, ''))
+                with self.subTest(mode=oct(mode), error=error):
+                    identity = SimpleNamespace(getpwnam=lambda _: SimpleNamespace(pw_uid=os.getuid()))
+                    with patch.object(audit.subprocess, 'run', side_effect=metadata), patch.object(audit, 'pwd', identity, create=True):
+                        with contextlib.redirect_stdout(io.StringIO()):
+                            self.assertEqual(audit.main([str(root)]), expected)
+
     def test_entire_subtree_requires_private_recognized_metadata(self):
         inherited = PRIVATE.replace("Archive: is_support_ACL", "Archive: is_inherit,is_support_ACL")
         syncthing = inherited + " [2] user:sc-syncthing:allow:rwxpdDaARWcCo:fd-- (level:2)\n"

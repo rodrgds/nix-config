@@ -43,14 +43,16 @@ class Object:
 
     def call(self, operation, *args):
         result = subprocess.run([TOOL, operation, self.ref, *args],
-                                pass_fds=(self.fd,), text=True, capture_output=True)
+                                pass_fds=(self.fd,), text=True, capture_output=True, timeout=10)
         if result.returncode:
+            if operation == '-get' and "It's Linux mode" in result.stderr + result.stdout:
+                return 'ACL version: Linux mode\nArchive: None\n'
             raise RuntimeError(operation + ' failed for ' + str(self.path) + ': ' + (result.stderr or result.stdout).strip())
         return result.stdout
 
     def read(self):
         text = self.call('-get')
-        if not re.search(r'^ACL version: (?:\d+|No ACL)\s*$', text, re.M):
+        if not re.search(r'^ACL version: (?:\d+|No ACL|Linux mode)\s*$', text, re.M):
             raise ValueError('unrecognized ACL: ' + str(self.path))
         archive = re.search(r'^Archive:\s*(.*)$', text, re.M)
         if not archive:
@@ -63,6 +65,16 @@ class Object:
                     raise ValueError('unrecognized ACL entry: ' + str(self.path))
                 entries.append((int(match[1]), match[2], int(match[3])))
         return text, set(archive[1].replace(' ', '').split(',')), entries
+
+    def is_private_linux(self):
+        if not self.read()[0].startswith('ACL version: Linux mode'):
+            return False
+        info = os.fstat(self.fd)
+        needed = 0o500 if self.directory else 0o400
+        if (info.st_uid not in {0, pwd.getpwnam('kraktoos').pw_uid}
+                or info.st_mode & 0o077 or info.st_mode & needed != needed):
+            raise ValueError('legacy Linux-mode object needs permission review: ' + str(self.path))
+        return True
 
     def add(self, identity, rights):
         entry = identity + ':allow:' + rights + (':fd--' if self.directory else ':----')
@@ -180,10 +192,19 @@ def rollback(journal):
 
 def reconcile(home, backups, journal, effective=True):
     prefix = [Object(home), Object(home / 'Backups'), Object(home / 'Development'), Object(home / 'University')]
-    objects = prefix + inventory(backups)
+    all_objects = prefix + inventory(backups)
+    objects = []
     snapshots = []
     changed = []
     try:
+        # Old imports may use private Unix permissions without DSM ACL support.
+        # Preserve those objects verbatim; never convert their format or modes.
+        for item in all_objects:
+            if item.is_private_linux():
+                if item in prefix or item.path == backups:
+                    raise ValueError('policy root must support DSM ACLs')
+                continue
+            objects.append(item)
         for number, item in enumerate(objects):
             text, flags, entries = item.read()
             if any(':deny:' in entry for _, entry, _ in entries) or 'is_read_only' in flags:
@@ -191,11 +212,24 @@ def reconcile(home, backups, journal, effective=True):
             snapshot = journal / str(number)
             (snapshot.mkdir if item.directory else snapshot.touch)()
             if entries:
-                subprocess.run([TOOL, '-copy', item.ref, str(snapshot)], pass_fds=(item.fd,), check=True, stdout=subprocess.DEVNULL)
+                subprocess.run([TOOL, '-copy', item.ref, str(snapshot)], pass_fds=(item.fd,), check=True, stdout=subprocess.DEVNULL, timeout=10)
+            saved_fd = os.open(str(snapshot), os.O_RDONLY | os.O_NOFOLLOW)
+            try:
+                os.fsync(saved_fd)
+            finally:
+                os.close(saved_fd)
             snapshots.append({'path': str(item.path), 'snapshot': str(snapshot), 'inherit': 'is_inherit' in flags, 'acl': bool(entries), 'identity': item.identity, 'owner': item.owner, 'text': text})
         # Every recovery object and original policy is saved before any mutation.
-        (journal / 'manifest.json').write_text(json.dumps(snapshots, indent=2))
-        os.chmod(str(journal / 'manifest.json'), 0o600)
+        with (journal / 'manifest.json').open('w') as manifest:
+            os.fchmod(manifest.fileno(), 0o600)
+            json.dump(snapshots, manifest, indent=2)
+            manifest.flush()
+            os.fsync(manifest.fileno())
+        journal_fd = os.open(str(journal), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(journal_fd)
+        finally:
+            os.close(journal_fd)
         for item in prefix[2:]:
             changed.append(item)
             item.add('user:sc-syncthing', FULL)
@@ -222,6 +256,9 @@ def reconcile(home, backups, journal, effective=True):
             for item in prefix[2:]:
                 assert set(FULL) <= permission(item, 'sc-syncthing'), str(item.path)
             assert set(FULL) <= permission(objects[4], 'kraktoos')
+        for item in all_objects:
+            if item not in objects:
+                assert item.is_private_linux()
         (journal / 'SUCCESS').write_text('ACL acceptance passed. No data or firewall was changed.\n')
         print('PASS: preserved sync roots, removed broad Syncthing authority, private backup ACLs; journal=' + str(journal))
     except BaseException:
@@ -240,7 +277,7 @@ def reconcile(home, backups, journal, effective=True):
             print('Original ACLs restored; journal=' + str(journal))
         raise
     finally:
-        for item in objects:
+        for item in all_objects:
             item.close()
 
 

@@ -60,6 +60,9 @@ verifies that configuration and tests a synthetic tree first. It preserves
 explicit access to Development/University and leaves jdsystem untouched. It
 removes home-wide Syncthing authority, retaining home traversal, and isolates
 the eight-dataset backup subtree. It does not change file data or the firewall.
+Three existing Linux-mode legacy objects are already private to the backup
+account. Their modes, owners and format are verified and preserved, not converted
+to DSM ACLs. Both the repair and metadata verifier recognize this case.
 
 Install the reviewed script as a root-owned file, verify its reviewed SHA-256
 after installation, then run it with the administrator's own sudo authentication:

@@ -8,6 +8,7 @@ import re
 import stat
 import subprocess
 import sys
+import pwd
 
 
 BACKUP_ROOT = "/volume1/homes/kraktoos/Backups/rgo-vps"
@@ -89,10 +90,18 @@ def main(argv=None):
                         [ACL_TOOL, "-get", str(path)], capture_output=True,
                         text=True, timeout=10, check=False,
                     )
-                    problems = (
-                        ["synoacltool failed, privileges or path need review"]
-                        if result.returncode else check_acl(result.stdout, is_root=path == root)
-                    )
+                    if result.returncode and "It's Linux mode" in result.stdout + result.stderr:
+                        info = path.lstat()
+                        needed = 0o500 if stat.S_ISDIR(info.st_mode) else 0o400
+                        private = (info.st_uid in {0, pwd.getpwnam('kraktoos').pw_uid}
+                                   and not info.st_mode & 0o077
+                                   and info.st_mode & needed == needed)
+                        problems = [] if private else ["Linux-mode object is not private to the backup/admin account"]
+                    else:
+                        problems = (
+                            ["synoacltool failed, privileges or path need review"]
+                            if result.returncode else check_acl(result.stdout, is_root=path == root)
+                        )
                 if problems:
                     failures += 1
                     if len(details) < 12:
