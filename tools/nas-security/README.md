@@ -42,16 +42,53 @@ sudo /usr/syno/bin/synoacltool -get-perm /volume1/homes/kraktoos/Backups sc-sync
 The installed ACL tool documents `-get`, `-get-perm PATH USERNAME`,
 `-set-archive`, `-del-archive`, `-enforce-inherit` and indexed ACE deletion.
 Unprivileged effective-user checks fail with `failed to initgroup`; that is an
-inspection limit, not a permission denial. No recursive CLI mutation is
-provided: inherited ACE indices vary by object, and bulk deletion/conversion
-has not been validated on a disposable DSM fixture. Use DSM's permission
-editor and effective Permission Inspector instead of guessing those mutations.
+inspection limit, not a permission denial. The reviewed command procedure below
+uses parsed ACEs and inode-anchored targets, rather than hardcoded ACE indices.
+Its native DSM fixtures verify inheritance, preservation and exact rollback.
 
 Do not use the Docker socket or any stored `SUDO_PASSWORD` to obtain root.
 Do not print `docker inspect` wholesale, `env`, `.env`, Docker credentials,
 authorized key lines or application configuration containing credentials.
 
 ## Isolate backup ACLs, NAS-03
+
+### Reviewed commands for the confirmed Syncthing layout
+
+The owner confirmed three Syncthing roots: `Development`, `University` and
+`/volume1/jdsystem`. Syncthing is stopped. `restrict-backup-acl.py --apply`
+verifies that configuration and tests a synthetic tree first. It preserves
+explicit access to Development/University and leaves jdsystem untouched. It
+removes home-wide Syncthing authority, retaining home traversal, and isolates
+the eight-dataset backup subtree. It does not change file data or the firewall.
+
+Install the reviewed script as a root-owned file, verify its reviewed SHA-256
+after installation, then run it with the administrator's own sudo authentication:
+
+```sh
+sudo /usr/bin/python3 /usr/local/lib/rgo-security/restrict-backup-acl.py --apply
+```
+
+The parent supplies the exact staged path and hash. No credential is in the
+script. It requires an idle upload window and holds all eight receiver locks.
+Unknown ACL entries, custom deny rules, links, replaced objects or unexpected
+configuration stop the repair. Root checks actual Syncthing access in the
+disposable fixture, then effective ACLs for the live folders. Root-only
+permission checks have not been claimed from an unprivileged fixture run.
+
+Recovery policies are retained under `/volume1/docker/rgo-security-acl/policy-*`.
+A failed acceptance restores the original ACLs. For a later explicit rollback,
+use the exact journal directory printed by the successful apply:
+
+```sh
+sudo /usr/bin/python3 /usr/local/lib/rgo-security/restrict-backup-acl.py --rollback /volume1/docker/rgo-security-acl/policy-EXACT_DIRECTORY
+```
+
+Rollback validates every live object and saved ACL before changing any policy;
+retention removing an old snapshot aborts without restoring broad home access.
+The native missing-target regression demonstrated that failure before the fix
+and passed afterward. Keep the recovery directory for diagnosis if a check fails.
+
+### DSM interface alternative
 
 Use File Station and select **only**
 `homes/kraktoos/Backups/rgo-vps`, Properties, Permission, Advanced options.
