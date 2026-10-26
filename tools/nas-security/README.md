@@ -210,6 +210,12 @@ for that external IPv6 test; this is still an administrator task.
 
 ## Hermes authority migration, NAS-01
 
+The owner's current priority is broad, useful Hermes access. Retain its current
+capabilities for now; the stages below describe a possible future migration,
+not an instruction to remove access. Any change must first establish and
+preserve the required workflows. Its NAS administrator and Docker authority
+remain a backup trust boundary that ordinary backup ACLs cannot contain.
+
 The live project is `/volume1/docker/hermes/compose.yml`, Compose project
 `hermes`, with Docker Compose `v2.20.1-6047-g6817716`. It uses local image
 `local/hermes-agent:uid1026-direct`, currently image ID
