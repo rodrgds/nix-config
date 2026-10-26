@@ -8,6 +8,7 @@
 let
   receiptDirectory = "/var/lib/nas-backup/receipts";
   freshness = "${pkgs.python3}/bin/python3 ${./freshness.py} --state-dir ${receiptDirectory}";
+  failureAlert = "nas-backup-alert@%n.service";
   expectedDatasets =
     lib.optional config.vps.montra.enable "montra-db:gzip"
     ++ lib.optionals (config.vps.openpost.enable && config.vps.openpost.edition == "cloud") [
@@ -37,6 +38,7 @@ let
     root: database:
     "${pkgs.python3}/bin/python3 ${./sqlite_archive.py} ${lib.escapeShellArg root} ${lib.escapeShellArg database}";
   job = name: dataset: kind: producer: status: {
+    unitConfig.OnFailure = lib.mkAfter [ failureAlert ];
     after = [
       "network-online.target"
     ];
@@ -83,6 +85,7 @@ let
     };
   };
   restoreJob = name: dataset: {
+    unitConfig.OnFailure = lib.mkAfter [ failureAlert ];
     # NAS restores only need transport, never start a production database.
     after = lib.mkForce [ "network-online.target" ];
     requires = lib.mkForce [ ];
@@ -136,6 +139,9 @@ let
 in
 {
   sops.secrets.nas_backup_ssh_key.mode = "0600";
+  sops.secrets.nas_backup_discord_webhook = lib.mkIf (expectedDatasets != [ ]) {
+    mode = "0600";
+  };
   assertions = [
     {
       assertion = !config.vps.openpost.offsiteBackup.enable;
@@ -147,8 +153,35 @@ in
   '';
   systemd.services = lib.mkMerge [
     (lib.mkIf (expectedDatasets != [ ]) {
+      "nas-backup-alert@" = {
+        description = "Notify infrastructure Discord of a failed NAS backup or check (%i)";
+        wants = [ "network-online.target" ];
+        after = [ "network-online.target" ];
+        environment.SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.python3}/bin/python3 ${./alert.py} --systemctl ${pkgs.systemd}/bin/systemctl %i";
+          LoadCredential = "discord-webhook:${config.sops.secrets.nas_backup_discord_webhook.path}";
+          DynamicUser = true;
+          NoNewPrivileges = true;
+          PrivateTmp = true;
+          PrivateDevices = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          RestrictAddressFamilies = [
+            "AF_UNIX"
+            "AF_INET"
+            "AF_INET6"
+          ];
+          UMask = "0077";
+          TimeoutStartSec = "90s";
+          MemoryMax = "64M";
+          TasksMax = 8;
+        };
+      };
       nas-backup-freshness = {
         description = "Check verified NAS backup receipt freshness (not restore drills)";
+        unitConfig.OnFailure = [ failureAlert ];
         serviceConfig = {
           Type = "oneshot";
           ExecStart = "${freshness} check ${lib.escapeShellArgs expectedDatasets}";

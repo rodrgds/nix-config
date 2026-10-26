@@ -79,11 +79,17 @@ datasets under `/var/lib/nas-backup/receipts`. The hourly
 older-than-36-hour receipts. Its first check runs 15 minutes after activation.
 A receipt confirms the transfer, not a restore or an independent retained copy.
 
-The monitor currently reports through its systemd result and journal. Human
-delivery needs an approved destination and a separately provisioned credential;
-do not reuse an application's webhook without authorization. A monitor outside
-the VPS is also needed to detect the VPS itself being offline. Until those are
-configured, run this check and inspect the result at least daily:
+Failed backup jobs, restore checks and freshness checks notify the owner's
+infrastructure Discord channel through `nas-backup-alert@.service`. Its dedicated
+webhook is SOPS-encrypted and passed through a private systemd credential to a
+sandboxed dynamic user. Messages contain only the hostname, failed unit, result
+and time, with mentions disabled. Delivery requires Discord's message
+acknowledgement; redirects are refused and retries are bounded. Notification
+errors never print the credential-bearing URL or backup contents.
+
+This does not replace the existing app-specific OpenPost notifications. A monitor
+outside the VPS is still needed to detect the VPS itself being offline. To check
+backup freshness manually:
 
 ```bash
 ssh rgo@rgo-vps 'sudo systemctl start nas-backup-freshness.service && sudo journalctl -u nas-backup-freshness.service -n 20 --no-pager'

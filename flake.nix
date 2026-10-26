@@ -378,6 +378,7 @@
               cp -R ${./modules/shared/nas-backup} modules/shared/nas-backup
               cp ${./tests/test_nas_backup.py} tests/test_nas_backup.py
               cp ${./tests/test_nas_freshness.py} tests/test_nas_freshness.py
+              cp ${./tests/test_nas_alerts.py} tests/test_nas_alerts.py
               cp ${./tests/test_nas_receiver_resources.py} tests/test_nas_receiver_resources.py
               export PYTHONDONTWRITEBYTECODE=1
               python3 -m unittest discover -s tests -p 'test_nas*.py' -v
