@@ -148,22 +148,47 @@ and confirm a second Tailscale session before applying DSM rules.
 In Control Panel, Security, Firewall, create a new named profile with these
 ordered rules, following the [vendor workflow](https://kb.synology.com/index.php/en-us/DSM/help/DSM/AdminCenter/connection_security_firewall?version=7):
 
+The owner requires whole-home-LAN DSM access for family members and continued
+QuickConnect access. The reviewed profile therefore uses the following policy,
+rather than an allowlist of individual home devices:
+
 | Traffic | Sources to record before enabling | Destination policy |
 | --- | --- | --- |
-| SSH and DSM HTTPS | Exact trusted administrative devices, plus verified Tailscale path | TCP 22,5001 |
-| NAS backup transport | `rgo-vps`, verified tailnet identity/path | TCP 22 only |
-| SMB, Drive and other file protocols | Exact actual file clients | Only the file services they use, e.g. TCP 445,6690 |
-| NFS and rsync | Actual approved senders/clients | Disable unused services in File Services; inventory RPC auxiliary ports before keeping NFS |
-| Application UIs | Actual private clients and required local tunnel upstreams | Explicit app ports only; no blanket LAN allow |
-| Everything else inbound | All other sources | Default deny on the physical interface, IPv4 and IPv6 |
+| Home LAN | Actual IPv4 subnet and current on-link global IPv6 prefix | All ports on the LAN interfaces, including family DSM/file/app access |
+| IPv6 link-local | `fe80::/10` on LAN interfaces | Preserve local router/discovery traffic |
+| Tailscale transport | All sources | UDP 41641, not public SSH or DSM |
+| Existing torrent peers | All sources | TCP/UDP 6881, retaining the existing published peer port |
+| ICMP | All sources | Preserve diagnostics and network control traffic |
+| Other unsolicited traffic | Other sources on physical, PPPoE and VPN interfaces | Default deny, IPv4 and IPv6 |
+| Loopback and container bridges | Existing local paths | No global default-deny rule; verify the forwarding boundary separately |
 
-The exact trusted LAN client addresses and IPv6 router policy are not known.
-Record them in the reviewed rollout plan before enablement. Keep loopback and
-required container/tunnel upstream connectivity working. Do not block required
-DHCP, DNS or discovery traffic blindly. Preserve normal outbound access.
-Do not edit generated firewall JSON or invoke undocumented firewall switches.
-`/usr/syno/bin/synofirewall` is root-restricted and its mutation contract was
-not validated in this session.
+Keep the original profile for recovery. Author a separate profile in DSM, save
+it inactive, read it back, then select and apply it. Do not edit generated
+firewall JSON or infer import schemas from CLI help. The installed CLI supports
+`--enable`, `--disable`, `--reload`, `--export` and `--import`, but help alone
+does not establish a safe profile-authoring/import contract.
+
+An ISP-delegated IPv6 prefix can change. Update its LAN allowance after a prefix
+change; IPv4 LAN access remains available. Keep loopback and required
+container/tunnel upstream connectivity working. Preserve normal outbound and
+established traffic. Verify QuickConnect relay and the required application
+permissions without changing the family's service selections. Test a fresh
+QuickConnect login on mobile data with both Wi-Fi and Tailscale off.
+
+After applying, inspect the effective IPv4 and IPv6 rules using the human
+administrator's own sudo authentication:
+
+```sh
+sudo /sbin/iptables -S
+sudo /sbin/ip6tables -S
+```
+
+If recovery is necessary, from the retained LAN SSH session, the verified DSM
+CLI can restore the previous disabled-firewall state:
+
+```sh
+sudo /usr/syno/bin/synofirewall --disable
+```
 
 Administrative/app ports requiring explicit containment include `9000/8000`
 (Portainer), `9119` (Hermes), `20128` (9Router), `8888/9999` (Hindsight), and
@@ -178,7 +203,7 @@ Docker-published traffic can bypass an INPUT-only policy. The existing
 [Docker forwarding boundary](https://docs.docker.com/engine/network/packet-filtering-firewalls/)
 needs explicit verification alongside DSM's policy. Do not flush Docker rules.
 After applying, establish fresh allowed SSH/DSM/file-client sessions, require
-the parent backup to succeed, and test denial from an untrusted LAN peer.
+the parent backup to succeed, and test denial from outside the allowed LAN.
 Check public IPv6 from an external IPv6-capable vantage and inspect the router's
 IPv4 forwarding, IPv6 ingress and UPnP mappings. The VPS has no usable route
 for that external IPv6 test; this is still an administrator task.
