@@ -8,6 +8,7 @@
 }:
 let
   rootDisk = import ./root-disk.nix;
+  tailscaleIPv4 = "100.69.139.47";
 in
 {
   imports = [
@@ -65,9 +66,19 @@ in
     enable = true;
     dnsBindHosts = [
       "127.0.0.1"
-      "100.69.139.47"
+      tailscaleIPv4
     ];
   };
+
+  # In Tailscale DNS, add this IP as a nameserver restricted to directus.rgo.pt.
+  # Clients must accept Tailscale DNS; unrelated domains retain their resolvers.
+  # Keep public DNS on the public VPS address for Caddy's ACME challenges.
+  services.adguardhome.settings.filtering.rewrites = [
+    {
+      domain = "directus.rgo.pt";
+      answer = tailscaleIPv4;
+    }
+  ];
 
   # OpenPost uses PostHog, but Montra still depends on the shared Umami service.
   vps.umami.enable = true;
