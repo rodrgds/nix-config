@@ -22,6 +22,12 @@ _agent_env_hash() {
 }
 
 _agent_env_hook() {
+  # Interactive shells must never pay the direnv export, and some devenv
+  # versions open a TUI when they detect a TTY, which hangs the prompt.
+  case $- in
+    *i*) return 0 ;;
+  esac
+
   # Already inside an activated environment, a build, or an explicit opt-out.
   [ -n "${AGENT_ENV_LOADED:-}" ] && return 0
   [ -n "${DEVENV_ROOT:-}" ] && return 0
