@@ -29,8 +29,7 @@ services:
       RGO_MUSIC_AHEAD: "10"
       NODE_OPTIONS: --max-old-space-size=128
     mem_limit: 384m
-    pids_limit: 64
-    # DSM's kernel does not support Docker CPU quotas. Encoding uses Intel VAAPI.
+    # DSM lacks Docker CPU quotas and PIDs limits. Encoding uses Intel VAAPI.
     logging:
       driver: json-file
       options:
