@@ -1,0 +1,44 @@
+services:
+  radio:
+    image: openpost-radio:runtime
+    build: .
+    container_name: openpost-radio
+    user: "1026:100"
+    group_add: ["937"]
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    volumes:
+      - ./app:/app:ro
+      - ./state:/state
+      - /volume1/homes/kraktoos/openpost-radio-music:/music:ro
+    env_file: [credentials.env]
+    environment:
+      RGO_MUSIC_REVISION: ${RADIO_REVISION:?Set RADIO_REVISION to the deployed music commit}
+      RGO_MUSIC_LIBRARY: /music
+      RGO_MUSIC_STATE: /state
+      RGO_MUSIC_ENCODER: h264_vaapi
+      RGO_MUSIC_FPS: "24"
+      RGO_MUSIC_SCALE: "2"
+      RGO_MUSIC_VIDEO_BITRATE: 3000k
+      RGO_MUSIC_DAY_MINUTES: "40"
+      RGO_MUSIC_AHEAD: "10"
+      NODE_OPTIONS: --max-old-space-size=128
+    mem_limit: 384m
+    pids_limit: 64
+    # DSM's kernel does not support Docker CPU quotas. Encoding uses Intel VAAPI.
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+    healthcheck:
+      test: [CMD, node, src/stream/health.js, /state/status.json]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
