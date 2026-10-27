@@ -38,7 +38,7 @@ _agent_env_hook() {
   command -v direnv >/dev/null 2>&1 || return 0
 
   local root="$PWD"
-  while [ "$root" != "/" ] && [ ! -e "$root/.envrc" ]; do
+  while [ -n "$root" ] && [ "$root" != "/" ] && [ ! -e "$root/.envrc" ]; do
     root="${root%/*}"
   done
   [ -e "$root/.envrc" ] || return 0
