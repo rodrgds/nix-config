@@ -1,45 +1,30 @@
-# OpenPost Radio on the NAS
+# OpenPost Radio NAS storage
 
-This directory owns `/volume1/docker/openpost-radio` on `kraktoos@rgo-nas`.
-The NAS has Intel J4025 graphics with VAAPI H.264 encoding; the VPS has only
-virtio graphics. Keep the live renderer and hardware encoder on the NAS so
-radio consumes no VPS CPU, RAM, or music-library disk.
+The live sender runs on `rgo-vps`. The NAS stores audio and pre-encoded
+programmes only. Do not start a radio renderer or encoder on the NAS.
+The retired `openpost-radio` container must remain stopped with restart=no.
 
-The authoritative music library is
-`/volume1/homes/kraktoos/openpost-radio-music`. Generate new compositions on a
-workstation, then run `scripts/publish-nas-library.sh` in the music project.
-The producer copies finished audio before atomically publishing its catalog.
-The stream keeps ten planned tracks ahead and refreshes the catalog as it
-refills. Local NAS playback reads the originals directly. The HTTP-source
-fallback uses a bounded disk cache and two background transfers.
+The authoritative library is
+`/volume1/homes/kraktoos/openpost-radio-music`. Generate compositions and
+prepare programmes on a workstation. Publish finished audio before the
+catalog with `scripts/publish-nas-library.sh` in `/Users/rgo/dev/rgo-music`.
+`node src/cli/program.js --hours 8 --fps 30` publishes four-minute video
+chunks and `programmes/current.json` there.
 
-Build `openpost-radio:runtime` using this Dockerfile on the NAS. Copy the
-project's `src/`, `assets/`, and `package.json` to `app/`, preserving `state/`.
-Copy this compose manifest. DSM's render-device GID is 937; verify it before
-moving to another host. No privileged container or Docker socket is needed.
-The base images are pinned, and only Node is added to the existing media
-runtime. The stream imports no composer/native-audio npm dependencies.
+`library-read.py` is the read-only SSH forced-command receiver at
+`/usr/local/lib/openpost-radio/library-read.py`, root-owned mode 0755.
+The dedicated public key in `/etc/ssh/authorized_keys/kraktoos` has
+`restrict,command="/usr/local/lib/openpost-radio/library-read.py"` options.
+It accepts only `read` followed by an allowlisted radio asset path. It
+rejects traversal, commands, and paths resolving outside the library.
+`provision-library.py` installs only this receiver and appends this key,
+using the narrow `/host-lib`, `/keys` and `/input` mounts documented by
+its source. Preserve unrelated authorized keys and DSM ACLs.
 
-The encrypted credential is `secrets/openpost-radio.env` in this configuration
-repository. Decrypt on an authorized workstation with SOPS and stream its
-contents over SSH to `credentials.env`, mode 0600. Never copy plaintext into
-`app/` or an image layer. The private card used for initial provisioning is
-not a durable secret source.
+The VPS module in the parent directory consumes SOPS-encrypted
+`secrets/openpost-radio-env` and `secrets/openpost-radio-nas-key` at runtime.
+Its known-host file is `/etc/nas-backup/known_hosts`. Keep this identity
+separate from the existing backup writer. Verify a manifest read succeeds
+and an arbitrary command returns 126 before enabling the relay.
 
-An authorized NAS rollout uses:
-
-```sh
-cd /volume1/docker/openpost-radio
-/usr/local/bin/docker compose -f compose.yaml up -d --no-deps radio
-/usr/local/bin/docker compose -f compose.yaml ps
-/usr/local/bin/docker logs --tail 30 openpost-radio
-/usr/local/bin/docker stats --no-stream openpost-radio
-```
-
-Check `/state/status.json` for advancing encoded seconds/bytes and a full
-lookahead queue. Docker health requires a recent frame and successful
-encoder progress. Confirm YouTube's ingest separately from public playback;
-a valid key can feed an event that still waits for the owner to press Go Live.
-
-The radio owns only this container and these directories. Leave existing
-Jellyfin, Montra, NAS backups, and DSM firewall configuration unchanged.
+Leave Jellyfin, Montra, NAS backups, and DSM firewall configuration alone.

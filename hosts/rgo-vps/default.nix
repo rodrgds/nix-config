@@ -60,6 +60,7 @@ in
 
   vps.enableAll = false;
   vps.caddy.enable = true;
+  vps.openpost-radio.enable = true;
   services.podman.enable = true;
 
   vps.adguardhome = {
