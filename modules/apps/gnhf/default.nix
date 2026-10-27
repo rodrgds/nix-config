@@ -1,6 +1,7 @@
 {
   lib,
   config,
+  username,
   ...
 }:
 let
@@ -16,5 +17,17 @@ in
       enable = true;
       npm.cliPackages.gnhf.package = "gnhf@latest";
     };
+
+    # gnhf drives OpenCode, which the javascript toolchain puts on the
+    # session path. Its Pi-specific config lived in the removed Pi module.
+    home-manager.users.${username}.home.file.".gnhf/config.yml".text = ''
+      agent: opencode
+
+      commitMessage:
+        preset: conventional
+
+      maxConsecutiveFailures: 3
+      preventSleep: true
+    '';
   };
 }

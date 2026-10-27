@@ -164,7 +164,10 @@ in
 
       retiredPackages = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [ "@google/gemini-cli" ];
+        default = [
+          "@google/gemini-cli"
+          "@earendil-works/pi-coding-agent"
+        ];
         description = "Global npm packages that should be removed during migration.";
       };
 

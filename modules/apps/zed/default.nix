@@ -25,7 +25,7 @@ let
     buffer_line_height = "standard";
     agent_ui_font_size = fontSize;
     agent_buffer_font_size = fontSize;
-    agent.terminal_init_command = "pi";
+    agent.terminal_init_command = "opencode";
     autosave = "on_focus_change";
     format_on_save = "on";
     features.inline_completion = false;

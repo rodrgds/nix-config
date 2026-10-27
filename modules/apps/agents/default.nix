@@ -15,15 +15,22 @@ let
     "codex"
     "claude-code"
     "opencode"
-    "pi"
   ];
 
   # The installer owns upstream content and its lockfile outside the checkout.
-  ensureSkillsSnippet = lib.concatMapStringsSep "\n" (spec: ''
-    ${lib.escapeShellArg toolchain.npm.binDir}/skills add ${lib.escapeShellArg spec.source} \
-      --global --yes --full-depth \
-      --agent ${lib.escapeShellArgs skillAgents} --skill ${lib.escapeShellArgs spec.skills}
-  '') globalSkillSources;
+  retiredSkills = import ./_retired-skills.nix;
+  removeSkillsSnippet = lib.optionalString (retiredSkills != [ ]) ''
+    ${lib.escapeShellArg (toolchain.npm.binDir + "/skills")} remove \
+      --global --yes ${lib.escapeShellArgs retiredSkills} >/dev/null 2>&1 || true
+  '';
+  ensureSkillsSnippet = ''
+    ${lib.concatMapStringsSep "\n" (spec: ''
+      ${lib.escapeShellArg toolchain.npm.binDir}/skills add ${lib.escapeShellArg spec.source} \
+        --global --yes --full-depth \
+        --agent ${lib.escapeShellArgs skillAgents} --skill ${lib.escapeShellArgs spec.skills}
+    '') globalSkillSources}
+    ${removeSkillsSnippet}
+  '';
 
   # Local skills stay editable in the repo, with one link per skill.
   skillsDir = "${constants.homeDir}/.config/home/modules/apps/agents/skills";
@@ -40,7 +47,7 @@ let
       fi
       rm "$agent_skill_target"
     fi
-    for agent_skill_dir in "$agent_skill_target" "$HOME/.claude/skills" "$HOME/.pi/agent/skills"; do
+    for agent_skill_dir in "$agent_skill_target" "$HOME/.claude/skills"; do
       mkdir -p "$agent_skill_dir"
       for skill_name in ${lib.escapeShellArgs localSkills}; do
         if [ -e "$agent_skill_dir/$skill_name" ] && [ ! -L "$agent_skill_dir/$skill_name" ]; then
@@ -102,7 +109,6 @@ in
           # Global AGENTS.md - single source of truth for all agents.
           # Deployed to every harness so instructions stay consistent
           # regardless of which CLI is driving the session.
-          home.file.".pi/agent/AGENTS.md".source = ./AGENTS.md;
           home.file.".dsh/AGENTS.md".source = ./AGENTS.md;
           home.file.".codex/AGENTS.md".source = ./AGENTS.md;
           home.file.".claude/CLAUDE.md".source = ./AGENTS.md;

@@ -1,15 +1,28 @@
 [
   {
     source = "mattpocock/skills";
-    skills = [ "*" ];
+    skills = [
+      "code-review"
+      "codebase-design"
+      "diagnosing-bugs"
+      "pr"
+      "prototype"
+      "research"
+      "tdd"
+      "writing-for-agents"
+    ];
   }
   {
     source = "jakubkrehel/skills";
-    skills = [ "*" ];
-  }
-  {
-    source = "humanlayer/skills";
-    skills = [ "show-me" ];
+    skills = [
+      "break"
+      "build-design"
+      "explain-interface"
+      "interface-review"
+      "state-machine"
+      "technical-drawing"
+      "variant"
+    ];
   }
   {
     source = "pbakaus/impeccable";
@@ -37,19 +50,15 @@
   }
   {
     source = "getpaseo/paseo";
-    skills = [ "*" ];
-  }
-  {
-    source = "vercel-labs/skills";
-    skills = [ "find-skills" ];
+    skills = [
+      "paseo"
+      "paseo-help"
+    ];
   }
   {
     source = "cloudflare/skills";
     skills = [
-      "cloudflare"
-      "durable-objects"
       "web-perf"
-      "workers-best-practices"
       "wrangler"
     ];
   }

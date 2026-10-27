@@ -1,17 +1,20 @@
 ---
 name: test-audit
-description: "Invoke whenever writing, changing, reviewing, or sweeping tests. Authoring gate for new tests plus audit workflow for low-value, implementation-coupled, or duplicative tests and the test-only production seams they demand."
+description: "Audit existing tests for low-value, implementation-coupled, or duplicative cases, and the test-only production seams they demand. Use when asked to audit, sweep, or prune a test suite; use the tdd skill when writing new tests."
 ---
 
 # Test Audit
 
-Three modes, one value bar. Authoring mode gates every new or changed test at
-write time. Audit mode runs focused sweeps of tests that re-assert source,
-duplicate stronger proof, couple behavior to implementation, or keep test-only
-production seams alive. Continue broad audits as separate coherent follow-up
-PRs; optimize for confidence, not deletion count. Campaign mode prunes one
-whole subsystem's test surface (every test file one plugin or core area owns);
-before starting one, write down the subsystem scope and batch plan first.
+Three modes, one value bar. Authoring mode gates a new or changed test at write
+time when this skill is already loaded. Audit mode runs focused sweeps of tests
+that re-assert source, duplicate stronger proof, couple behavior to
+implementation, or keep test-only production seams alive. Optimize for
+confidence, not deletion count.
+
+Campaign mode audits one bounded area at a time. Caps are hard: at most 20
+candidates per batch and at most 2 batches. When a cap is reached, stop and
+report the remaining candidates instead of continuing. Write down the bounded
+scope before starting.
 
 When exploring the codebase, recall Hindsight for the project's verified
 domain language and prior testing and interface decisions, then check them
@@ -89,15 +92,9 @@ or types directly.
 ## Discovery
 
 Keep discovery read-only and report evidence before editing. For broad scope,
-run parallel discovery lanes when available:
-
-- core and packages (`src/`, `packages/`);
-- plugins (`extensions/`);
-- UI, apps, scripts, and tooling;
-- a cross-cutting pattern sweep.
-
-Outside campaign mode, prefer a few high-confidence candidates over a large
-speculative inventory. Hunt for the [junk patterns](#junk-patterns).
+work one bounded area at a time within the campaign caps. Prefer a few
+high-confidence candidates over a large speculative inventory. Hunt for the
+[junk patterns](#junk-patterns).
 
 ## Retention bar
 
@@ -160,8 +157,9 @@ tests.
 ## Landing and continuation
 
 Commit, push, open a PR, or land only when authorized. Follow the repository's
-PR flow. Land one coherent PR at a time; after landing, refresh from current
-`main` and rerun read-only discovery for the next high-confidence batch.
+PR flow. Land one coherent PR at a time. After landing, refresh from current
+`main` and rerun read-only discovery for the next high-confidence batch, within
+the campaign caps.
 
 ## Handoff
 

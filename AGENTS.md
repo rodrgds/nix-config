@@ -47,7 +47,7 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 
 ## Architecture
 
-- **Shared source of truth** - when several modules need the same data, keep it in one shared place and import it. `modules/shared/9router.nix` is the model: one 9Router combo catalog consumed by opencode and Pi. The rebuild wizard refreshes its `9router/combos.json` snapshot from the proxy before every rebuild.
+- **Shared source of truth** - when several modules need the same data, keep it in one shared place and import it. `modules/shared/9router.nix` is the model: one 9Router combo catalog consumed by opencode and DeepSeek Harness. The rebuild wizard refreshes its `9router/combos.json` snapshot from the proxy before every rebuild.
 - **Declarative wiring, self-updating tools** - machine wiring is declarative; upstream-managed tools stay mutable when Nix pinning would hurt reliability. Shared npm CLI ownership lives in `modules/apps/javascript-toolchain/default.nix`; harness modules contribute package needs and hook behavior there instead of owning their own prefix or timer.
 - **Role profiles first** - shared workstation defaults belong in `modules/profiles/default.nix`. Host files should mostly pick profiles, keep true host-specific apps explicit, and keep explicit `false` toggles for dormant modules the user may re-enable.
 - **Agent skills** - declare upstream sources in `modules/apps/agents/_skill-sources.nix`. The skills CLI installs and updates them in `~/.agents/skills/`; keep them out of Git and do not patch them locally. Repo-owned skills live in `modules/apps/agents/skills/` and are linked individually into the shared directory. Add local instructions there or in project `AGENTS.md` files.
@@ -61,12 +61,6 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 - **Nix daemon trust** - workstations grant daemon administration only to root. Approve needed signed caches in `modules/core/nix/default.nix`; do not restore user trust or disable signatures to fix cache compatibility. VPS deployment trust is a separate boundary.
 - **Blender MCP** - upgrade the server and bundled add-on together in `modules/apps/blender/default.nix`. After activation, enable `blender_mcp` in Blender and verify scene inspection and viewport capture before claiming a working connection.
 - **One-off tools** - the global file owns this rule. This repo has no Devenv environment; use `nix run`, `nix shell`, or a temporary package for repo tooling.
-
-## Pi configuration
-
-Agents (global `AGENTS.md` + skills) are configured in `modules/apps/agents/default.nix`; Pi is configured in `modules/apps/pi/default.nix`. Change them there and rebuild.
-
-Model preferences are configuration, not rules. The default provider/model and picker ordering live in the Pi module; change them where they are defined rather than restating them in a doc.
 
 ## Claude Code
 

@@ -102,7 +102,7 @@ in
               # self-hosted server; bank and tags below live in
               # ~/.hindsight/coding-agent.json, token in HINDSIGHT_API_TOKEN.
               plugins = [ hindsightPluginPath ];
-              # Global agent skills, same set Pi uses.
+              # Global agent skills shared with the other harnesses.
               skills = [ skillsDir ];
               providers = {
                 nine_router = {
@@ -257,7 +257,7 @@ in
             # apiToken is deliberately absent: the file wins where it sets
             # a value, so the token stays in HINDSIGHT_API_TOKEN from shell
             # init below instead of landing in the Nix store. bankId rodrigo
-            # shares Pi's bank; retains carry the per-repo project tag.
+            # uses the shared rodrigo bank; retains carry the per-repo project tag.
             # (`source:` tags are server-reserved; attribution is stamped
             # by the integration itself.) autoUpdate is pinned off;
             # rebuilds move the runtime forward.

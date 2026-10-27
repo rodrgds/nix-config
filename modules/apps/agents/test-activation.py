@@ -44,7 +44,12 @@ fs.appendFileSync(process.env.INVOCATIONS, JSON.stringify(process.argv.slice(2))
         "INVOCATIONS": str(invocations),
     })
     calls = [json.loads(line) for line in invocations.read_text().splitlines()]
-    assert calls and all(call[0] == "add" for call in calls), calls
+    adds = [call for call in calls if call and call[0] == "add"]
+    removes = [call for call in calls if call and call[0] == "remove"]
+    assert adds, calls
+    assert removes and "--global" in removes[0] and "--yes" in removes[0], calls
+    assert "wizard" in removes[0], calls
+    assert "code-review" not in removes[0], calls
     assert (fixture / ".agents" / "skills").is_dir()
 
 print("Skill activation passes with a minimal PATH")
