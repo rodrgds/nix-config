@@ -49,6 +49,12 @@ let
         fi
         ln -sfn "$agent_skill_source/$skill_name" "$agent_skill_dir/$skill_name"
       done
+      # Drop dangling links from skills that were removed or renamed upstream.
+      for existing_skill in "$agent_skill_dir"/*; do
+        if [ -L "$existing_skill" ] && [ ! -e "$existing_skill" ]; then
+          rm -f "$existing_skill"
+        fi
+      done
     done
   '';
 in
@@ -102,6 +108,28 @@ in
           home.file.".claude/CLAUDE.md".source = ./AGENTS.md;
           home.file.".claude/AGENTS.md".source = ./AGENTS.md;
           xdg.configFile."opencode/AGENTS.md".source = ./AGENTS.md;
+
+          # Agent shells start in the project directory. Load the project's
+          # direnv/devenv environment once and reuse the cached export, so
+          # commands run directly instead of paying `devenv shell` per call.
+          home.file.".config/agent-shell/env.sh".source = ./agent-env.sh;
+          home.file.".local/bin/timeout" = {
+            executable = true;
+            text = ''
+              #!/bin/sh
+              exec ${pkgs.coreutils}/bin/timeout "$@"
+            '';
+          };
+          programs.bash.profileExtra = lib.mkAfter ''
+            if [ -r "$HOME/.config/agent-shell/env.sh" ]; then
+              . "$HOME/.config/agent-shell/env.sh"
+            fi
+          '';
+          programs.zsh.envExtra = lib.mkAfter ''
+            if [ -r "$HOME/.config/agent-shell/env.sh" ]; then
+              . "$HOME/.config/agent-shell/env.sh"
+            fi
+          '';
 
           home.activation.linkSkills =
             lib.hm.dag.entryAfter

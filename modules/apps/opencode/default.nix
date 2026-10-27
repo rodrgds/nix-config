@@ -16,12 +16,16 @@ let
   # One local package entry resolves the Hindsight OpenCode V2 integration.
   # The shared toolchain below owns its installation.
   hindsightPluginPath = "${toolchain.npm.installRoot}/lib/node_modules/@vectorize-io/hindsight-coding-agents";
-  opencodeSkills = lib.mapAttrs' (
-    name: _:
-    lib.nameValuePair "opencode/skills/${lib.removeSuffix ".md" name}/SKILL.md" {
-      source = ./skills + "/${name}";
-    }
-  ) (lib.attrsets.filterAttrs (_: type: type == "regular") (builtins.readDir ./skills));
+  opencodeSkills =
+    if builtins.pathExists ./skills then
+      lib.mapAttrs' (
+        name: _:
+        lib.nameValuePair "opencode/skills/${lib.removeSuffix ".md" name}/SKILL.md" {
+          source = ./skills + "/${name}";
+        }
+      ) (lib.attrsets.filterAttrs (_: type: type == "regular") (builtins.readDir ./skills))
+    else
+      { };
 in
 {
   options.apps.opencode = {

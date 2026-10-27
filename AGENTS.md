@@ -60,7 +60,7 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 - **OCI startup readiness** - use `podman.sdnotify = "healthy"` when activation must wait for application/database readiness. Startup probes can legitimately fail while booting; declaring the unit ready early exposes their transient failures to NixOS activation and can trigger rollback. Preserve startup migration grace and test the real systemd readiness boundary.
 - **Nix daemon trust** - workstations grant daemon administration only to root. Approve needed signed caches in `modules/core/nix/default.nix`; do not restore user trust or disable signatures to fix cache compatibility. VPS deployment trust is a separate boundary.
 - **Blender MCP** - upgrade the server and bundled add-on together in `modules/apps/blender/default.nix`. After activation, enable `blender_mcp` in Blender and verify scene inspection and viewport capture before claiming a working connection.
-- **One-off tools** - the global file owns this rule. Repo-specific addition: when the nix-config repo itself needs a tool, use `devenv`.
+- **One-off tools** - the global file owns this rule. This repo has no Devenv environment; use `nix run`, `nix shell`, or a temporary package for repo tooling.
 
 ## Pi configuration
 

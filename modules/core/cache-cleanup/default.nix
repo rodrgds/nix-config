@@ -341,6 +341,13 @@ let
         fi
       fi
 
+      # devenv writes a shell-<hash>.sh for every invocation and never removes
+      # it. One checkout reached 16k files and 1.6GB before this sweep existed.
+      for devenv_state in "$user_home"/dev/*/.devenv "$user_home"/.t3/worktrees/*/*/.devenv; do
+        [ -d "$devenv_state" ] || continue
+        run find "$devenv_state" -xdev -maxdepth 1 -type f -name 'shell-*.sh' -mtime +1 -delete
+      done
+
       if [ "$do_go_build_cache" = "1" ]; then
         if process_running '(^|/)(go)( |$).*(build|clean|env|generate|install|run|test|tool)'; then
           log "keeping Go build caches while a Go command is active"
