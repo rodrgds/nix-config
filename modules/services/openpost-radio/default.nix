@@ -37,7 +37,7 @@ in
         pkgs.openssh
       ];
       environment = {
-        RGO_MUSIC_REVISION = "27d6f68";
+        RGO_MUSIC_REVISION = "8ac7d1f";
         RGO_MUSIC_STATE = "/var/lib/openpost-radio";
         RGO_MUSIC_BUFFER = "/var/cache/openpost-radio";
         RGO_MUSIC_NAS_HOST = "kraktoos@100.88.5.41";

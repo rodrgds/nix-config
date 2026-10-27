@@ -267,6 +267,7 @@
         sshUser = "rgo";
         user = "root";
         remoteBuild = false;
+        fastConnection = true;
         autoRollback = true;
         magicRollback = true;
         activationTimeout = 1800;
