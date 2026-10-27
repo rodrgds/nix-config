@@ -56,7 +56,7 @@ in
         CacheDirectoryMode = "0700";
         Restart = "always";
         RestartSec = "10s";
-        MemoryMax = "192M";
+        MemoryMax = "128M";
         MemorySwapMax = 0;
         CPUQuota = "50%";
         TasksMax = 32;
