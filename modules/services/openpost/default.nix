@@ -201,7 +201,10 @@ let
     OPENPOST_PUBLIC_URL = "https://${cfg.domain}";
     OPENPOST_DISABLE_REGISTRATIONS = "false";
     OPENPOST_STOCK_MEDIA_ENABLED = "true";
-    LINKEDIN_DISABLE_THREAD_REPLIES = "true";
+    OPENPOST_LINKEDIN_AUTH_MODE = "community_management";
+    OPENPOST_LINKEDIN_ORGANIZATIONS_ENABLED = "true";
+    OPENPOST_LINKEDIN_MEMBER_ANALYTICS_ENABLED = "true";
+    OPENPOST_DISABLE_LINKEDIN_THREAD_REPLIES = "false";
     X_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/x/callback";
     LINKEDIN_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/linkedin/callback";
     THREADS_REDIRECT_URI = "https://${cfg.domain}/api/v1/accounts/threads/callback";
