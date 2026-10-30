@@ -78,10 +78,12 @@ let ff = null,
   stopping = false;
 process.on("SIGTERM", () => {
   stopping = true;
+  ff?.stdin.end();
   ff?.kill("SIGTERM");
 });
 process.on("SIGINT", () => {
   stopping = true;
+  ff?.stdin.end();
   ff?.kill("SIGTERM");
 });
 while (!stopping) {
