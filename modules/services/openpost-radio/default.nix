@@ -62,9 +62,9 @@ in
         CacheDirectoryMode = "0700";
         Restart = "always";
         RestartSec = "10s";
-        MemoryMax = "128M";
+        MemoryMax = "384M";
         MemorySwapMax = 0;
-        CPUQuota = "50%";
+        CPUQuota = "100%";
         TasksMax = 32;
         NoNewPrivileges = true;
         ProtectSystem = "strict";
