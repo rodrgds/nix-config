@@ -6,6 +6,11 @@
 }:
 let
   cfg = config.vps.openpost-radio;
+  relay = pkgs.runCommand "openpost-radio-relay" { } ''
+    mkdir -p "$out"
+    cp ${./relay.js} "$out/relay.js"
+    cp ${./relay-timestamps.js} "$out/relay-timestamps.js"
+  '';
 in
 {
   options.vps.openpost-radio.enable = lib.mkEnableOption "OpenPost Radio packet relay";
@@ -38,7 +43,7 @@ in
         pkgs.openssh
       ];
       environment = {
-        RGO_MUSIC_REVISION = "45275f7";
+        RGO_MUSIC_REVISION = "e01a65d";
         RGO_MUSIC_STATE = "/var/lib/openpost-radio";
         RGO_MUSIC_BUFFER = "/var/cache/openpost-radio";
         RGO_MUSIC_NAS_HOST = "kraktoos@100.88.5.41";
@@ -46,7 +51,7 @@ in
         NODE_OPTIONS = "--max-old-space-size=64";
       };
       serviceConfig = {
-        ExecStart = "${pkgs.nodejs_24}/bin/node ${./relay.js}";
+        ExecStart = "${pkgs.nodejs_24}/bin/node ${relay}/relay.js";
         EnvironmentFile = config.sops.secrets.openpost-radio-env.path;
         LoadCredential = "nas-key:${config.sops.secrets.openpost-radio-nas-key.path}";
         User = "openpost-radio";

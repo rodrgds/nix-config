@@ -13,6 +13,7 @@ import {
 import { createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { join } from "node:path";
+import { shiftTransportTimestamps } from "./relay-timestamps.js";
 const run = promisify(execFile);
 const state = process.env.RGO_MUSIC_STATE ?? "/var/lib/openpost-radio";
 const cache = process.env.RGO_MUSIC_BUFFER ?? "/var/cache/openpost-radio";
@@ -251,9 +252,9 @@ while (!stopping) {
   ff = spawn("ffmpeg", args, { stdio: ["pipe", "ignore", "pipe", "pipe"] });
   const sender = ff;
   sender.stdin.on("error", () => {}); // EPIPE is handled by the process exit.
-  const packetBuffer = Buffer.allocUnsafe(128 * 1024);
+  const packetBuffer = Buffer.allocUnsafe(188 * 696);
   const feed = (async () => {
-    let i = initial;
+    let i = initial, sequence = 0;
     while (alive && !stopping) {
       try {
         await download(i);
@@ -264,26 +265,39 @@ while (!stopping) {
       }
       const file = await open(join(folder, fileName(i)), "r");
       try {
+        let carry = 0;
         while (alive && !stopping && !sender.stdin.destroyed) {
           const { bytesRead } = await file.read(
             packetBuffer,
-            0,
-            packetBuffer.length,
+            carry,
+            packetBuffer.length - carry,
             null,
           );
-          if (!bytesRead) break;
+          if (!bytesRead) {
+            if (carry) throw Error("incomplete programme transport packet");
+            break;
+          }
+          const total = carry + bytesRead;
+          const usable = total - total % 188;
+          // Source chunks reset to zero at each programme wrap. Give PCR,
+          // PTS and DTS one continuous clock, preserving their relative timing.
+          shiftTransportTimestamps(packetBuffer.subarray(0, usable),
+            (sequence - i) * m.chunkSeconds);
           // Reuse the storage only after the pipe has consumed it. Allocating
           // a fresh Buffer for every read grows the long-running V8 heap.
           await new Promise((resolve, reject) =>
-            sender.stdin.write(packetBuffer.subarray(0, bytesRead), (error) =>
+            sender.stdin.write(packetBuffer.subarray(0, usable), (error) =>
               error ? reject(error) : resolve(),
             ),
           );
+          carry = total - usable;
+          packetBuffer.copy(packetBuffer, 0, usable, total);
         }
       } finally {
         await file.close();
       }
       i = (i + 1) % m.count;
+      sequence++;
     }
   })().catch((error) => {
     if (alive && !stopping) console.error(`packet source: ${error.message}`);
