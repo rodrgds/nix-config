@@ -10,6 +10,50 @@ class Tests(unittest.TestCase):
  def runrx(self,data,name="montra-db",kind="gzip"):
   return subprocess.run([sys.executable,str(R),"--root",str(self.root)],input=data,capture_output=True,env=dict(os.environ,SSH_ORIGINAL_COMMAND=f"upload {name} {kind}"))
  def snaps(self): return sorted((self.root/"montra-db").glob("snapshot-*"))
+ def test_unverified_upload_stays_in_synology_tmp_until_commit(self):
+  import importlib.util, io
+  spec = importlib.util.spec_from_file_location('staging_receiver', R)
+  receiver = importlib.util.module_from_spec(spec); spec.loader.exec_module(receiver)
+  payload = gzip.compress(os.urandom(16384))
+  root = self.root
+  case = self
+  class ObservedStream(io.BytesIO):
+   observed = False
+   def read(self, size=-1):
+    if self.tell() >= 4 + len(payload) and not self.observed:
+     self.observed = True
+     case.assertEqual(list((root / 'montra-db').glob('.partial-*')), [], 'unverified streams must stay outside the indexed dataset root')
+     pending = list((root / 'montra-db' / '@tmp').glob('.partial-*'))
+     case.assertEqual(len(pending), 1)
+     case.assertGreater((pending[0] / 'data.gz').stat().st_size, 0)
+     case.assertEqual(case.snaps(), [], 'a stream is not a successful snapshot before sender commit')
+    return super().read(size)
+  stream = ObservedStream(wire(payload))
+  receipt = receiver.receive(str(root), 'upload montra-db gzip', stream)
+  self.assertTrue(stream.observed)
+  self.assertEqual((root / receipt['label'] / 'data.gz').read_bytes(), payload)
+  self.assertEqual(list((root / 'montra-db' / '@tmp').iterdir()), [])
+ def test_failed_upload_cleans_legacy_and_synology_tmp_partials(self):
+  parent = self.root / 'montra-db'; parent.mkdir()
+  staging = parent / '@tmp'; staging.mkdir()
+  for directory in (parent, staging):
+   partial = directory / ('.partial-' + 'a' * 32); partial.mkdir()
+   (partial / 'data.gz').write_bytes(b'abandoned stream')
+  result = self.runrx(wire(gzip.compress(b'incomplete'), False))
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual(list(parent.glob('.partial-*')), [])
+  self.assertEqual(list(staging.iterdir()), [])
+  self.assertEqual(self.snaps(), [])
+ def test_synology_tmp_symlink_cannot_redirect_staging(self):
+  parent = self.root / 'montra-db'; parent.mkdir()
+  outside = Path(self.t.name) / 'outside'; outside.mkdir()
+  marker = outside / 'keep'; marker.write_text('keep')
+  (parent / '@tmp').symlink_to(outside)
+  result = self.runrx(wire(gzip.compress(b'complete')))
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual(list(outside.iterdir()), [marker])
+  self.assertEqual(marker.read_text(), 'keep')
+  self.assertEqual(self.snaps(), [])
  def test_no_commit(self):
   self.assertNotEqual(self.runrx(wire(gzip.compress(b"prefix"),False)).returncode,0); self.assertEqual(self.snaps(),[])
  def test_success(self):

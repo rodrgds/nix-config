@@ -235,7 +235,7 @@ def receive(root, command, stream):
     if kind != expected_kind:
         raise ValueError('wrong format for dataset')
     rootfd = open_root(root)
-    parent = stagefd = lockfd = datafd = None
+    parent = stagefd = lockfd = datafd = staging_parent = None
     stage = None
     try:
         try:
@@ -251,9 +251,19 @@ def receive(root, command, stream):
         for name in os.listdir(parent):
             if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
                 remove_snapshot(parent, name)
+        # Synology Drive excludes @tmp. Do not index growing/unverified streams;
+        # only publish the verified snapshot into the synced dataset directory.
+        try:
+            os.mkdir('@tmp', 0o700, dir_fd=parent)
+        except FileExistsError:
+            pass
+        staging_parent = os.open('@tmp', DIRECTORY, dir_fd=parent)
+        for name in os.listdir(staging_parent):
+            if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
+                remove_snapshot(staging_parent, name)
         stage = '.partial-' + uuid.uuid4().hex
-        os.mkdir(stage, 0o700, dir_fd=parent)
-        stagefd = os.open(stage, DIRECTORY, dir_fd=parent)
+        os.mkdir(stage, 0o700, dir_fd=staging_parent)
+        stagefd = os.open(stage, DIRECTORY, dir_fd=staging_parent)
         datafd = os.open('data.gz', os.O_CREAT | os.O_EXCL | os.O_RDWR | FILE, 0o600, dir_fd=stagefd)
         digest = hashlib.sha256()
         count = 0
@@ -293,7 +303,8 @@ def receive(root, command, stream):
             manifest.flush()
             os.fsync(manifest.fileno())
         os.fsync(stagefd)
-        os.rename(stage, label, src_dir_fd=parent, dst_dir_fd=parent)
+        os.rename(stage, label, src_dir_fd=staging_parent, dst_dir_fd=parent)
+        os.fsync(staging_parent)
         stage = None
         os.fsync(parent)
         retain_snapshots(parent, dataset, stamp)
@@ -304,8 +315,8 @@ def receive(root, command, stream):
         if stagefd is not None:
             os.close(stagefd)
         if stage is not None:
-            remove_snapshot(parent, stage)
-        for fd in (lockfd, parent, rootfd):
+            remove_snapshot(staging_parent, stage)
+        for fd in (staging_parent, lockfd, parent, rootfd):
             if fd is not None:
                 os.close(fd)
 

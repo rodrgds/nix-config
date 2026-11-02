@@ -42,6 +42,16 @@ forced command and host-key pinning until the replacement is proven.
 
 A snapshot is published only after the whole producer succeeds and the NAS verifies its SHA-256, size, gzip checksum and, for archives, tar framing. Failed uploads cannot rotate successful backups. Each dataset retains at most seven successful snapshots. OpenPost database and media snapshots also expire six days after their receiver-issued UTC timestamp. An independent hourly prune removes expired OpenPost snapshots even when daily uploads fail, including the last remaining snapshot. Other datasets keep their seven-successful-snapshot policy without an age limit. Montra's status file is replaced only after a matching NAS receipt.
 
+Uploads stage growing, unverified files under each dataset's `@tmp/` directory.
+After sender success and verification, the receiver renames the snapshot into the
+dataset root and synchronizes both directories. It removes abandoned partials
+from `@tmp/` and the legacy root location while holding the dataset lock.
+
+The six-day expiry applies to snapshots in this NAS backup tree. It does not
+establish retention for Synology Drive versions, synchronized clients, recycle
+bins, or other copies. Check those configurations separately before making a
+retention claim about them.
+
 Each snapshot directory contains `data.gz` and `manifest.json`. Database datasets contain gzipped SQL. Media archives contain `media/` files. Vaultwarden and Directus archives contain ordered `database/00000000.sql` chunks and `files/` application data, excluding the live SQLite database and its WAL files. Concatenate the SQL chunks into sqlite3 on a new restore database, then restore the application files separately.
 
 The receiver accepts at most 16 GiB compressed and 128 GiB expanded per upload.
