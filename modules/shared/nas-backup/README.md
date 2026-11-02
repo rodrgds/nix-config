@@ -40,7 +40,7 @@ forced command and host-key pinning until the replacement is proven.
 
 ## Integrity and recovery
 
-A snapshot is published only after the whole producer succeeds and the NAS verifies its SHA-256, size, gzip checksum and, for archives, tar framing. Failed uploads cannot rotate successful backups. Each dataset retains seven successful snapshots. Montra's status file is replaced only after a matching NAS receipt.
+A snapshot is published only after the whole producer succeeds and the NAS verifies its SHA-256, size, gzip checksum and, for archives, tar framing. Failed uploads cannot rotate successful backups. Each dataset retains at most seven successful snapshots. OpenPost database and media snapshots also expire six days after their receiver-issued UTC timestamp. An independent hourly prune removes expired OpenPost snapshots even when daily uploads fail, including the last remaining snapshot. Other datasets keep their seven-successful-snapshot policy without an age limit. Montra's status file is replaced only after a matching NAS receipt.
 
 Each snapshot directory contains `data.gz` and `manifest.json`. Database datasets contain gzipped SQL. Media archives contain `media/` files. Vaultwarden and Directus archives contain ordered `database/00000000.sql` chunks and `files/` application data, excluding the live SQLite database and its WAL files. Concatenate the SQL chunks into sqlite3 on a new restore database, then restore the application files separately.
 
@@ -69,7 +69,65 @@ replacing an archive and its checksum together. See SQLite's
 [safe-mode contract](https://sqlite.org/cli.html#the_safe_command_line_option).
 The PostgreSQL server and psql client run in a disposable digest-pinned Alpine container, with no network, production volumes, host mounts or credentials. Its root filesystem is read-only, it runs as postgres with no capabilities, and temporary storage, memory, CPU and process counts are bounded. A separate database inside a production container is not an acceptable substitute. See the dated audit reports for isolation regression evidence and current host-side staging limits.
 
-OpenPost's older encrypted offsite job requires local backup files and cannot be enabled with this transport. A third-copy policy must consume NAS snapshots instead. Historical backups and retired app data are not removed by activation.
+OpenPost's older encrypted offsite job requires local backup files and cannot be enabled with this transport. A third-copy policy must consume NAS snapshots instead. Historical backups for other datasets and retired app data are not removed by activation. OpenPost snapshots follow the age limit above.
+
+
+## Enable OpenPost snapshot expiry
+
+The first rollout must preserve a verified recovery copy of the cleaned OpenPost
+state before expiry is enabled. Use this order:
+
+1. Deploy and verify the OpenPost data cleanup. With the existing receiver still
+   installed, run `openpost-postgres-backup.service` and
+   `openpost-media-backup.service` on the VPS. Check both systemd results and their
+   matching fresh NAS manifests, then run `openpost-restore-drill.service` and
+   verify success. Stop here if any backup or restore check fails.
+2. Install this reviewed `receiver.py` on the NAS as root-owned
+   `/usr/local/lib/nas-backup/receiver.py`, mode `0755`. Preserve the existing
+   forced SSH key command and DSM ACLs. Compare the installed SHA-256 with the
+   reviewed local file before continuing. The new receiver applies age retention
+   after successful uploads as well as through the explicit prune command.
+3. From the VPS, use the dedicated identity to run only `prune openpost-db` and
+   `prune openpost-media`. Both return a JSON dataset name and removal count.
+   Confirm the fresh snapshots remain and older expired snapshots are gone.
+4. Run the ordinary `rebuild --vps` workflow from the Home configuration checkout.
+   Check `openpost-nas-backup-prune.timer`, start its service once, and inspect its
+   journal and result. Verify `nas-backup-freshness.timer` remains active.
+
+The receiver rejects prune commands for every other dataset, arbitrary paths,
+extra arguments and shell syntax. Prune takes the same exclusive dataset lock
+as uploads, so it cannot remove an in-progress snapshot. A busy receiver causes
+that prune attempt to fail and alert; the hourly timer retries. Upload sessions
+remain bounded by the receiver's six-hour deadline.
+
+For expiry independent of VPS availability, also install the maintained
+`openpost-retention.sh` as root-owned
+`/usr/local/lib/nas-backup/openpost-retention.sh`, mode `0755`, on the NAS. After
+the same fresh-backup and restore gate, add this single idempotent entry to the
+DSM root crontab, preserving every existing entry, and reload its cron service:
+
+```cron
+17 * * * * kraktoos /usr/local/lib/nas-backup/openpost-retention.sh
+```
+
+Run the script once as `kraktoos` and check both JSON results. This task runs
+with the existing backup account's permissions and only expires the two
+OpenPost datasets. Its errors go to the NAS system log. Keep this NAS-local
+schedule when VPS service activation is unavailable; do not describe the
+VPS-only timer as independent of VPS outages.
+
+After the initial verified rollout, expiry does not require a newer successful
+backup. This is deliberate: an outage must not retain expired recovery data
+indefinitely. The freshness monitor alerts after 36 hours without a verified
+transfer. If uploads remain broken, expiry can leave OpenPost without a NAS
+recovery snapshot. Repair the producer or transport promptly instead of extending
+the privacy deadline.
+
+The declared hourly timer runs on the VPS and requires NAS SSH access. A VPS or
+transport outage can delay expiry until connectivity returns. Enforcing expiry
+while the VPS is offline requires a separately reviewed NAS-local scheduled task
+using the same two restricted prune commands. The VPS freshness monitor cannot
+prove expiry during its own outage.
 
 ## Freshness monitoring
 

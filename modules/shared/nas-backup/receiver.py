@@ -37,6 +37,9 @@ MAX_TAR_HEADERS = 1000000
 MAX_TAR_METADATA_BYTES = 64 * 1024
 MAX_TAR_TOTAL_METADATA_BYTES = 16 * 1024 ** 2
 KEEP = 7
+OPENPOST_DATASETS = {'openpost-db', 'openpost-media'}
+OPENPOST_MAX_AGE = datetime.timedelta(days=6)
+SNAPSHOT_PATTERN = r'snapshot-\d{8}T\d{12}Z-[0-9a-f]{32}'
 DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
 FILE = os.O_NOFOLLOW | os.O_CLOEXEC
 
@@ -134,6 +137,46 @@ def remove_snapshot(parent, name):
     finally:
         os.close(fd)
     os.rmdir(name, dir_fd=parent)
+
+
+def retain_snapshots(parent, dataset, now):
+    snapshots = sorted(name for name in os.listdir(parent)
+                       if re.fullmatch(SNAPSHOT_PATTERN, name))
+    expired = set(snapshots[:-KEEP])
+    if dataset in OPENPOST_DATASETS:
+        cutoff = now - OPENPOST_MAX_AGE
+        for name in snapshots:
+            # Receiver-issued UTC names are independent of mutable filesystem
+            # mtimes. Do not allow a new upload to extend an older copy's age.
+            created = datetime.datetime.strptime(name[9:31], '%Y%m%dT%H%M%S%fZ').replace(
+                tzinfo=datetime.timezone.utc)
+            if created <= cutoff:
+                expired.add(name)
+    for name in sorted(expired):
+        remove_snapshot(parent, name)
+    os.fsync(parent)
+    return len(expired)
+
+
+def prune(root, dataset, now=None):
+    # This command deliberately grants no arbitrary dataset or path deletion.
+    if dataset not in OPENPOST_DATASETS:
+        raise ValueError('prune dataset not allowed')
+    if now is None:
+        now = datetime.datetime.now(datetime.timezone.utc)
+    rootfd = open_root(root)
+    parent = lockfd = None
+    try:
+        parent = os.open(dataset, DIRECTORY, dir_fd=rootfd)
+        lockfd = os.open('.lock', os.O_CREAT | os.O_RDWR | FILE, 0o600, dir_fd=parent)
+        if not stat.S_ISREG(os.fstat(lockfd).st_mode):
+            raise ValueError('invalid lock')
+        fcntl.flock(lockfd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return {'dataset': dataset, 'removed': retain_snapshots(parent, dataset, now)}
+    finally:
+        for fd in (lockfd, parent, rootfd):
+            if fd is not None:
+                os.close(fd)
 
 
 def verify(fd, kind):
@@ -253,11 +296,7 @@ def receive(root, command, stream):
         os.rename(stage, label, src_dir_fd=parent, dst_dir_fd=parent)
         stage = None
         os.fsync(parent)
-        snapshots = sorted(name for name in os.listdir(parent)
-                           if re.fullmatch(r'snapshot-\d{8}T\d{12}Z-[0-9a-f]{32}', name))
-        for name in snapshots[:-KEEP]:
-            remove_snapshot(parent, name)
-        os.fsync(parent)
+        retain_snapshots(parent, dataset, stamp)
         return receipt
     finally:
         if datafd is not None:
@@ -318,6 +357,10 @@ def main():
     try:
         resource_limits(args.root)
         command = os.environ.get('SSH_ORIGINAL_COMMAND', '')
+        match = re.fullmatch(r'prune (openpost-db|openpost-media)', command)
+        if match:
+            print(json.dumps(prune(args.root, match[1])), flush=True)
+            return 0
         match = re.fullmatch(r'download ([a-z-]+)', command)
         if match:
             download(args.root, match[1], sys.stdout.buffer)

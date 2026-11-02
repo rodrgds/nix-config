@@ -62,6 +62,69 @@ class Tests(unittest.TestCase):
   (self.root/"montra-db").symlink_to(self.t.name); self.assertNotEqual(self.runrx(wire(gzip.compress(b"x"))).returncode,0)
 
 
+class OpenPostRetentionTests(unittest.TestCase):
+ def setUp(self):
+  import datetime, importlib.util
+  self.time = datetime.datetime.now(datetime.timezone.utc)
+  self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+  self.root = Path(self.temp.name).resolve() / 'backups'; self.root.mkdir()
+  spec = importlib.util.spec_from_file_location('retention_receiver', R)
+  self.receiver = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.receiver)
+ def snapshot(self, dataset, age, identifier):
+  import datetime
+  parent = self.root / dataset; parent.mkdir(exist_ok=True)
+  (parent / '.lock').touch(exist_ok=True)
+  stamp = self.time - datetime.timedelta(days=age)
+  name = 'snapshot-' + stamp.strftime('%Y%m%dT%H%M%S%fZ-') + ('%032x' % identifier)
+  result = parent / name; result.mkdir()
+  (result / 'data.gz').write_bytes(gzip.compress(b'fixture backup'))
+  (result / 'manifest.json').write_text('{}')
+  return result
+ def prune(self, command):
+  return subprocess.run([sys.executable, str(R), '--root', str(self.root)], input=b'', capture_output=True,
+                        env=dict(os.environ, SSH_ORIGINAL_COMMAND=command), timeout=10)
+ def test_openpost_prune_expires_final_snapshot_without_upload(self):
+  # The command must work without a successful new upload. Otherwise a failed
+  # daily backup can keep old YouTube data in recovery snapshots indefinitely.
+  for dataset in ('openpost-db', 'openpost-media'):
+   stale = self.snapshot(dataset, 7, 1)
+   result = self.prune('prune ' + dataset)
+   self.assertEqual(result.returncode, 0, result.stderr)
+   self.assertFalse(stale.exists())
+ def test_six_day_boundary_and_seven_snapshot_cap(self):
+  for dataset in ('openpost-db', 'openpost-media'):
+   expired = self.snapshot(dataset, 6, 1)
+   fresh = [self.snapshot(dataset, .1 * i, i + 2) for i in range(9)]
+   self.receiver.prune(str(self.root), dataset, now=self.time)
+   self.assertFalse(expired.exists())
+   self.assertEqual(sum(path.exists() for path in fresh), 7)
+   self.assertTrue(fresh[0].exists())
+ def test_verified_upload_also_removes_expired_openpost_snapshot(self):
+  import io
+  old = self.snapshot('openpost-db', 100, 1)
+  receipt = self.receiver.receive(str(self.root), 'upload openpost-db gzip', io.BytesIO(wire(gzip.compress(b'cleaned backup'))))
+  self.assertFalse(old.exists())
+  self.assertTrue((self.root / receipt['label'] / 'data.gz').exists())
+ def test_prune_rejects_other_datasets_and_arbitrary_paths(self):
+  unchanged = self.snapshot('montra-db', 100, 1)
+  for command in ('prune montra-db', 'prune ../escape', 'prune openpost-db;id', 'prune openpost-db extra'):
+   result = self.prune(command)
+   self.assertNotEqual(result.returncode, 0, command)
+   self.assertTrue(unchanged.exists())
+ def test_failed_upload_keeps_expired_snapshot_until_prune(self):
+  import io
+  old = self.snapshot('openpost-db', 100, 1)
+  with self.assertRaises(ValueError):
+   self.receiver.receive(str(self.root), 'upload openpost-db gzip', io.BytesIO(wire(gzip.compress(b'failed'), False)))
+  self.assertTrue(old.exists())
+ def test_prune_refuses_dataset_symlinks(self):
+  outside = self.root / 'elsewhere'; outside.mkdir(); (outside / 'keep').write_text('keep')
+  (self.root / 'openpost-db').symlink_to(outside)
+  result = self.prune('prune openpost-db')
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual((outside / 'keep').read_text(), 'keep')
+
+
 class StreamingFixture(unittest.TestCase):
  def setUp(self):
   self.t=tempfile.TemporaryDirectory(); self.dir=Path(self.t.name).resolve(); self.root=self.dir/"backups"; self.root.mkdir()
