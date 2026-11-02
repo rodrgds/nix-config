@@ -218,6 +218,41 @@ in
         job "openpost-media-backup" "openpost-media" "tar-gzip" "${mediaPython}/bin/python3 ${./media.py}"
           "";
       openpost-restore-drill = restoreJob "openpost-restore-drill" "openpost-db";
+      openpost-nas-backup-prune = {
+        description = "Expire OpenPost NAS recovery snapshots after six days";
+        unitConfig.OnFailure = [ failureAlert ];
+        wants = [ "network-online.target" ];
+        after = [ "network-online.target" ];
+        path = [ pkgs.openssh ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = pkgs.writeShellScript "openpost-nas-backup-prune" ''
+            set -euo pipefail
+            result=0
+            for dataset in openpost-db openpost-media; do
+              if ! ${pkgs.coreutils}/bin/timeout 2min ssh -T -oBatchMode=yes -oIdentitiesOnly=yes \
+                -oStrictHostKeyChecking=yes \
+                -oUserKnownHostsFile=/etc/nas-backup/known_hosts \
+                -oGlobalKnownHostsFile=/dev/null -oHostKeyAlias=rgo-nas \
+                -oHostKeyAlgorithms=ssh-ed25519 -oConnectTimeout=30 \
+                -oServerAliveInterval=30 -oServerAliveCountMax=3 \
+                -i ${config.sops.secrets.nas_backup_ssh_key.path} \
+                kraktoos@100.88.5.41 "prune $dataset"; then
+                result=1
+              fi
+            done
+            exit "$result"
+          '';
+          UMask = "0077";
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+          TimeoutStartSec = "5min";
+          MemoryMax = "64M";
+          TasksMax = 8;
+        };
+      };
     })
     (lib.mkIf config.vps.vaultwarden.enable {
       vaultwarden-backup =
@@ -261,4 +296,15 @@ in
       AccuracySec = "1min";
     };
   };
+  systemd.timers.openpost-nas-backup-prune =
+    lib.mkIf (config.vps.openpost.enable && config.vps.openpost.edition == "cloud")
+      {
+        description = "Enforce OpenPost backup expiry independently of successful uploads";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnActiveSec = "15min";
+          OnUnitActiveSec = "1h";
+          AccuracySec = "1min";
+        };
+      };
 }
