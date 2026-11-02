@@ -135,6 +135,67 @@ class OpenPostRetentionTests(unittest.TestCase):
    result = self.prune('prune ' + dataset)
    self.assertEqual(result.returncode, 0, result.stderr)
    self.assertFalse(stale.exists())
+ def partial(self, parent, identifier):
+  import datetime
+  parent.mkdir(exist_ok=True)
+  partial = parent / ('.partial-' + ('%032x' % identifier)); partial.mkdir()
+  (partial / 'data.gz').write_bytes(b'abandoned API payload')
+  old = (self.time - datetime.timedelta(days=7)).timestamp()
+  os.utime(partial, (old, old))
+  return partial
+ def test_hourly_prune_cleans_abandoned_partials_without_upload(self):
+  unrelated = self.root / 'montra-db'; unrelated.mkdir()
+  untouched = self.partial(unrelated, 9)
+  for dataset in ('openpost-db', 'openpost-media'):
+   fresh = self.snapshot(dataset, 1, 1)
+   parent = self.root / dataset
+   partials = [self.partial(parent, 2), self.partial(parent / '@tmp', 3)]
+   non_partial = parent / '@tmp' / '.partial-not-a-backup'; non_partial.mkdir()
+   result = self.prune('prune ' + dataset)
+   self.assertEqual(result.returncode, 0, result.stderr)
+   self.assertTrue(fresh.exists(), 'hourly cleanup must retain the fresh verified snapshot')
+   self.assertEqual(json.loads(result.stdout)['removed'], 0, 'the receipt counts verified snapshots only')
+   for partial in partials: self.assertFalse(partial.exists(), 'abandoned payload survived hourly prune')
+   self.assertTrue(non_partial.exists(), 'cleanup must keep the existing exact partial grammar')
+   self.assertTrue(untouched.exists(), 'OpenPost pruning must not clean another dataset')
+ def test_upload_lock_blocks_hourly_partial_cleanup(self):
+  import fcntl
+  fresh = self.snapshot('openpost-db', 1, 1)
+  parent = self.root / 'openpost-db'
+  partials = [self.partial(parent, 2), self.partial(parent / '@tmp', 3)]
+  with (parent / '.lock').open('r+') as lock:
+   fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+   result = self.prune('prune openpost-db')
+   self.assertNotEqual(result.returncode, 0, 'prune must not enter an active upload')
+   self.assertTrue(all(partial.exists() for partial in partials))
+   self.assertTrue(fresh.exists())
+  result = self.prune('prune openpost-db')
+  self.assertEqual(result.returncode, 0, result.stderr)
+  self.assertTrue(all(not partial.exists() for partial in partials))
+  self.assertTrue(fresh.exists())
+ def test_hourly_prune_rejects_symlinked_staging(self):
+  fresh = self.snapshot('openpost-db', 1, 1)
+  outside = self.root / 'outside'; outside.mkdir()
+  marker = outside / 'keep'; marker.write_text('keep')
+  (self.root / 'openpost-db' / '@tmp').symlink_to(outside)
+  result = self.prune('prune openpost-db')
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual(list(outside.iterdir()), [marker])
+  self.assertEqual(marker.read_text(), 'keep')
+  self.assertTrue(fresh.exists())
+ def test_hourly_prune_rejects_partial_symlink_escapes(self):
+  outside = self.root / 'outside'; outside.mkdir()
+  marker = outside / 'keep'; marker.write_text('keep')
+  for dataset, staged in (('openpost-db', False), ('openpost-media', True)):
+   fresh = self.snapshot(dataset, 1, 1)
+   parent = self.root / dataset
+   if staged: parent = parent / '@tmp'; parent.mkdir()
+   (parent / ('.partial-' + 'a' * 32)).symlink_to(outside)
+   result = self.prune('prune ' + dataset)
+   self.assertNotEqual(result.returncode, 0)
+   self.assertEqual(list(outside.iterdir()), [marker])
+   self.assertEqual(marker.read_text(), 'keep')
+   self.assertTrue(fresh.exists())
  def test_six_day_boundary_and_seven_snapshot_cap(self):
   for dataset in ('openpost-db', 'openpost-media'):
    expired = self.snapshot(dataset, 6, 1)

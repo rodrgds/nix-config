@@ -149,6 +149,14 @@ def remove_snapshot(parent, name):
     os.rmdir(name, dir_fd=parent)
 
 
+def remove_partials(parent):
+    # Call only while holding the dataset lock: no matching upload can be live.
+    for name in os.listdir(parent):
+        if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
+            remove_snapshot(parent, name)
+    os.fsync(parent)
+
+
 def retain_snapshots(parent, dataset, now):
     snapshots = sorted(name for name in os.listdir(parent)
                        if re.fullmatch(SNAPSHOT_PATTERN, name))
@@ -182,6 +190,16 @@ def prune(root, dataset, now=None):
         if not stat.S_ISREG(os.fstat(lockfd).st_mode):
             raise ValueError('invalid lock')
         fcntl.flock(lockfd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        remove_partials(parent)
+        try:
+            staging_parent = os.open('@tmp', DIRECTORY, dir_fd=parent)
+        except FileNotFoundError:
+            pass
+        else:
+            try:
+                remove_partials(staging_parent)
+            finally:
+                os.close(staging_parent)
         return {'dataset': dataset, 'removed': retain_snapshots(parent, dataset, now)}
     finally:
         for fd in (lockfd, parent, rootfd):
@@ -257,10 +275,7 @@ def receive(root, command, stream):
         if not stat.S_ISREG(os.fstat(lockfd).st_mode):
             raise ValueError('invalid lock')
         fcntl.flock(lockfd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        # A killed receiver may leave a partial. Under the lock it cannot be live.
-        for name in os.listdir(parent):
-            if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
-                remove_snapshot(parent, name)
+        remove_partials(parent)
         # Synology Drive excludes @tmp. Do not index growing/unverified streams;
         # only publish the verified snapshot into the synced dataset directory.
         try:
@@ -268,9 +283,7 @@ def receive(root, command, stream):
         except FileExistsError:
             pass
         staging_parent = os.open('@tmp', DIRECTORY, dir_fd=parent)
-        for name in os.listdir(staging_parent):
-            if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
-                remove_snapshot(staging_parent, name)
+        remove_partials(staging_parent)
         stage = '.partial-' + uuid.uuid4().hex
         os.mkdir(stage, 0o700, dir_fd=staging_parent)
         stagefd = os.open(stage, DIRECTORY, dir_fd=staging_parent)

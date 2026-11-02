@@ -50,6 +50,8 @@ Uploads stage growing, unverified files under each dataset's `@tmp/` directory.
 After sender success and verification, the receiver renames the snapshot into the
 dataset root and synchronizes both directories. It removes abandoned partials
 from `@tmp/` and the legacy root location while holding the dataset lock.
+The hourly OpenPost prune also removes those abandoned partials under the same
+lock, even when no later upload succeeds. It leaves an active upload untouched.
 
 The six-day expiry applies to snapshots in this NAS backup tree. It does not
 establish retention for Synology Drive versions, synchronized clients, recycle
