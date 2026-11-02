@@ -1,4 +1,4 @@
-// Send pre-encoded broadcasts. No scene rendering, audio decoding, or encoding here.
+// Copy prepared video and normalize audio for the ingest connection.
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
@@ -241,8 +241,18 @@ while (!stopping) {
     "0:v:0",
     "-map",
     "0:a:0",
-    "-c",
+    "-c:v",
     "copy",
+    // Normalize audio at the ingest boundary. Forwarding the programme AAC
+    // unchanged has produced clean source files but static on YouTube.
+    "-c:a",
+    "libmp3lame",
+    "-b:a",
+    "192k",
+    "-ar",
+    "44100",
+    "-ac",
+    "2",
     "-f",
     "flv",
     "-flvflags",
@@ -347,7 +357,8 @@ while (!stopping) {
     const status = {
       at: Date.now(),
       revision: process.env.RGO_MUSIC_REVISION,
-      mode: "packet-copy",
+      mode: "video-copy",
+      audioCodec: "mp3",
       fps: m.fps,
       width: m.width,
       height: m.height,
@@ -364,7 +375,7 @@ while (!stopping) {
       .catch((e) => console.error(e.message));
   }, 5000);
   console.log(
-    `relaying ${m.width}x${m.height} at ${m.fps}fps; 10 chunks ahead; no encoding`,
+    `relaying ${m.width}x${m.height} at ${m.fps}fps; 10 chunks ahead; video copy, MP3 audio`,
   );
   await new Promise((resolve) => {
     ff.on("close", () => {
