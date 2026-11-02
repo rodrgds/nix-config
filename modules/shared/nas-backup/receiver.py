@@ -22,6 +22,7 @@ import tarfile
 import uuid
 
 ROOT = '/volume1/homes/kraktoos/Backups/rgo-vps'
+PRIVATE_ROOT = '/volume1/openpost-private-backups/rgo-vps'
 DATASETS = {'montra-db', 'openpost-db', 'openpost-media', 'umami-db',
             'shlink-db', 'unprompted-db', 'directus', 'vaultwarden'}
 ARCHIVE_DATASETS = {'openpost-media', 'directus', 'vaultwarden'}
@@ -44,12 +45,21 @@ DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
 FILE = os.O_NOFOLLOW | os.O_CLOEXEC
 
 
+def storage_root(root, dataset):
+    # Only production OpenPost datasets leave the indexed homes tree. Explicit
+    # --root overrides remain self-contained for tests and recovery operators.
+    # open_root must find the private root already provisioned; never fall back.
+    if root == ROOT and dataset in OPENPOST_DATASETS:
+        return PRIVATE_ROOT
+    return root
+
+
 def resource_limits(root):
     # DSM's Linux kernel enforces RLIMIT_AS without a cgroup or privileges.
     # Darwin has different address-space semantics; explicit alternate roots
     # remain usable for local fixtures, but the production root fails closed.
     if sys.platform != 'linux':
-        if root == ROOT:
+        if root in (ROOT, PRIVATE_ROOT):
             raise RuntimeError('production receiver requires Linux resource limits')
         return
     for kind, maximum in ((resource.RLIMIT_AS, MAX_ADDRESS_SPACE),
@@ -164,7 +174,7 @@ def prune(root, dataset, now=None):
         raise ValueError('prune dataset not allowed')
     if now is None:
         now = datetime.datetime.now(datetime.timezone.utc)
-    rootfd = open_root(root)
+    rootfd = open_root(storage_root(root, dataset))
     parent = lockfd = None
     try:
         parent = os.open(dataset, DIRECTORY, dir_fd=rootfd)
@@ -234,7 +244,7 @@ def receive(root, command, stream):
     expected_kind = 'tar-gzip' if dataset in ARCHIVE_DATASETS else 'gzip'
     if kind != expected_kind:
         raise ValueError('wrong format for dataset')
-    rootfd = open_root(root)
+    rootfd = open_root(storage_root(root, dataset))
     parent = stagefd = lockfd = datafd = staging_parent = None
     stage = None
     try:
@@ -324,7 +334,7 @@ def receive(root, command, stream):
 def download(root, dataset, output):
     if dataset not in DATASETS:
         raise ValueError('dataset not allowed')
-    rootfd = open_root(root)
+    rootfd = open_root(storage_root(root, dataset))
     parent = lockfd = snapshotfd = datafd = None
     try:
         parent = os.open(dataset, DIRECTORY, dir_fd=rootfd)

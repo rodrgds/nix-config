@@ -1,12 +1,12 @@
 # Direct NAS backups
 
-The VPS streams eight backup datasets over Tailscale to `/volume1/homes/kraktoos/Backups/rgo-vps`. Daily backup timers, weekly OpenPost and Directus restore checks, service dependencies and existing owner-specific failure alerts remain in their owning service modules. Full dumps and media mirrors are no longer written to the VPS. There is not yet a human alert route covering every dataset.
+The VPS streams eight backup datasets over Tailscale. The production receiver routes `openpost-db` and `openpost-media` to `/volume1/openpost-private-backups/rgo-vps`. Other datasets continue using `/volume1/homes/kraktoos/Backups/rgo-vps`. Runtime relocation requires the operator steps below. Daily backup timers, weekly OpenPost and Directus restore checks, service dependencies and existing owner-specific failure alerts remain in their owning service modules. Full dumps and media mirrors are no longer written to the VPS. There is not yet a human alert route covering every dataset.
 
 ## Access
 
 The dedicated SSH identity is encrypted as `nas_backup_ssh_key` in `secrets/vps-secrets.yaml` and installed by sops-nix. It is separate from the laptop and desktop login keys. SSH pins the NAS host key and falls back from `rgo-nas` to its Tailscale address `100.88.5.41` when DNS is unavailable.
 
-Install `receiver.py` as root-owned `/usr/local/lib/nas-backup/receiver.py` on the NAS. Create the backup root owned by `kraktoos`. Authorize the dedicated public key in `/etc/ssh/authorized_keys/kraktoos` with:
+Install `receiver.py` as root-owned `/usr/local/lib/nas-backup/receiver.py` on the NAS. Provision both backup roots with private DSM ACLs and ownership for `kraktoos` before switching the receiver. Authorize the dedicated public key in `/etc/ssh/authorized_keys/kraktoos` with:
 
 ```text
 restrict,command="/usr/bin/python3 -I /usr/local/lib/nas-backup/receiver.py" ssh-ed25519 PUBLIC_KEY rgo-vps-nas-backup
@@ -16,7 +16,7 @@ Synology rejects this home's ACL during normal key lookup. Its SSH configuration
 
 ### NAS permissions
 
-The backup tree must have a private DSM ACL as well as private Unix modes. The
+Both backup trees must have private DSM ACLs as well as private Unix modes. The
 October 2026 audit found that inheritance from the home folder gave
 `sc-syncthing` full access to every snapshot, overriding the privacy intended by
 `mkdir(..., 0700)` and file mode `0600`. A `0777` result from `stat` on Synology
@@ -31,6 +31,10 @@ folders and files. Review any explicit child rules as well. Do not change the
 whole home folder or delete snapshots. Verify the effective ACL on all eight
 datasets and representative files afterwards. The root-owned receiver and
 root-owned authorized key file remain outside this writable data tree.
+
+Apply the same access restrictions to `/volume1/openpost-private-backups` and
+its children. Verify that this private root is not shared, watched by Drive, or
+copied by another sync job. Preserve the retention policy for other home files.
 
 The forced key restricts commands, but still runs as an administrator who is in
 the Docker group. A future separate backup account needs no Docker membership,
@@ -79,30 +83,46 @@ replacing an archive and its checksum together. See SQLite's
 [safe-mode contract](https://sqlite.org/cli.html#the_safe_command_line_option).
 The PostgreSQL server and psql client run in a disposable digest-pinned Alpine container, with no network, production volumes, host mounts or credentials. Its root filesystem is read-only, it runs as postgres with no capabilities, and temporary storage, memory, CPU and process counts are bounded. A separate database inside a production container is not an acceptable substitute. See the dated audit reports for isolation regression evidence and current host-side staging limits.
 
-OpenPost's older encrypted offsite job requires local backup files and cannot be enabled with this transport. A third-copy policy must consume NAS snapshots instead. Historical backups for other datasets and retired app data are not removed by activation. OpenPost snapshots follow the age limit above.
+OpenPost's older encrypted offsite job requires local backup files and cannot be enabled with this transport. A third-copy policy must consume NAS snapshots instead. Activation does not remove legacy backups or retired app data. OpenPost expiry applies at the selected receiver root; copies outside the private tree need an explicit reviewed cleanup.
 
 
-## Enable OpenPost snapshot expiry
+## Route OpenPost backups outside Drive and enable expiry
 
-The first rollout must preserve a verified recovery copy of the cleaned OpenPost
-state before expiry is enabled. Use this order:
+The private root must be an unshared directory outside every Drive watch path.
+Verify that configuration and its effective DSM ACL before installing this
+receiver. Only `kraktoos` and administrators should have access. Durable
+snapshots belong in the private dataset root, with `@tmp/` reserved for partial
+streams. Do not use `@tmp/` as permanent backup storage.
 
-1. Deploy and verify the OpenPost data cleanup. With the existing receiver still
-   installed, run `openpost-postgres-backup.service` and
-   `openpost-media-backup.service` on the VPS. Check both systemd results and their
-   matching fresh NAS manifests, then run `openpost-restore-drill.service` and
-   verify success. Stop here if any backup or restore check fails.
-2. Install this reviewed `receiver.py` on the NAS as root-owned
-   `/usr/local/lib/nas-backup/receiver.py`, mode `0755`. Preserve the existing
-   forced SSH key command and DSM ACLs. Compare the installed SHA-256 with the
-   reviewed local file before continuing. The new receiver applies age retention
-   after successful uploads as well as through the explicit prune command.
-3. From the VPS, use the dedicated identity to run only `prune openpost-db` and
-   `prune openpost-media`. Both return a JSON dataset name and removal count.
-   Confirm the fresh snapshots remain and older expired snapshots are gone.
-4. Run the ordinary `rebuild --vps` workflow from the Home configuration checkout.
-   Check `openpost-nas-backup-prune.timer`, start its service once, and inspect its
-   journal and result. Verify `nas-backup-freshness.timer` remains active.
+Production `upload`, `download`, and `prune` commands use the private root for
+the two OpenPost datasets. A missing or symlinked private root fails closed;
+there is no fallback into the indexed homes tree. Dataset names, receipt labels,
+and the forced SSH protocol stay unchanged. An explicit `--root` override keeps
+all datasets under that supplied root for isolated tests or recovery work.
+
+Runtime relocation is an operator action, not an automatic migration. The
+receiver neither moves nor deletes legacy snapshots. After the switch, ordinary
+OpenPost prune commands affect only the private tree. Use this rollout order:
+
+1. Preserve the existing verified recovery copy. Deploy and verify OpenPost's
+   data cleanup, then provision the private root with the access restrictions
+   above. Verify sufficient capacity before changing the receiver.
+2. Install this reviewed `receiver.py` as root-owned
+   `/usr/local/lib/nas-backup/receiver.py`, mode `0755`. Preserve the forced SSH
+   key command and compare the installed SHA-256 with the reviewed file.
+3. Run `openpost-postgres-backup.service` and `openpost-media-backup.service`.
+   Check successful results and fresh manifests in the private tree. Run
+   `openpost-restore-drill.service` and verify it restores through the unchanged
+   download protocol from that tree. Stop if either backup or restore fails.
+4. Only after that proof, remove or migrate the specifically approved legacy
+   OpenPost recovery copies through the reviewed operator procedure. Handle
+   Drive versions, recycle bins, and any synchronized copies separately. The
+   new storage route does not purge them or change other home files' retention.
+5. Run only `prune openpost-db` and `prune openpost-media` through the dedicated
+   identity. Confirm both JSON results and that fresh private snapshots remain.
+   Apply the scoped Nix revision through the normal `rebuild --vps` workflow,
+   verify `openpost-nas-backup-prune.timer`, and run its service once. Keep the
+   existing freshness timer active.
 
 The receiver rejects prune commands for every other dataset, arbitrary paths,
 extra arguments and shell syntax. Prune takes the same exclusive dataset lock
