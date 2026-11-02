@@ -10,6 +10,50 @@ class Tests(unittest.TestCase):
  def runrx(self,data,name="montra-db",kind="gzip"):
   return subprocess.run([sys.executable,str(R),"--root",str(self.root)],input=data,capture_output=True,env=dict(os.environ,SSH_ORIGINAL_COMMAND=f"upload {name} {kind}"))
  def snaps(self): return sorted((self.root/"montra-db").glob("snapshot-*"))
+ def test_unverified_upload_stays_in_synology_tmp_until_commit(self):
+  import importlib.util, io
+  spec = importlib.util.spec_from_file_location('staging_receiver', R)
+  receiver = importlib.util.module_from_spec(spec); spec.loader.exec_module(receiver)
+  payload = gzip.compress(os.urandom(16384))
+  root = self.root
+  case = self
+  class ObservedStream(io.BytesIO):
+   observed = False
+   def read(self, size=-1):
+    if self.tell() >= 4 + len(payload) and not self.observed:
+     self.observed = True
+     case.assertEqual(list((root / 'montra-db').glob('.partial-*')), [], 'unverified streams must stay outside the indexed dataset root')
+     pending = list((root / 'montra-db' / '@tmp').glob('.partial-*'))
+     case.assertEqual(len(pending), 1)
+     case.assertGreater((pending[0] / 'data.gz').stat().st_size, 0)
+     case.assertEqual(case.snaps(), [], 'a stream is not a successful snapshot before sender commit')
+    return super().read(size)
+  stream = ObservedStream(wire(payload))
+  receipt = receiver.receive(str(root), 'upload montra-db gzip', stream)
+  self.assertTrue(stream.observed)
+  self.assertEqual((root / receipt['label'] / 'data.gz').read_bytes(), payload)
+  self.assertEqual(list((root / 'montra-db' / '@tmp').iterdir()), [])
+ def test_failed_upload_cleans_legacy_and_synology_tmp_partials(self):
+  parent = self.root / 'montra-db'; parent.mkdir()
+  staging = parent / '@tmp'; staging.mkdir()
+  for directory in (parent, staging):
+   partial = directory / ('.partial-' + 'a' * 32); partial.mkdir()
+   (partial / 'data.gz').write_bytes(b'abandoned stream')
+  result = self.runrx(wire(gzip.compress(b'incomplete'), False))
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual(list(parent.glob('.partial-*')), [])
+  self.assertEqual(list(staging.iterdir()), [])
+  self.assertEqual(self.snaps(), [])
+ def test_synology_tmp_symlink_cannot_redirect_staging(self):
+  parent = self.root / 'montra-db'; parent.mkdir()
+  outside = Path(self.t.name) / 'outside'; outside.mkdir()
+  marker = outside / 'keep'; marker.write_text('keep')
+  (parent / '@tmp').symlink_to(outside)
+  result = self.runrx(wire(gzip.compress(b'complete')))
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual(list(outside.iterdir()), [marker])
+  self.assertEqual(marker.read_text(), 'keep')
+  self.assertEqual(self.snaps(), [])
  def test_no_commit(self):
   self.assertNotEqual(self.runrx(wire(gzip.compress(b"prefix"),False)).returncode,0); self.assertEqual(self.snaps(),[])
  def test_success(self):
@@ -60,6 +104,155 @@ class Tests(unittest.TestCase):
  def test_confinement(self):
   for n in ["../escape","unknown","montra-db;touch /tmp/no"]: self.assertNotEqual(self.runrx(wire(gzip.compress(b"x")),n).returncode,0)
   (self.root/"montra-db").symlink_to(self.t.name); self.assertNotEqual(self.runrx(wire(gzip.compress(b"x"))).returncode,0)
+
+
+class OpenPostRetentionTests(unittest.TestCase):
+ def setUp(self):
+  import datetime, importlib.util
+  self.time = datetime.datetime.now(datetime.timezone.utc)
+  self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+  self.root = Path(self.temp.name).resolve() / 'backups'; self.root.mkdir()
+  spec = importlib.util.spec_from_file_location('retention_receiver', R)
+  self.receiver = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.receiver)
+ def snapshot(self, dataset, age, identifier):
+  import datetime
+  parent = self.root / dataset; parent.mkdir(exist_ok=True)
+  (parent / '.lock').touch(exist_ok=True)
+  stamp = self.time - datetime.timedelta(days=age)
+  name = 'snapshot-' + stamp.strftime('%Y%m%dT%H%M%S%fZ-') + ('%032x' % identifier)
+  result = parent / name; result.mkdir()
+  (result / 'data.gz').write_bytes(gzip.compress(b'fixture backup'))
+  (result / 'manifest.json').write_text('{}')
+  return result
+ def prune(self, command):
+  return subprocess.run([sys.executable, str(R), '--root', str(self.root)], input=b'', capture_output=True,
+                        env=dict(os.environ, SSH_ORIGINAL_COMMAND=command), timeout=10)
+ def test_openpost_prune_expires_final_snapshot_without_upload(self):
+  # The command must work without a successful new upload. Otherwise a failed
+  # daily backup can keep old YouTube data in recovery snapshots indefinitely.
+  for dataset in ('openpost-db', 'openpost-media'):
+   stale = self.snapshot(dataset, 7, 1)
+   result = self.prune('prune ' + dataset)
+   self.assertEqual(result.returncode, 0, result.stderr)
+   self.assertFalse(stale.exists())
+ def test_six_day_boundary_and_seven_snapshot_cap(self):
+  for dataset in ('openpost-db', 'openpost-media'):
+   expired = self.snapshot(dataset, 6, 1)
+   fresh = [self.snapshot(dataset, .1 * i, i + 2) for i in range(9)]
+   self.receiver.prune(str(self.root), dataset, now=self.time)
+   self.assertFalse(expired.exists())
+   self.assertEqual(sum(path.exists() for path in fresh), 7)
+   self.assertTrue(fresh[0].exists())
+ def test_verified_upload_also_removes_expired_openpost_snapshot(self):
+  import io
+  old = self.snapshot('openpost-db', 100, 1)
+  receipt = self.receiver.receive(str(self.root), 'upload openpost-db gzip', io.BytesIO(wire(gzip.compress(b'cleaned backup'))))
+  self.assertFalse(old.exists())
+  self.assertTrue((self.root / receipt['label'] / 'data.gz').exists())
+ def test_prune_rejects_other_datasets_and_arbitrary_paths(self):
+  unchanged = self.snapshot('montra-db', 100, 1)
+  for command in ('prune montra-db', 'prune ../escape', 'prune openpost-db;id', 'prune openpost-db extra'):
+   result = self.prune(command)
+   self.assertNotEqual(result.returncode, 0, command)
+   self.assertTrue(unchanged.exists())
+ def test_failed_upload_keeps_expired_snapshot_until_prune(self):
+  import io
+  old = self.snapshot('openpost-db', 100, 1)
+  with self.assertRaises(ValueError):
+   self.receiver.receive(str(self.root), 'upload openpost-db gzip', io.BytesIO(wire(gzip.compress(b'failed'), False)))
+  self.assertTrue(old.exists())
+ def test_prune_refuses_dataset_symlinks(self):
+  outside = self.root / 'elsewhere'; outside.mkdir(); (outside / 'keep').write_text('keep')
+  (self.root / 'openpost-db').symlink_to(outside)
+  result = self.prune('prune openpost-db')
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual((outside / 'keep').read_text(), 'keep')
+
+
+class PrivateOpenPostStorageTests(unittest.TestCase):
+ def setUp(self):
+  import importlib.util
+  self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+  base = Path(self.temp.name).resolve()
+  self.legacy = base / 'indexed-homes'; self.legacy.mkdir()
+  self.private = base / 'private-backups'; self.private.mkdir()
+  spec = importlib.util.spec_from_file_location('private_receiver', R)
+  self.receiver = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.receiver)
+ def payload(self, dataset):
+  import io, tarfile
+  if dataset != 'openpost-media': return gzip.compress(b'private database backup')
+  stream = io.BytesIO()
+  with tarfile.open(fileobj=stream, mode='w') as archive:
+   data = b'private media backup'; member = tarfile.TarInfo('media/asset')
+   member.size = len(data); archive.addfile(member, io.BytesIO(data))
+  return gzip.compress(stream.getvalue())
+ def test_production_upload_download_prune_uses_private_tree(self):
+  import datetime, io
+  from unittest.mock import patch
+  now = datetime.datetime.now(datetime.timezone.utc)
+  with patch.dict(self.receiver.__dict__, ROOT=str(self.legacy), PRIVATE_ROOT=str(self.private)):
+   for dataset in ('openpost-db', 'openpost-media'):
+    # A legacy successful snapshot must neither be read nor deleted by the
+    # newly routed protocol. Runtime migration remains an explicit operation.
+    old = self.legacy / dataset / 'snapshot-20000101T000000000000Z-00000000000000000000000000000000'
+    old.mkdir(parents=True); (old / 'data.gz').write_bytes(b'legacy recovery copy')
+    payload = self.payload(dataset)
+    kind = 'tar-gzip' if dataset == 'openpost-media' else 'gzip'
+    receipt = self.receiver.receive(str(self.legacy), 'upload '+dataset+' '+kind, io.BytesIO(wire(payload)))
+    self.assertTrue((self.private / receipt['label'] / 'data.gz').exists())
+    self.assertFalse((self.legacy / receipt['label']).exists())
+    self.assertTrue(receipt['label'].startswith(dataset+'/snapshot-'))
+    self.assertEqual(list((self.private / dataset / '@tmp').iterdir()), [])
+    downloaded = io.BytesIO(); self.receiver.download(str(self.legacy), dataset, downloaded)
+    manifest, data = downloaded.getvalue().split(b'\n', 1)
+    self.assertEqual(json.loads(manifest), receipt)
+    self.assertEqual(data, payload)
+    removed = self.receiver.prune(str(self.legacy), dataset, now=now+datetime.timedelta(days=7))
+    self.assertEqual(removed['removed'], 1)
+    self.assertFalse((self.private / receipt['label']).exists())
+    self.assertEqual((old / 'data.gz').read_bytes(), b'legacy recovery copy')
+ def test_other_datasets_keep_legacy_tree(self):
+  import io
+  from unittest.mock import patch
+  with patch.dict(self.receiver.__dict__, ROOT=str(self.legacy), PRIVATE_ROOT=str(self.private)):
+   payload = self.payload('montra-db')
+   receipt = self.receiver.receive(str(self.legacy), 'upload montra-db gzip', io.BytesIO(wire(payload)))
+   self.assertTrue((self.legacy / receipt['label'] / 'data.gz').exists())
+   self.assertEqual(list(self.private.iterdir()), [])
+   output = io.BytesIO(); self.receiver.download(str(self.legacy), 'montra-db', output)
+   self.assertEqual(output.getvalue().split(b'\n',1)[1], payload)
+ def test_custom_root_override_stays_self_contained(self):
+  import datetime, io
+  from unittest.mock import patch
+  with patch.dict(self.receiver.__dict__, PRIVATE_ROOT=str(self.private)):
+   receipt = self.receiver.receive(str(self.legacy), 'upload openpost-db gzip', io.BytesIO(wire(self.payload('openpost-db'))))
+   self.assertTrue((self.legacy / receipt['label'] / 'data.gz').exists())
+   self.assertEqual(list(self.private.iterdir()), [])
+   output = io.BytesIO(); self.receiver.download(str(self.legacy), 'openpost-db', output)
+   self.assertEqual(json.loads(output.getvalue().split(b'\n',1)[0]), receipt)
+   removed = self.receiver.prune(str(self.legacy), 'openpost-db', now=datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(days=7))
+   self.assertEqual(removed['removed'], 1)
+   self.assertEqual(list(self.private.iterdir()), [])
+ def test_missing_private_root_fails_closed_for_all_operations(self):
+  import io
+  from unittest.mock import patch
+  missing = self.private / 'not-provisioned'
+  with patch.dict(self.receiver.__dict__, ROOT=str(self.legacy), PRIVATE_ROOT=str(missing)):
+   for dataset in ('openpost-db','openpost-media'):
+    kind = 'tar-gzip' if dataset == 'openpost-media' else 'gzip'
+    with self.assertRaises(FileNotFoundError):
+     self.receiver.receive(str(self.legacy), 'upload '+dataset+' '+kind, io.BytesIO(wire(self.payload(dataset))))
+    with self.assertRaises(FileNotFoundError): self.receiver.download(str(self.legacy), dataset, io.BytesIO())
+    with self.assertRaises(FileNotFoundError): self.receiver.prune(str(self.legacy), dataset)
+   self.assertEqual(list(self.legacy.iterdir()), [])
+ def test_private_root_symlink_fails_closed(self):
+  import io
+  from unittest.mock import patch
+  redirect = self.private / 'redirect'; redirect.symlink_to(self.legacy)
+  with patch.dict(self.receiver.__dict__, ROOT=str(self.legacy), PRIVATE_ROOT=str(redirect)):
+   with self.assertRaises(OSError):
+    self.receiver.receive(str(self.legacy), 'upload openpost-db gzip', io.BytesIO(wire(self.payload('openpost-db'))))
+   self.assertEqual(list(self.legacy.iterdir()), [])
 
 
 class StreamingFixture(unittest.TestCase):

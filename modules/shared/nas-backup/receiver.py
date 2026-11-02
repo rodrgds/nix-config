@@ -22,6 +22,7 @@ import tarfile
 import uuid
 
 ROOT = '/volume1/homes/kraktoos/Backups/rgo-vps'
+PRIVATE_ROOT = '/volume1/openpost-private-backups/rgo-vps'
 DATASETS = {'montra-db', 'openpost-db', 'openpost-media', 'umami-db',
             'shlink-db', 'unprompted-db', 'directus', 'vaultwarden'}
 ARCHIVE_DATASETS = {'openpost-media', 'directus', 'vaultwarden'}
@@ -37,8 +38,20 @@ MAX_TAR_HEADERS = 1000000
 MAX_TAR_METADATA_BYTES = 64 * 1024
 MAX_TAR_TOTAL_METADATA_BYTES = 16 * 1024 ** 2
 KEEP = 7
+OPENPOST_DATASETS = {'openpost-db', 'openpost-media'}
+OPENPOST_MAX_AGE = datetime.timedelta(days=6)
+SNAPSHOT_PATTERN = r'snapshot-\d{8}T\d{12}Z-[0-9a-f]{32}'
 DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
 FILE = os.O_NOFOLLOW | os.O_CLOEXEC
+
+
+def storage_root(root, dataset):
+    # Only production OpenPost datasets leave the indexed homes tree. Explicit
+    # --root overrides remain self-contained for tests and recovery operators.
+    # open_root must find the private root already provisioned; never fall back.
+    if root == ROOT and dataset in OPENPOST_DATASETS:
+        return PRIVATE_ROOT
+    return root
 
 
 def resource_limits(root):
@@ -46,7 +59,7 @@ def resource_limits(root):
     # Darwin has different address-space semantics; explicit alternate roots
     # remain usable for local fixtures, but the production root fails closed.
     if sys.platform != 'linux':
-        if root == ROOT:
+        if root in (ROOT, PRIVATE_ROOT):
             raise RuntimeError('production receiver requires Linux resource limits')
         return
     for kind, maximum in ((resource.RLIMIT_AS, MAX_ADDRESS_SPACE),
@@ -136,6 +149,46 @@ def remove_snapshot(parent, name):
     os.rmdir(name, dir_fd=parent)
 
 
+def retain_snapshots(parent, dataset, now):
+    snapshots = sorted(name for name in os.listdir(parent)
+                       if re.fullmatch(SNAPSHOT_PATTERN, name))
+    expired = set(snapshots[:-KEEP])
+    if dataset in OPENPOST_DATASETS:
+        cutoff = now - OPENPOST_MAX_AGE
+        for name in snapshots:
+            # Receiver-issued UTC names are independent of mutable filesystem
+            # mtimes. Do not allow a new upload to extend an older copy's age.
+            created = datetime.datetime.strptime(name[9:31], '%Y%m%dT%H%M%S%fZ').replace(
+                tzinfo=datetime.timezone.utc)
+            if created <= cutoff:
+                expired.add(name)
+    for name in sorted(expired):
+        remove_snapshot(parent, name)
+    os.fsync(parent)
+    return len(expired)
+
+
+def prune(root, dataset, now=None):
+    # This command deliberately grants no arbitrary dataset or path deletion.
+    if dataset not in OPENPOST_DATASETS:
+        raise ValueError('prune dataset not allowed')
+    if now is None:
+        now = datetime.datetime.now(datetime.timezone.utc)
+    rootfd = open_root(storage_root(root, dataset))
+    parent = lockfd = None
+    try:
+        parent = os.open(dataset, DIRECTORY, dir_fd=rootfd)
+        lockfd = os.open('.lock', os.O_CREAT | os.O_RDWR | FILE, 0o600, dir_fd=parent)
+        if not stat.S_ISREG(os.fstat(lockfd).st_mode):
+            raise ValueError('invalid lock')
+        fcntl.flock(lockfd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return {'dataset': dataset, 'removed': retain_snapshots(parent, dataset, now)}
+    finally:
+        for fd in (lockfd, parent, rootfd):
+            if fd is not None:
+                os.close(fd)
+
+
 def verify(fd, kind):
     os.lseek(fd, 0, os.SEEK_SET)
     # Consume the whole gzip, including CRC/trailer and concatenated members.
@@ -191,8 +244,8 @@ def receive(root, command, stream):
     expected_kind = 'tar-gzip' if dataset in ARCHIVE_DATASETS else 'gzip'
     if kind != expected_kind:
         raise ValueError('wrong format for dataset')
-    rootfd = open_root(root)
-    parent = stagefd = lockfd = datafd = None
+    rootfd = open_root(storage_root(root, dataset))
+    parent = stagefd = lockfd = datafd = staging_parent = None
     stage = None
     try:
         try:
@@ -208,9 +261,19 @@ def receive(root, command, stream):
         for name in os.listdir(parent):
             if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
                 remove_snapshot(parent, name)
+        # Synology Drive excludes @tmp. Do not index growing/unverified streams;
+        # only publish the verified snapshot into the synced dataset directory.
+        try:
+            os.mkdir('@tmp', 0o700, dir_fd=parent)
+        except FileExistsError:
+            pass
+        staging_parent = os.open('@tmp', DIRECTORY, dir_fd=parent)
+        for name in os.listdir(staging_parent):
+            if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
+                remove_snapshot(staging_parent, name)
         stage = '.partial-' + uuid.uuid4().hex
-        os.mkdir(stage, 0o700, dir_fd=parent)
-        stagefd = os.open(stage, DIRECTORY, dir_fd=parent)
+        os.mkdir(stage, 0o700, dir_fd=staging_parent)
+        stagefd = os.open(stage, DIRECTORY, dir_fd=staging_parent)
         datafd = os.open('data.gz', os.O_CREAT | os.O_EXCL | os.O_RDWR | FILE, 0o600, dir_fd=stagefd)
         digest = hashlib.sha256()
         count = 0
@@ -250,14 +313,11 @@ def receive(root, command, stream):
             manifest.flush()
             os.fsync(manifest.fileno())
         os.fsync(stagefd)
-        os.rename(stage, label, src_dir_fd=parent, dst_dir_fd=parent)
+        os.rename(stage, label, src_dir_fd=staging_parent, dst_dir_fd=parent)
+        os.fsync(staging_parent)
         stage = None
         os.fsync(parent)
-        snapshots = sorted(name for name in os.listdir(parent)
-                           if re.fullmatch(r'snapshot-\d{8}T\d{12}Z-[0-9a-f]{32}', name))
-        for name in snapshots[:-KEEP]:
-            remove_snapshot(parent, name)
-        os.fsync(parent)
+        retain_snapshots(parent, dataset, stamp)
         return receipt
     finally:
         if datafd is not None:
@@ -265,8 +325,8 @@ def receive(root, command, stream):
         if stagefd is not None:
             os.close(stagefd)
         if stage is not None:
-            remove_snapshot(parent, stage)
-        for fd in (lockfd, parent, rootfd):
+            remove_snapshot(staging_parent, stage)
+        for fd in (staging_parent, lockfd, parent, rootfd):
             if fd is not None:
                 os.close(fd)
 
@@ -274,7 +334,7 @@ def receive(root, command, stream):
 def download(root, dataset, output):
     if dataset not in DATASETS:
         raise ValueError('dataset not allowed')
-    rootfd = open_root(root)
+    rootfd = open_root(storage_root(root, dataset))
     parent = lockfd = snapshotfd = datafd = None
     try:
         parent = os.open(dataset, DIRECTORY, dir_fd=rootfd)
@@ -318,6 +378,10 @@ def main():
     try:
         resource_limits(args.root)
         command = os.environ.get('SSH_ORIGINAL_COMMAND', '')
+        match = re.fullmatch(r'prune (openpost-db|openpost-media)', command)
+        if match:
+            print(json.dumps(prune(args.root, match[1])), flush=True)
+            return 0
         match = re.fullmatch(r'download ([a-z-]+)', command)
         if match:
             download(args.root, match[1], sys.stdout.buffer)
