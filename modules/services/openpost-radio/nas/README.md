@@ -7,7 +7,7 @@ The retired `openpost-radio` container must remain stopped with restart=no.
 The authoritative library is
 `/volume1/homes/kraktoos/openpost-radio-music`. Generate compositions and
 prepare programmes on a workstation. Publish finished audio before the
-catalog with `scripts/publish-nas-library.sh` in `/Users/rgo/dev/rgo-music`.
+catalog with `scripts/publish-nas-library.sh` in `/Users/rgo/dev/openpost-radio`.
 `node src/cli/program.js --hours 8 --fps 30` publishes four-minute video
 chunks and `programmes/current.json` there.
 
