@@ -194,11 +194,18 @@ in
             };
           in
           {
-            sops.secrets = {
-              nine_router_api_key = { };
-              exa_api_key = { };
-              opencode_go_api_key = { };
-              hindsight_api_token.sopsFile = ../../../secrets/hindsight-secrets.yaml;
+            sops = {
+              secrets = {
+                nine_router_api_key = { };
+                exa_api_key = { };
+                opencode_go_api_key = { };
+                hindsight_api_token.sopsFile = ../../../secrets/hindsight-secrets.yaml;
+              };
+            }
+            // lib.optionalAttrs isLinux {
+              templates."opencode-config" = {
+                content = builtins.toJSON opencodeConfig;
+              };
             };
 
             # Do not enable HM's V1-oriented module: it installs a second CLI
@@ -313,11 +320,6 @@ in
               ${pkgs.coreutils}/bin/chmod 600 "$target.tmp"
               ${pkgs.coreutils}/bin/mv "$target.tmp" "$target"
             '';
-          }
-          // lib.optionalAttrs isLinux {
-            sops.templates."opencode-config" = {
-              content = builtins.toJSON opencodeConfig;
-            };
           };
       }
       # (lib.optionalAttrs isLinux {
