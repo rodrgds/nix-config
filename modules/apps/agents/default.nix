@@ -109,15 +109,14 @@ in
           # Global AGENTS.md - single source of truth for all agents.
           # Deployed to every harness so instructions stay consistent
           # regardless of which CLI is driving the session.
-          home.file.".dsh/AGENTS.md".source = ./AGENTS.md;
           home.file.".codex/AGENTS.md".source = ./AGENTS.md;
           home.file.".claude/CLAUDE.md".source = ./AGENTS.md;
           home.file.".claude/AGENTS.md".source = ./AGENTS.md;
           xdg.configFile."opencode/AGENTS.md".source = ./AGENTS.md;
 
           # Agent shells start in the project directory. Load the project's
-          # direnv/devenv environment once and reuse the cached export, so
-          # commands run directly instead of paying `devenv shell` per call.
+          # approved environment using direnv/devenv's own cache. Login PATH
+          # resets must not leave inherited activation flags hiding the tools.
           home.file.".config/agent-shell/env.sh".source = ./agent-env.sh;
           home.file.".local/bin/timeout" = {
             executable = true;

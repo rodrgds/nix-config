@@ -131,7 +131,6 @@ in
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
               update = "auto";
-              model = "nine_router/good";
               # Native websearch (V2): Exa key comes from EXA_API_KEY,
               # exported from the sops secret in shell init below.
               websearch = {

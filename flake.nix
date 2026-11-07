@@ -77,9 +77,7 @@
     vicinae.url = "github:vicinaehq/vicinae";
 
     devenv = {
-      # 32f6747 builds a binary that segfaults while generating completions on
-      # x86_64-linux. Keep the last known-good revision until upstream moves on.
-      url = "github:cachix/devenv/e30eb49258bee68353bd9c619823f635f4afa86c";
+      url = "github:cachix/devenv/b904dcb51fe48c30db250038241507f60752f222";
     };
 
     handy = {

@@ -3,7 +3,6 @@
 # Single source of truth for the public combo names served by the 9Router
 # gateway on the NAS. Consumed by:
 #   - modules/apps/opencode -> opencode provider model list
-#   - modules/apps/deepseek-harness -> DSH model provider
 #
 # Combos are created and routed in the 9Router dashboard. The rebuild wizard
 # refreshes `9router/combos.json` from the proxy's /v1/models endpoint (combos

@@ -10,7 +10,7 @@ let
   inherit (constants) isLinux isDarwin homeDir;
   isVps = config.secrets.isVps or false;
   # Approve cache selection without granting users daemon administration.
-  # Devenv enables its cache per project; Vicinae is needed by desktop rebuilds.
+  # Devenv is also a workstation package, so rebuilds need its cache.
   workstationCaches = lib.optionals (!isVps) (
     [
       {
@@ -57,7 +57,8 @@ in
         accept-flake-config = false;
         substituters = [
           "https://cache.nixos.org"
-        ];
+        ]
+        ++ lib.optional (!isVps) "https://devenv.cachix.org";
         trusted-public-keys = [
           "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         ]

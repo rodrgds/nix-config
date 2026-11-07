@@ -1,16 +1,8 @@
 {
   "models": [
     {
-      "alias": "flash",
-      "displayName": "flash"
-    },
-    {
       "alias": "free",
       "displayName": "free"
-    },
-    {
-      "alias": "good",
-      "displayName": "good"
     },
     {
       "alias": "hermes",

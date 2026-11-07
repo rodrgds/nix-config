@@ -86,7 +86,7 @@ in
       apps.opencode.enable = lib.mkDefault true;
       apps.agents.enable = lib.mkDefault true;
       apps.gnhf.enable = lib.mkDefault true;
-      apps.deepseek-harness.enable = lib.mkDefault true;
+      apps.javascript-toolchain.npm.retiredPackages = [ "@deepseek-ai/dsh" ];
       apps.codex.enable = lib.mkDefault true;
       apps.claude.enable = lib.mkDefault true;
       apps.muse.enable = lib.mkDefault true;
