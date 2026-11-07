@@ -10,6 +10,50 @@ class Tests(unittest.TestCase):
  def runrx(self,data,name="montra-db",kind="gzip"):
   return subprocess.run([sys.executable,str(R),"--root",str(self.root)],input=data,capture_output=True,env=dict(os.environ,SSH_ORIGINAL_COMMAND=f"upload {name} {kind}"))
  def snaps(self): return sorted((self.root/"montra-db").glob("snapshot-*"))
+ def test_unverified_upload_stays_in_synology_tmp_until_commit(self):
+  import importlib.util, io
+  spec = importlib.util.spec_from_file_location('staging_receiver', R)
+  receiver = importlib.util.module_from_spec(spec); spec.loader.exec_module(receiver)
+  payload = gzip.compress(os.urandom(16384))
+  root = self.root
+  case = self
+  class ObservedStream(io.BytesIO):
+   observed = False
+   def read(self, size=-1):
+    if self.tell() >= 4 + len(payload) and not self.observed:
+     self.observed = True
+     case.assertEqual(list((root / 'montra-db').glob('.partial-*')), [], 'unverified streams must stay outside the indexed dataset root')
+     pending = list((root / 'montra-db' / '@tmp').glob('.partial-*'))
+     case.assertEqual(len(pending), 1)
+     case.assertGreater((pending[0] / 'data.gz').stat().st_size, 0)
+     case.assertEqual(case.snaps(), [], 'a stream is not a successful snapshot before sender commit')
+    return super().read(size)
+  stream = ObservedStream(wire(payload))
+  receipt = receiver.receive(str(root), 'upload montra-db gzip', stream)
+  self.assertTrue(stream.observed)
+  self.assertEqual((root / receipt['label'] / 'data.gz').read_bytes(), payload)
+  self.assertEqual(list((root / 'montra-db' / '@tmp').iterdir()), [])
+ def test_failed_upload_cleans_legacy_and_synology_tmp_partials(self):
+  parent = self.root / 'montra-db'; parent.mkdir()
+  staging = parent / '@tmp'; staging.mkdir()
+  for directory in (parent, staging):
+   partial = directory / ('.partial-' + 'a' * 32); partial.mkdir()
+   (partial / 'data.gz').write_bytes(b'abandoned stream')
+  result = self.runrx(wire(gzip.compress(b'incomplete'), False))
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual(list(parent.glob('.partial-*')), [])
+  self.assertEqual(list(staging.iterdir()), [])
+  self.assertEqual(self.snaps(), [])
+ def test_synology_tmp_symlink_cannot_redirect_staging(self):
+  parent = self.root / 'montra-db'; parent.mkdir()
+  outside = Path(self.t.name) / 'outside'; outside.mkdir()
+  marker = outside / 'keep'; marker.write_text('keep')
+  (parent / '@tmp').symlink_to(outside)
+  result = self.runrx(wire(gzip.compress(b'complete')))
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual(list(outside.iterdir()), [marker])
+  self.assertEqual(marker.read_text(), 'keep')
+  self.assertEqual(self.snaps(), [])
  def test_no_commit(self):
   self.assertNotEqual(self.runrx(wire(gzip.compress(b"prefix"),False)).returncode,0); self.assertEqual(self.snaps(),[])
  def test_success(self):
@@ -91,6 +135,67 @@ class OpenPostRetentionTests(unittest.TestCase):
    result = self.prune('prune ' + dataset)
    self.assertEqual(result.returncode, 0, result.stderr)
    self.assertFalse(stale.exists())
+ def partial(self, parent, identifier):
+  import datetime
+  parent.mkdir(exist_ok=True)
+  partial = parent / ('.partial-' + ('%032x' % identifier)); partial.mkdir()
+  (partial / 'data.gz').write_bytes(b'abandoned API payload')
+  old = (self.time - datetime.timedelta(days=7)).timestamp()
+  os.utime(partial, (old, old))
+  return partial
+ def test_hourly_prune_cleans_abandoned_partials_without_upload(self):
+  unrelated = self.root / 'montra-db'; unrelated.mkdir()
+  untouched = self.partial(unrelated, 9)
+  for dataset in ('openpost-db', 'openpost-media'):
+   fresh = self.snapshot(dataset, 1, 1)
+   parent = self.root / dataset
+   partials = [self.partial(parent, 2), self.partial(parent / '@tmp', 3)]
+   non_partial = parent / '@tmp' / '.partial-not-a-backup'; non_partial.mkdir()
+   result = self.prune('prune ' + dataset)
+   self.assertEqual(result.returncode, 0, result.stderr)
+   self.assertTrue(fresh.exists(), 'hourly cleanup must retain the fresh verified snapshot')
+   self.assertEqual(json.loads(result.stdout)['removed'], 0, 'the receipt counts verified snapshots only')
+   for partial in partials: self.assertFalse(partial.exists(), 'abandoned payload survived hourly prune')
+   self.assertTrue(non_partial.exists(), 'cleanup must keep the existing exact partial grammar')
+   self.assertTrue(untouched.exists(), 'OpenPost pruning must not clean another dataset')
+ def test_upload_lock_blocks_hourly_partial_cleanup(self):
+  import fcntl
+  fresh = self.snapshot('openpost-db', 1, 1)
+  parent = self.root / 'openpost-db'
+  partials = [self.partial(parent, 2), self.partial(parent / '@tmp', 3)]
+  with (parent / '.lock').open('r+') as lock:
+   fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+   result = self.prune('prune openpost-db')
+   self.assertNotEqual(result.returncode, 0, 'prune must not enter an active upload')
+   self.assertTrue(all(partial.exists() for partial in partials))
+   self.assertTrue(fresh.exists())
+  result = self.prune('prune openpost-db')
+  self.assertEqual(result.returncode, 0, result.stderr)
+  self.assertTrue(all(not partial.exists() for partial in partials))
+  self.assertTrue(fresh.exists())
+ def test_hourly_prune_rejects_symlinked_staging(self):
+  fresh = self.snapshot('openpost-db', 1, 1)
+  outside = self.root / 'outside'; outside.mkdir()
+  marker = outside / 'keep'; marker.write_text('keep')
+  (self.root / 'openpost-db' / '@tmp').symlink_to(outside)
+  result = self.prune('prune openpost-db')
+  self.assertNotEqual(result.returncode, 0)
+  self.assertEqual(list(outside.iterdir()), [marker])
+  self.assertEqual(marker.read_text(), 'keep')
+  self.assertTrue(fresh.exists())
+ def test_hourly_prune_rejects_partial_symlink_escapes(self):
+  outside = self.root / 'outside'; outside.mkdir()
+  marker = outside / 'keep'; marker.write_text('keep')
+  for dataset, staged in (('openpost-db', False), ('openpost-media', True)):
+   fresh = self.snapshot(dataset, 1, 1)
+   parent = self.root / dataset
+   if staged: parent = parent / '@tmp'; parent.mkdir()
+   (parent / ('.partial-' + 'a' * 32)).symlink_to(outside)
+   result = self.prune('prune ' + dataset)
+   self.assertNotEqual(result.returncode, 0)
+   self.assertEqual(list(outside.iterdir()), [marker])
+   self.assertEqual(marker.read_text(), 'keep')
+   self.assertTrue(fresh.exists())
  def test_six_day_boundary_and_seven_snapshot_cap(self):
   for dataset in ('openpost-db', 'openpost-media'):
    expired = self.snapshot(dataset, 6, 1)
@@ -123,6 +228,92 @@ class OpenPostRetentionTests(unittest.TestCase):
   result = self.prune('prune openpost-db')
   self.assertNotEqual(result.returncode, 0)
   self.assertEqual((outside / 'keep').read_text(), 'keep')
+
+
+class PrivateOpenPostStorageTests(unittest.TestCase):
+ def setUp(self):
+  import importlib.util
+  self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+  base = Path(self.temp.name).resolve()
+  self.legacy = base / 'indexed-homes'; self.legacy.mkdir()
+  self.private = base / 'private-backups'; self.private.mkdir()
+  spec = importlib.util.spec_from_file_location('private_receiver', R)
+  self.receiver = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.receiver)
+ def payload(self, dataset):
+  import io, tarfile
+  if dataset != 'openpost-media': return gzip.compress(b'private database backup')
+  stream = io.BytesIO()
+  with tarfile.open(fileobj=stream, mode='w') as archive:
+   data = b'private media backup'; member = tarfile.TarInfo('media/asset')
+   member.size = len(data); archive.addfile(member, io.BytesIO(data))
+  return gzip.compress(stream.getvalue())
+ def test_production_upload_download_prune_uses_private_tree(self):
+  import datetime, io
+  from unittest.mock import patch
+  now = datetime.datetime.now(datetime.timezone.utc)
+  with patch.dict(self.receiver.__dict__, ROOT=str(self.legacy), PRIVATE_ROOT=str(self.private)):
+   for dataset in ('openpost-db', 'openpost-media'):
+    # A legacy successful snapshot must neither be read nor deleted by the
+    # newly routed protocol. Runtime migration remains an explicit operation.
+    old = self.legacy / dataset / 'snapshot-20000101T000000000000Z-00000000000000000000000000000000'
+    old.mkdir(parents=True); (old / 'data.gz').write_bytes(b'legacy recovery copy')
+    payload = self.payload(dataset)
+    kind = 'tar-gzip' if dataset == 'openpost-media' else 'gzip'
+    receipt = self.receiver.receive(str(self.legacy), 'upload '+dataset+' '+kind, io.BytesIO(wire(payload)))
+    self.assertTrue((self.private / receipt['label'] / 'data.gz').exists())
+    self.assertFalse((self.legacy / receipt['label']).exists())
+    self.assertTrue(receipt['label'].startswith(dataset+'/snapshot-'))
+    self.assertEqual(list((self.private / dataset / '@tmp').iterdir()), [])
+    downloaded = io.BytesIO(); self.receiver.download(str(self.legacy), dataset, downloaded)
+    manifest, data = downloaded.getvalue().split(b'\n', 1)
+    self.assertEqual(json.loads(manifest), receipt)
+    self.assertEqual(data, payload)
+    removed = self.receiver.prune(str(self.legacy), dataset, now=now+datetime.timedelta(days=7))
+    self.assertEqual(removed['removed'], 1)
+    self.assertFalse((self.private / receipt['label']).exists())
+    self.assertEqual((old / 'data.gz').read_bytes(), b'legacy recovery copy')
+ def test_other_datasets_keep_legacy_tree(self):
+  import io
+  from unittest.mock import patch
+  with patch.dict(self.receiver.__dict__, ROOT=str(self.legacy), PRIVATE_ROOT=str(self.private)):
+   payload = self.payload('montra-db')
+   receipt = self.receiver.receive(str(self.legacy), 'upload montra-db gzip', io.BytesIO(wire(payload)))
+   self.assertTrue((self.legacy / receipt['label'] / 'data.gz').exists())
+   self.assertEqual(list(self.private.iterdir()), [])
+   output = io.BytesIO(); self.receiver.download(str(self.legacy), 'montra-db', output)
+   self.assertEqual(output.getvalue().split(b'\n',1)[1], payload)
+ def test_custom_root_override_stays_self_contained(self):
+  import datetime, io
+  from unittest.mock import patch
+  with patch.dict(self.receiver.__dict__, PRIVATE_ROOT=str(self.private)):
+   receipt = self.receiver.receive(str(self.legacy), 'upload openpost-db gzip', io.BytesIO(wire(self.payload('openpost-db'))))
+   self.assertTrue((self.legacy / receipt['label'] / 'data.gz').exists())
+   self.assertEqual(list(self.private.iterdir()), [])
+   output = io.BytesIO(); self.receiver.download(str(self.legacy), 'openpost-db', output)
+   self.assertEqual(json.loads(output.getvalue().split(b'\n',1)[0]), receipt)
+   removed = self.receiver.prune(str(self.legacy), 'openpost-db', now=datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(days=7))
+   self.assertEqual(removed['removed'], 1)
+   self.assertEqual(list(self.private.iterdir()), [])
+ def test_missing_private_root_fails_closed_for_all_operations(self):
+  import io
+  from unittest.mock import patch
+  missing = self.private / 'not-provisioned'
+  with patch.dict(self.receiver.__dict__, ROOT=str(self.legacy), PRIVATE_ROOT=str(missing)):
+   for dataset in ('openpost-db','openpost-media'):
+    kind = 'tar-gzip' if dataset == 'openpost-media' else 'gzip'
+    with self.assertRaises(FileNotFoundError):
+     self.receiver.receive(str(self.legacy), 'upload '+dataset+' '+kind, io.BytesIO(wire(self.payload(dataset))))
+    with self.assertRaises(FileNotFoundError): self.receiver.download(str(self.legacy), dataset, io.BytesIO())
+    with self.assertRaises(FileNotFoundError): self.receiver.prune(str(self.legacy), dataset)
+   self.assertEqual(list(self.legacy.iterdir()), [])
+ def test_private_root_symlink_fails_closed(self):
+  import io
+  from unittest.mock import patch
+  redirect = self.private / 'redirect'; redirect.symlink_to(self.legacy)
+  with patch.dict(self.receiver.__dict__, ROOT=str(self.legacy), PRIVATE_ROOT=str(redirect)):
+   with self.assertRaises(OSError):
+    self.receiver.receive(str(self.legacy), 'upload openpost-db gzip', io.BytesIO(wire(self.payload('openpost-db'))))
+   self.assertEqual(list(self.legacy.iterdir()), [])
 
 
 class StreamingFixture(unittest.TestCase):

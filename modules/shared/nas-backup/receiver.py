@@ -22,6 +22,7 @@ import tarfile
 import uuid
 
 ROOT = '/volume1/homes/kraktoos/Backups/rgo-vps'
+PRIVATE_ROOT = '/volume1/openpost-private-backups/rgo-vps'
 DATASETS = {'montra-db', 'openpost-db', 'openpost-media', 'umami-db',
             'shlink-db', 'unprompted-db', 'directus', 'vaultwarden'}
 ARCHIVE_DATASETS = {'openpost-media', 'directus', 'vaultwarden'}
@@ -44,12 +45,21 @@ DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
 FILE = os.O_NOFOLLOW | os.O_CLOEXEC
 
 
+def storage_root(root, dataset):
+    # Only production OpenPost datasets leave the indexed homes tree. Explicit
+    # --root overrides remain self-contained for tests and recovery operators.
+    # open_root must find the private root already provisioned; never fall back.
+    if root == ROOT and dataset in OPENPOST_DATASETS:
+        return PRIVATE_ROOT
+    return root
+
+
 def resource_limits(root):
     # DSM's Linux kernel enforces RLIMIT_AS without a cgroup or privileges.
     # Darwin has different address-space semantics; explicit alternate roots
     # remain usable for local fixtures, but the production root fails closed.
     if sys.platform != 'linux':
-        if root == ROOT:
+        if root in (ROOT, PRIVATE_ROOT):
             raise RuntimeError('production receiver requires Linux resource limits')
         return
     for kind, maximum in ((resource.RLIMIT_AS, MAX_ADDRESS_SPACE),
@@ -139,6 +149,14 @@ def remove_snapshot(parent, name):
     os.rmdir(name, dir_fd=parent)
 
 
+def remove_partials(parent):
+    # Call only while holding the dataset lock: no matching upload can be live.
+    for name in os.listdir(parent):
+        if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
+            remove_snapshot(parent, name)
+    os.fsync(parent)
+
+
 def retain_snapshots(parent, dataset, now):
     snapshots = sorted(name for name in os.listdir(parent)
                        if re.fullmatch(SNAPSHOT_PATTERN, name))
@@ -164,7 +182,7 @@ def prune(root, dataset, now=None):
         raise ValueError('prune dataset not allowed')
     if now is None:
         now = datetime.datetime.now(datetime.timezone.utc)
-    rootfd = open_root(root)
+    rootfd = open_root(storage_root(root, dataset))
     parent = lockfd = None
     try:
         parent = os.open(dataset, DIRECTORY, dir_fd=rootfd)
@@ -172,6 +190,16 @@ def prune(root, dataset, now=None):
         if not stat.S_ISREG(os.fstat(lockfd).st_mode):
             raise ValueError('invalid lock')
         fcntl.flock(lockfd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        remove_partials(parent)
+        try:
+            staging_parent = os.open('@tmp', DIRECTORY, dir_fd=parent)
+        except FileNotFoundError:
+            pass
+        else:
+            try:
+                remove_partials(staging_parent)
+            finally:
+                os.close(staging_parent)
         return {'dataset': dataset, 'removed': retain_snapshots(parent, dataset, now)}
     finally:
         for fd in (lockfd, parent, rootfd):
@@ -234,8 +262,8 @@ def receive(root, command, stream):
     expected_kind = 'tar-gzip' if dataset in ARCHIVE_DATASETS else 'gzip'
     if kind != expected_kind:
         raise ValueError('wrong format for dataset')
-    rootfd = open_root(root)
-    parent = stagefd = lockfd = datafd = None
+    rootfd = open_root(storage_root(root, dataset))
+    parent = stagefd = lockfd = datafd = staging_parent = None
     stage = None
     try:
         try:
@@ -247,13 +275,18 @@ def receive(root, command, stream):
         if not stat.S_ISREG(os.fstat(lockfd).st_mode):
             raise ValueError('invalid lock')
         fcntl.flock(lockfd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        # A killed receiver may leave a partial. Under the lock it cannot be live.
-        for name in os.listdir(parent):
-            if re.fullmatch(r'\.partial-[0-9a-f]{32}', name):
-                remove_snapshot(parent, name)
+        remove_partials(parent)
+        # Synology Drive excludes @tmp. Do not index growing/unverified streams;
+        # only publish the verified snapshot into the synced dataset directory.
+        try:
+            os.mkdir('@tmp', 0o700, dir_fd=parent)
+        except FileExistsError:
+            pass
+        staging_parent = os.open('@tmp', DIRECTORY, dir_fd=parent)
+        remove_partials(staging_parent)
         stage = '.partial-' + uuid.uuid4().hex
-        os.mkdir(stage, 0o700, dir_fd=parent)
-        stagefd = os.open(stage, DIRECTORY, dir_fd=parent)
+        os.mkdir(stage, 0o700, dir_fd=staging_parent)
+        stagefd = os.open(stage, DIRECTORY, dir_fd=staging_parent)
         datafd = os.open('data.gz', os.O_CREAT | os.O_EXCL | os.O_RDWR | FILE, 0o600, dir_fd=stagefd)
         digest = hashlib.sha256()
         count = 0
@@ -293,7 +326,8 @@ def receive(root, command, stream):
             manifest.flush()
             os.fsync(manifest.fileno())
         os.fsync(stagefd)
-        os.rename(stage, label, src_dir_fd=parent, dst_dir_fd=parent)
+        os.rename(stage, label, src_dir_fd=staging_parent, dst_dir_fd=parent)
+        os.fsync(staging_parent)
         stage = None
         os.fsync(parent)
         retain_snapshots(parent, dataset, stamp)
@@ -304,8 +338,8 @@ def receive(root, command, stream):
         if stagefd is not None:
             os.close(stagefd)
         if stage is not None:
-            remove_snapshot(parent, stage)
-        for fd in (lockfd, parent, rootfd):
+            remove_snapshot(staging_parent, stage)
+        for fd in (staging_parent, lockfd, parent, rootfd):
             if fd is not None:
                 os.close(fd)
 
@@ -313,7 +347,7 @@ def receive(root, command, stream):
 def download(root, dataset, output):
     if dataset not in DATASETS:
         raise ValueError('dataset not allowed')
-    rootfd = open_root(root)
+    rootfd = open_root(storage_root(root, dataset))
     parent = lockfd = snapshotfd = datafd = None
     try:
         parent = os.open(dataset, DIRECTORY, dir_fd=rootfd)
