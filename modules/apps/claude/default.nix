@@ -16,6 +16,17 @@ let
       };
     }
   );
+  # Attribution lands in commit trailers, PR bodies and session links. Empty
+  # strings disable the first two; sessionUrl disables the trailer line.
+  managedSettings = pkgs.writeText "claude-code-settings.json" (
+    builtins.toJSON {
+      attribution = {
+        commit = "";
+        pr = "";
+        sessionUrl = false;
+      };
+    }
+  );
   configure = pkgs.writeShellApplication {
     name = "configure-claude-code";
     runtimeInputs = [
@@ -49,7 +60,8 @@ in
             ${configure}/bin/configure-claude-code \
               "$HOME" \
               ${lib.escapeShellArg "${constants.homeDir}/.agents/skills"} \
-              ${managedConfig}
+              ${managedConfig} \
+              ${managedSettings}
           '';
     };
   };

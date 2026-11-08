@@ -1,13 +1,24 @@
 claude_home=$1
 shared_skills=$2
 managed_config=$3
+managed_settings=$4
 config_file="$claude_home/.claude.json"
+settings_file="$claude_home/.claude/settings.json"
 
 mkdir -p "$claude_home/.claude/skills"
 
-# Account state and user-defined servers share this file with MCP wiring.
 temporary_config=$(mktemp "$config_file.XXXXXX")
-trap 'rm -f "$temporary_config"' EXIT
+temporary_settings=$(mktemp "$settings_file.XXXXXX")
+trap 'rm -f "$temporary_config" "$temporary_settings"' EXIT
+
+install_config() {
+  if ! cmp -s "$1" "$2"; then
+    chmod 600 "$2"
+    mv "$2" "$1"
+  fi
+}
+
+# Account state and user-defined servers share this file with MCP wiring.
 if [ -f "$config_file" ]; then
   jq --slurpfile managed "$managed_config" \
     '.mcpServers = ((.mcpServers // {}) + $managed[0].mcpServers)' \
@@ -15,10 +26,17 @@ if [ -f "$config_file" ]; then
 else
   jq . "$managed_config" > "$temporary_config"
 fi
-if ! cmp -s "$config_file" "$temporary_config"; then
-  chmod 600 "$temporary_config"
-  mv "$temporary_config" "$config_file"
+install_config "$config_file" "$temporary_config"
+
+# Claude settings stay mutable, but managed values win.
+if [ -f "$settings_file" ]; then
+  jq --slurpfile managed "$managed_settings" \
+    '.attribution = ((.attribution | if type == "object" then . else {} end) + $managed[0].attribution)' \
+    "$settings_file" > "$temporary_settings"
+else
+  jq . "$managed_settings" > "$temporary_settings"
 fi
+install_config "$settings_file" "$temporary_settings"
 
 for skill in "$shared_skills"/*; do
   [ -f "$skill/SKILL.md" ] || continue
