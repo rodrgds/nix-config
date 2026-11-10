@@ -36,11 +36,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    affinity-nix = {
-      url = "github:mrshmllow/affinity-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -75,15 +70,6 @@
 
     # Use Vicinae's own package set so its package and NixOS module stay aligned.
     vicinae.url = "github:vicinaehq/vicinae";
-
-    devenv = {
-      url = "github:cachix/devenv/b904dcb51fe48c30db250038241507f60752f222";
-    };
-
-    handy = {
-      url = "github:cjpais/Handy";
-      #inputs.nixpkgs.follows = "nixpkgs";
-    };
 
     import-tree = {
       url = "github:vic/import-tree";
@@ -124,6 +110,27 @@
       fullname = "Rodrigo Dias";
       mkConstants = system: import ./modules/constants.nix { inherit username system; };
 
+      # deploy-rs library with nixpkgs' binary-cached deploy-rs package, so
+      # neither the client nor the VPS activation binary is compiled locally.
+      # https://github.com/serokell/deploy-rs#overall-usage
+      deployPkgs = import nixpkgs {
+        system = "x86_64-linux";
+        overlays = [
+          deploy-rs.overlays.default
+          (_: prev: {
+            deploy-rs = {
+              inherit (nixpkgs.legacyPackages.x86_64-linux) deploy-rs;
+              inherit (prev.deploy-rs) lib;
+            };
+          })
+        ];
+      };
+      deployApp = pkgs: {
+        type = "app";
+        program = "${pkgs.deploy-rs}/bin/deploy";
+        meta.description = "Deploy the rgo-vps NixOS configuration";
+      };
+
       # Helper function to create NixOS configurations
       mkNixosSystem =
         { system, hostname }:
@@ -138,7 +145,6 @@
               ;
             lib = linuxLib;
             constants = mkConstants system;
-            devenvPkg = inputs.devenv.packages.${system}.default;
           };
           modules = [
             # Apply overlays
@@ -204,7 +210,6 @@
               ;
             inherit (nixpkgs-darwin) lib;
             constants = mkConstants system;
-            devenvPkg = inputs.devenv.packages.${system}.default;
           };
           modules = [
             # Apply overlays
@@ -270,19 +275,15 @@
         magicRollback = true;
         activationTimeout = 1800;
         confirmTimeout = 60;
-        profiles.system.path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.rgo-vps;
+        profiles.system.path = deployPkgs.deploy-rs.lib.activate.nixos self.nixosConfigurations.rgo-vps;
       };
 
       apps = {
-        aarch64-darwin.deploy-rs = deploy-rs.apps.aarch64-darwin.deploy-rs // {
-          meta.description = "Deploy the rgo-vps NixOS configuration";
-        };
-        x86_64-linux.deploy-rs = deploy-rs.apps.x86_64-linux.deploy-rs // {
-          meta.description = "Deploy the rgo-vps NixOS configuration";
-        };
+        aarch64-darwin.deploy-rs = deployApp nixpkgs-darwin.legacyPackages.aarch64-darwin;
+        x86_64-linux.deploy-rs = deployApp nixpkgs.legacyPackages.x86_64-linux;
       };
 
-      checks.x86_64-linux = deploy-rs.lib.x86_64-linux.deployChecks self.deploy // {
+      checks.x86_64-linux = deployPkgs.deploy-rs.lib.deployChecks self.deploy // {
         vps-security-policy =
           let
             vps = self.nixosConfigurations.rgo-vps.config;

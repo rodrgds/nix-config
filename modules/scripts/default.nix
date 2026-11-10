@@ -1,137 +1,76 @@
-# Centralized scripts module with auto-imports and shell aliases
+# Helper scripts and shared shell aliases.
+#
+# Scripts install as executables in ~/scripts (on PATH), each with an alias
+# without its extension (`system_info`, `copy`, `screenshot`, ...). Desktop
+# consumers (Hyprland, Quickshell, SketchyBar) run them from the checkout via
+# `constants.scriptDir`. Most drive Linux/Wayland tools, so macOS only gets
+# the cross-platform ones.
 {
   lib,
   config,
+  pkgs,
   username,
   constants,
-  inputs,
-  system,
   ...
 }:
 let
   cfg = config.scripts;
   inherit (constants) isDarwin isLinux homeDir;
 
-  # Read all script files from the scripts directory
-  scriptDir = ./.;
+  allScripts = builtins.attrNames (
+    lib.filterAttrs (name: type: type == "regular" && name != "default.nix") (builtins.readDir ./.)
+  );
+  scriptNames = if isDarwin then [ "toggle_caffeine.sh" ] else allScripts;
 
-  # Get all files in the scripts directory (excluding default.nix)
-  scriptFiles = lib.filterAttrs (
-    name: type: type == "regular" && name != "default.nix" && name != "__pycache__"
-  ) (builtins.readDir scriptDir);
-
-  # Generate script content from files
-  scripts = lib.mapAttrs (name: _: builtins.readFile (scriptDir + "/${name}")) scriptFiles;
-
-  # Generate shell aliases from script names (remove extensions for alias names)
-  getAliasName =
+  scriptAlias =
     name:
     let
-      # Remove script extensions for cleaner aliases
-      withoutSh = lib.removeSuffix ".sh" name;
-      withoutPy = lib.removeSuffix ".py" withoutSh;
-      withoutTs = lib.removeSuffix ".ts" withoutPy;
+      interpreter = if lib.hasSuffix ".sh" name then "bash " else "";
     in
-    withoutTs;
+    lib.nameValuePair (lib.removeSuffix ".py" (lib.removeSuffix ".sh" name)) "${interpreter}${homeDir}/scripts/${name}";
 
-  # Check if file is a shell script that needs bash prefix for Fish compatibility
-  isShellScript = name: lib.hasSuffix ".sh" name;
-  isBunScript = name: lib.hasSuffix ".ts" name;
-
-  scriptAliases = lib.mapAttrs' (
-    name: content:
-    let
-      aliasName = getAliasName name;
-      # Point to source location in repo so aliases work immediately
-      # (home-manager also installs to ~/.config/home/scripts/ for PATH access)
-      scriptPath = "${homeDir}/.config/home/modules/scripts/${name}";
-      # Prefix scripts that need an interpreter so aliases work across shells.
-      aliasValue =
-        if isShellScript name then
-          "bash ${scriptPath}"
-        else if isBunScript name then
-          "bun ${scriptPath}"
-        else
-          scriptPath;
-    in
-    lib.nameValuePair aliasName aliasValue
-  ) scripts;
-
-  # Common aliases for both platforms
-  commonAliases = scriptAliases // {
-    "h" = "cd ${homeDir}/.config/home";
-    "v" = "nvim";
-    "glog" = "git log --oneline --graph --decorate --all";
-    "ll" = "ls -la";
-    "rebuild" = "bun ${homeDir}/.config/home/tools/rebuild-wizard/rebuild.ts";
-    # Linux uses the Wayland clipboard; Darwin retains the native command.
-    "copy" = if isDarwin then "pbcopy" else "bash ${homeDir}/.config/home/modules/scripts/copy.sh";
-  };
-
-  # Linux-specific aliases
-  linuxAliases = commonAliases // {
-    "rescrobbled-logs" = "journalctl --user -u rescrobbled.service -f";
-  };
-
-  installedScripts = lib.mapAttrs' (
-    name: content:
-    lib.nameValuePair "scripts/${name}" {
-      text = content;
-      executable = true;
-    }
-  ) scripts;
-
-  mkHomeConfig = aliases: {
-    home.file = installedScripts;
-
-    # Root the exact client used by path:.#deploy-rs in workstation generations.
-    # Keep the flake app as the selector when the checkout's lockfile changes.
-    home.packages = lib.optionals (!(config.secrets.isVps or false)) [
-      inputs.deploy-rs.packages.${system}.deploy-rs
-    ];
-
-    # Set up shell aliases via home-manager (generic, works with all shells)
-    home.shellAliases = aliases;
-
-    # Nushell needs its own alias mapping.
-    programs.nushell.shellAliases = aliases;
-
-    # Zsh aliases
-    programs.zsh.shellAliases = aliases;
-
-    # Bash aliases
-    programs.bash.shellAliases = aliases;
-
-    # home.file installs these executables under ~/scripts.
-    home.sessionPath = [ "${homeDir}/scripts" ];
+  aliases = {
+    h = "cd ${homeDir}/.config/home";
+    v = "nvim";
+    glog = "git log --oneline --graph --decorate --all";
+    ll = "ls -la";
+    rebuild = "bun ${homeDir}/.config/home/tools/rebuild-wizard/rebuild.ts";
+    copy = "pbcopy";
+  }
+  // lib.listToAttrs (map scriptAlias scriptNames)
+  // lib.optionalAttrs isLinux {
+    rescrobbled-logs = "journalctl --user -u rescrobbled.service -f";
   };
 in
 {
   options.scripts = {
-    enable = lib.mkEnableOption "Enable scripts";
+    enable = lib.mkEnableOption "helper scripts and shell aliases";
   };
 
-  config = lib.mkIf cfg.enable (
-    # Use optionalAttrs to only include Linux-specific options on Linux
-    lib.optionalAttrs isLinux {
-      environment.shellAliases = linuxAliases;
-    }
-    # Merge with Darwin-specific configuration
-    // lib.optionalAttrs isDarwin {
-      home-manager.users.${username} = (mkHomeConfig commonAliases) // {
-        sops.secrets = {
-          openrouter_api_key = { };
-        };
+  config = lib.mkIf cfg.enable {
+    home-manager.users.${username} = {
+      home.file = lib.listToAttrs (
+        map (
+          name:
+          lib.nameValuePair "scripts/${name}" {
+            source = ./. + "/${name}";
+            executable = true;
+          }
+        ) scriptNames
+      );
+      home.sessionPath = [ "${homeDir}/scripts" ];
+      home.shellAliases = aliases;
+
+      # The rebuild wizard deploys the VPS with this binary-cached client.
+      home.packages = lib.optionals (!(config.secrets.isVps or false)) [ pkgs.deploy-rs ];
+
+      sops.secrets = {
+        openrouter_api_key = { };
+      }
+      // lib.optionalAttrs isLinux {
+        # twitter_reply.py reads this key.
+        openai_api_key = { };
       };
-    }
-    # Merge with Linux-specific home-manager configuration
-    // lib.optionalAttrs isLinux {
-      home-manager.users.${username} = (mkHomeConfig linuxAliases) // {
-        sops.secrets = {
-          openrouter_api_key = { };
-          openai_api_key = { };
-        };
-      };
-    }
-  );
+    };
+  };
 }

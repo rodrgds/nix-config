@@ -1,6 +1,8 @@
 {
   lib,
   config,
+  pkgs,
+  inputs,
   username,
   constants,
   ...
@@ -9,22 +11,15 @@ let
   cfg = config.core.nix;
   inherit (constants) isLinux isDarwin homeDir;
   isVps = config.secrets.isVps or false;
-  # Approve cache selection without granting users daemon administration.
-  # Devenv is also a workstation package, so rebuilds need its cache.
-  workstationCaches = lib.optionals (!isVps) (
-    [
-      {
-        url = "https://devenv.cachix.org";
-        key = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=";
-      }
-    ]
-    ++ lib.optionals (isLinux && config.apps.vicinae.enable) [
-      {
-        url = "https://vicinae.cachix.org";
-        key = "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc=";
-      }
-    ]
-  );
+  # Extra caches cost a lookup for every missing path, so list only caches
+  # whose builds this configuration actually uses. Vicinae's Linux build comes
+  # from its own flake; everything else is on cache.nixos.org.
+  workstationCaches = lib.optionals (!isVps && isLinux && config.apps.vicinae.enable) [
+    {
+      url = "https://vicinae.cachix.org";
+      key = "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc=";
+    }
+  ];
 in
 {
   options.core.nix = {
@@ -55,10 +50,7 @@ in
         trusted-substituters = map (cache: cache.url) workstationCaches;
         require-sigs = true;
         accept-flake-config = false;
-        substituters = [
-          "https://cache.nixos.org"
-        ]
-        ++ lib.optional (!isVps) "https://devenv.cachix.org";
+        substituters = [ "https://cache.nixos.org" ] ++ map (cache: cache.url) workstationCaches;
         trusted-public-keys = [
           "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         ]
@@ -77,6 +69,23 @@ in
           Weekday = 0;
         };
       };
+
+      # Pin this generation's flake inputs so the weekly GC keeps them. Without
+      # a root, GC deletes their sources (about 1 GiB, mostly nixpkgs) and the
+      # next rebuild downloads them again before it can evaluate (~30s). `self`
+      # stays out so editing the checkout alone never changes the system.
+      environment.etc = lib.mkMerge [
+        (lib.mkIf (!isVps) {
+          "nix/flake-inputs".source = pkgs.linkFarm "flake-inputs" (
+            lib.mapAttrs (_: input: input.outPath) (removeAttrs inputs [ "self" ])
+          );
+        })
+        # nix-darwin restarts the daemon when /etc/nix/machines differs from
+        # the running system's copy, and diff treats two missing files as
+        # different, so every activation restarted it. An empty file (no
+        # remote builders) keeps the daemon running across rebuilds.
+        (lib.mkIf isDarwin { "nix/machines".text = ""; })
+      ];
 
       nix.optimise = {
         automatic = true;
