@@ -3,123 +3,94 @@ import { describe, expect, test } from "bun:test";
 import { TARGETS } from "./config";
 import {
   allowedTargetsFor,
-  directTargetHelp,
-  directTargetFromArgs,
-  directTargetUsage,
+  buildCommand,
+  deployCommand,
+  needsActivation,
+  parseArgs,
   postRebuildHealthCommand,
-  rebuildCommand,
+  systemdMajorChange,
 } from "./targets";
 
-describe("direct rebuild flags", () => {
-  test("keeps the TUI for a plain rebuild", () => {
-    expect(directTargetFromArgs([])).toBeNull();
+const target = (name: string) => TARGETS.find((t) => t.name === name)!;
+
+describe("arguments", () => {
+  test("a plain rebuild targets this machine", () => {
+    expect(parseArgs([])).toEqual({ kind: "rebuild" });
   });
 
-  test("maps every configured target flag", () => {
-    for (const target of TARGETS) {
-      expect(directTargetFromArgs([target.cliFlag])).toBe(target.name);
+  test("maps subcommands and legacy target flags", () => {
+    expect(parseArgs(["update"])).toEqual({ kind: "update" });
+    expect(parseArgs(["--update"])).toEqual({ kind: "update" });
+    expect(parseArgs(["vps"])).toEqual({ kind: "rebuild", target: "rgo-vps" });
+    expect(parseArgs(["secrets"])).toEqual({ kind: "secrets", file: undefined });
+    expect(parseArgs(["secrets", "vps-secrets"])).toEqual({
+      kind: "secrets",
+      file: "vps-secrets",
+    });
+    for (const { cliFlag, name } of TARGETS) {
+      expect(parseArgs([cliFlag])).toEqual({ kind: "rebuild", target: name });
     }
   });
 
   test("rejects unknown or combined arguments", () => {
-    expect(() => directTargetFromArgs(["--unknown"])).toThrow(
-      directTargetUsage(),
-    );
-    expect(() => directTargetFromArgs(["--desktop", "--laptop"])).toThrow(
-      directTargetUsage(),
-    );
-  });
-
-  test("assigns one unique CLI flag to every target", () => {
-    const flags = TARGETS.map(({ cliFlag }) => cliFlag);
-    expect(new Set(flags).size).toBe(TARGETS.length);
-  });
-
-  test("generates help from the configured targets", () => {
-    const help = directTargetHelp();
-    for (const target of TARGETS) {
-      expect(help).toContain(target.cliFlag);
-      expect(help).toContain(target.name);
-      expect(help).toContain(target.description);
+    for (const args of [["--nope"], ["--laptop", "--vps"], ["update", "now"]]) {
+      expect(() => parseArgs(args)).toThrow("Unknown arguments");
     }
   });
 });
 
-describe("remote VPS rebuilds", () => {
-  test("offers rgo-vps from the Darwin laptop", async () => {
-    const targets = await allowedTargetsFor("rgo-laptop", "darwin");
-
-    expect(targets.map((target) => target.name)).toEqual([
-      "rgo-laptop",
-      "rgo-vps",
+describe("targets", () => {
+  test("the laptop rebuilds itself and deploys the VPS remotely", () => {
+    const names = allowedTargetsFor("rgo-laptop", "darwin").map((t) => t.name);
+    expect(names).toEqual(["rgo-laptop", "rgo-vps"]);
+    expect(deployCommand(target("rgo-vps"), "rgo-laptop")).toEqual([
+      "nix",
+      ["run", ".#deploy-rs", "--", "--skip-checks", "--remote-build", ".#rgo-vps"],
     ]);
   });
 
-  test("builds rgo-vps on the VPS from the Darwin laptop", () => {
-    const target = TARGETS.find(({ name }) => name === "rgo-vps");
-    expect(target).toBeDefined();
-
-    const [command, args] = rebuildCommand(target!, "rgo-laptop");
-
-    expect(command).toBe("nix");
-    expect(args).toEqual([
-      "run",
-      "path:.#deploy-rs",
-      "--",
-      "--skip-checks",
+  test("the desktop builds the VPS locally", () => {
+    expect(deployCommand(target("rgo-vps"), "rgo-desktop")[1]).not.toContain(
       "--remote-build",
-      "path:.#rgo-vps",
-      "--",
-      "--impure",
-      "--option",
-      "substituters",
-      "https://cache.nixos.org",
-    ]);
+    );
   });
 
-  test("builds rgo-vps locally from the Linux desktop", () => {
-    const target = TARGETS.find(({ name }) => name === "rgo-vps");
-    expect(target).toBeDefined();
+  test("builds go to the given out-link without root", () => {
+    const [cmd, args] = buildCommand(target("rgo-laptop"), "/state/result");
+    expect(cmd).toBe("nh");
+    expect(args.slice(0, 7)).toEqual([
+      "darwin",
+      "build",
+      ".",
+      "-H",
+      "rgo-laptop",
+      "-o",
+      "/state/result",
+    ]);
+    expect(buildCommand(target("rgo-desktop"), "/r")[1][0]).toBe("os");
+  });
 
-    const [command, args] = rebuildCommand(target!, "rgo-desktop");
-
-    expect(command).toBe("nix");
-    expect(args).not.toContain("--remote-build");
-    expect(args).toContain("path:.#rgo-vps");
+  test("health runs only after a local laptop rebuild", () => {
+    expect(postRebuildHealthCommand(target("rgo-laptop"), "rgo-laptop")).not.toBeNull();
+    expect(postRebuildHealthCommand(target("rgo-laptop"), "rgo-desktop")).toBeNull();
+    expect(postRebuildHealthCommand(target("rgo-desktop"), "rgo-desktop")).toBeNull();
   });
 });
 
-describe("local rebuild visibility", () => {
-  test("shows nix-darwin activation logs", () => {
-    const target = TARGETS.find(({ name }) => name === "rgo-laptop");
-    expect(target).toBeDefined();
-
-    const [, args] = rebuildCommand(target!, "rgo-laptop");
-    expect(args).toContain("--show-activation-logs");
+describe("activation decisions", () => {
+  test("skips only a live build whose last activation succeeded", () => {
+    expect(needsActivation("/nix/store/a", "/nix/store/a", "/nix/store/a")).toBe(false);
+    expect(needsActivation("/nix/store/b", "/nix/store/a", "/nix/store/a")).toBe(true);
+    expect(needsActivation("/nix/store/a", "/nix/store/a", null)).toBe(true);
   });
 
-  test("checks laptop health after a local Darwin rebuild", () => {
-    const target = TARGETS.find(({ name }) => name === "rgo-laptop");
-    expect(target).toBeDefined();
-
-    expect(postRebuildHealthCommand(target!, "rgo-laptop")).toEqual([
-      "/run/current-system/sw/bin/rgo-laptop-health",
-      [],
-    ]);
-  });
-
-  test("does not run laptop health for another host", () => {
-    const target = TARGETS.find(({ name }) => name === "rgo-laptop");
-    expect(target).toBeDefined();
-
-    expect(postRebuildHealthCommand(target!, "rgo-desktop")).toBeNull();
-  });
-
-  test("shows NixOS activation logs", () => {
-    const target = TARGETS.find(({ name }) => name === "rgo-desktop");
-    expect(target).toBeDefined();
-
-    const [, args] = rebuildCommand(target!, "rgo-desktop");
-    expect(args).toContain("--show-activation-logs");
+  test("detects systemd major upgrades from store paths", () => {
+    expect(
+      systemdMajorChange("/nix/store/x-systemd-257.9", "/nix/store/y-systemd-258.1"),
+    ).toEqual({ from: "257", to: "258" });
+    expect(
+      systemdMajorChange("/nix/store/x-systemd-258.0", "/nix/store/y-systemd-258.1"),
+    ).toBeNull();
+    expect(systemdMajorChange(null, "/nix/store/y-systemd-258.1")).toBeNull();
   });
 });

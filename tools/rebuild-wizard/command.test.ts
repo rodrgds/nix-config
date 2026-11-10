@@ -1,34 +1,6 @@
 import { expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 
-import { runLogged } from "./command";
-
-for (const code of [0, 31]) {
-  test(`logged phase reports elapsed subprocess time and preserves exit ${code}`, async () => {
-    const lines: string[] = [];
-    const command = runLogged(
-      (line) => lines.push(line),
-      process.execPath,
-      [
-        "-e",
-        `await Bun.sleep(40); console.log("fixture output"); process.exit(${code})`,
-      ],
-      { cwd: tmpdir(), phase: "cross-system evaluation" },
-    );
-    if (code === 0) await command;
-    else await expect(command).rejects.toThrow("Command failed (31)");
-
-    expect(lines).toContain("fixture output");
-    expect(lines).toContain(`exit code: ${code}`);
-    const timing = lines.find((line) =>
-      line.startsWith("[timing] cross-system evaluation:"),
-    );
-    expect(timing).toBeDefined();
-    const seconds = Number(timing!.match(/: ([\d.]+)s$/)?.[1]);
-    expect(seconds).toBeGreaterThanOrEqual(0.03);
-  });
-}
-
 test("interactive phase reports a failed command before returning its exit status", async () => {
   const child = Bun.spawn(
     [

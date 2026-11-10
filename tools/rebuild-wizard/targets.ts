@@ -1,45 +1,72 @@
-import { DATE_STAMP, HOME, HOST_ALIASES, REPO_DIR, TARGETS } from "./config";
+import { existsSync } from "node:fs";
+import { FLAKE_REF, HOME, HOST_ALIASES, TARGETS } from "./config";
 import { commandExists, runCapture } from "./command";
-import { join, pathExists, readText } from "./fs";
-import type { PlatformKind, Target } from "./types";
+import type { Action, PlatformKind, Target } from "./types";
 
-export function directTargetUsage(): string {
-  return `Usage: rebuild [${TARGETS.map(({ cliFlag }) => cliFlag).join(" | ")}]`;
-}
+export const USAGE = `Usage:
+  rebuild                 rebuild this machine (no-op when nothing changed)
+  rebuild update          update flake inputs and the 9Router catalog, rebuild,
+                          then refresh npm CLIs, skills and Homebrew in the background
+  rebuild vps             deploy rgo-vps with deploy-rs (automatic rollback)
+  rebuild secrets [name]  edit secrets/<name>.yaml with sops (default: secrets)
 
-export function directTargetHelp(): string {
-  return [
-    directTargetUsage(),
-    "       rebuild",
-    "",
-    "Direct targets:",
-    ...TARGETS.map(
-      ({ cliFlag, name, description, allowedFrom }) =>
-        `  ${cliFlag.padEnd(12)} ${name}: ${description} (from ${allowedFrom.join(", ")})`,
-    ),
-    "",
-    "Run without a target flag to open the TUI.",
-  ].join("\n");
-}
+Target flags also work: ${TARGETS.map(({ cliFlag }) => cliFlag).join(", ")}, --update.`;
 
-export function directTargetFromArgs(args: string[]): string | null {
-  if (args.length === 0) return null;
-
-  const matches =
-    args.length === 1
-      ? TARGETS.filter(({ cliFlag }) => cliFlag === args[0])
-      : [];
-
-  if (matches.length !== 1) {
-    throw new Error(
-      `Unknown rebuild arguments: ${args.join(" ")}\n${directTargetUsage()}`,
-    );
+export function parseArgs(args: string[]): Action {
+  const [first, ...rest] = args;
+  if (first === undefined) return { kind: "rebuild" };
+  if (["help", "--help", "-h"].includes(first) && rest.length === 0) {
+    return { kind: "help" };
   }
-
-  return matches[0]!.name;
+  if (["update", "--update"].includes(first) && rest.length === 0) {
+    return { kind: "update" };
+  }
+  if (first === "secrets" && rest.length <= 1) {
+    return { kind: "secrets", file: rest[0] };
+  }
+  if (first === "vps" && rest.length === 0) {
+    return { kind: "rebuild", target: "rgo-vps" };
+  }
+  const target = TARGETS.find(({ cliFlag }) => cliFlag === first);
+  if (target && rest.length === 0) {
+    return { kind: "rebuild", target: target.name };
+  }
+  throw new Error(`Unknown arguments: ${args.join(" ")}\n\n${USAGE}`);
 }
 
-const REBUILD_STORE_SPACE_ARGS = [
+export async function detectPlatform(): Promise<PlatformKind> {
+  const uname = (
+    await runCapture("uname", ["-s"], { cwd: "/", check: false })
+  ).trim();
+  if (uname === "Darwin") return "darwin";
+  if (uname === "Linux") return "linux";
+  return "other";
+}
+
+export async function detectHost(): Promise<string> {
+  const explicit = Bun.env.NIX_REBUILD_HOST;
+  if (explicit) return HOST_ALIASES[explicit] ?? explicit;
+  const raw = (
+    await runCapture("hostname", ["-s"], { check: false, cwd: HOME || "/" })
+  ).trim();
+  const cleaned = raw.replace(/\.local$/, "");
+  return HOST_ALIASES[cleaned] ?? cleaned;
+}
+
+export function allowedTargetsFor(
+  currentHost: string,
+  platform: PlatformKind,
+): Target[] {
+  const nixos = platform === "linux" && existsSync("/etc/NIXOS");
+  return TARGETS.filter((target) => {
+    if (!target.allowedFrom.includes(currentHost)) return false;
+    if (target.kind === "darwin") return platform === "darwin";
+    if (target.kind === "nixos") return nixos;
+    return platform === "darwin" || nixos;
+  });
+}
+
+const NIXOS_STORE_SPACE_ARGS = [
   "--option",
   "min-free",
   String(8 * 1024 * 1024 * 1024),
@@ -48,134 +75,115 @@ const REBUILD_STORE_SPACE_ARGS = [
   String(16 * 1024 * 1024 * 1024),
 ];
 
-const NIXOS_CACHE_ONLY_ARGS = [
-  "--option",
-  "substituters",
-  "https://cache.nixos.org",
-];
-
-// The currently configured Garnix endpoint is returning 502s, which can hit
-// Nix's TunnelLogger crash path. Affinity is disabled, so rebuilds only need
-// the Vicinae and official NixOS caches.
-const DESKTOP_CACHE_ARGS = [
-  "--option",
-  "substituters",
-  "https://vicinae.cachix.org https://cache.nixos.org",
-];
-
-export async function detectPlatform(): Promise<PlatformKind> {
-  const uname = (
-    await runCapture("uname", ["-s"], { cwd: "/", check: false })
-  ).trim();
-
-  if (uname === "Darwin") return "darwin";
-  if (uname === "Linux") return "linux";
-  return "other";
+// Builds without root, so an unchanged system never asks for a password.
+export function buildCommand(target: Target, outLink: string): [string, string[]] {
+  const platform = target.kind === "darwin" ? "darwin" : "os";
+  return [
+    "nh",
+    [
+      platform,
+      "build",
+      FLAKE_REF,
+      "-H",
+      target.name,
+      "-o",
+      outLink,
+      ...(target.kind === "nixos" ? NIXOS_STORE_SPACE_ARGS : []),
+    ],
+  ];
 }
 
-export async function isNixOS(platform: PlatformKind): Promise<boolean> {
-  return platform === "linux" && (await pathExists("/etc/NIXOS"));
+// nix-darwin's own switch: point the system profile at the build, then
+// activate it as root (darwin-rebuild switch does exactly these two steps).
+export function darwinActivateCommand(system: string): [string, string[]] {
+  return [
+    "sudo",
+    [
+      "/bin/sh",
+      "-c",
+      'set -e; "$1/sw/bin/nix-env" -p /nix/var/nix/profiles/system --set "$1"; exec "$1/activate"',
+      "rebuild-activate",
+      system,
+    ],
+  ];
 }
 
-export async function detectHost(): Promise<string> {
-  const explicit = Bun.env.NIX_REBUILD_HOST;
-  if (explicit) return HOST_ALIASES[explicit] ?? explicit;
-
-  const raw = (
-    await runCapture("hostname", ["-s"], {
-      check: false,
-      cwd: HOME || "/",
-    })
-  ).trim();
-
-  const cleaned = raw.replace(/\.local$/, "");
-  return HOST_ALIASES[cleaned] ?? cleaned;
+// NixOS keeps nh for activation: the build is already cached, and nh runs
+// switch-to-configuration the way nixos-rebuild does.
+export function nixosSwitchCommand(
+  target: Target,
+  mode: "switch" | "boot",
+): [string, string[]] {
+  return [
+    "nh",
+    [
+      "os",
+      mode,
+      FLAKE_REF,
+      "-H",
+      target.name,
+      "--show-activation-logs",
+      ...NIXOS_STORE_SPACE_ARGS,
+    ],
+  ];
 }
 
-export async function allowedTargetsFor(
+export function deployCommand(
+  target: Target,
   currentHost: string,
+): [string, string[]] {
+  const args = ["run", `${FLAKE_REF}#deploy-rs`, "--", "--skip-checks"];
+  if (target.remoteBuildFrom?.includes(currentHost)) args.push("--remote-build");
+  args.push(`${FLAKE_REF}#${target.name}`);
+  return ["nix", args];
+}
+
+// Activation is skipped only when the build is already live and the last
+// activation of it succeeded, so a failed switch is retried next time.
+export function needsActivation(
+  built: string,
+  current: string | null,
+  lastActivated: string | null,
+): boolean {
+  return built !== current || built !== lastActivated;
+}
+
+// A live PID 1 re-exec across systemd major versions can hang, so such
+// generations become the boot default instead of switching live.
+export function systemdMajorChange(
+  currentSystemd: string | null,
+  builtSystemd: string | null,
+): { from: string; to: string } | null {
+  const major = (path: string | null) => path?.match(/-systemd-(\d+)/)?.[1];
+  const from = major(currentSystemd);
+  const to = major(builtSystemd);
+  return from && to && from !== to ? { from, to } : null;
+}
+
+export function postRebuildHealthCommand(
+  target: Target,
+  currentHost: string,
+): [string, string[]] | null {
+  if (target.kind !== "darwin" || currentHost !== target.name) return null;
+  return ["/run/current-system/sw/bin/rgo-laptop-health", []];
+}
+
+// Refresh the vendor-updated tools in the background after `rebuild update`.
+export function backgroundUpdateCommands(
   platform: PlatformKind,
-): Promise<Target[]> {
-  const nixos = await isNixOS(platform);
-
-  return TARGETS.filter((target) => {
-    if (!target.allowedFrom.includes(currentHost)) return false;
-    if (target.kind === "darwin") return platform === "darwin";
-    if (target.kind === "nixos") return nixos;
-    if (target.kind === "nixos-remote") {
-      return platform === "darwin" || nixos;
-    }
-    return false;
-  });
-}
-
-export async function parseFlakeInputs(): Promise<string[]> {
-  const flakePath = join(REPO_DIR, "flake.nix");
-  const lines = (await readText(flakePath)).split("\n");
-  const inputs: string[] = [];
-
-  let inInputs = false;
-  let depth = 0;
-
-  for (const line of lines) {
-    if (!inInputs && /^\s*inputs\s*=\s*\{/.test(line)) {
-      inInputs = true;
-      depth = 1;
-      continue;
-    }
-
-    if (!inInputs) continue;
-
-    if (depth === 1) {
-      const match = line.match(/^\s*([A-Za-z0-9_.-]+)(?:\.url)?\s*=/);
-      const name = match?.[1]?.replace(/\.url$/, "");
-      if (name) inputs.push(name);
-    }
-
-    const opens = (line.match(/\{/g) ?? []).length;
-    const closes = (line.match(/\}/g) ?? []).length;
-    depth += opens - closes;
-
-    if (depth <= 0) break;
+  uid: string,
+): [string, string[]][] {
+  if (platform === "darwin") {
+    return ["pt.rgo.update-javascript-toolchain", "pt.rgo.homebrew-upgrade"].map(
+      (label) => ["launchctl", ["kickstart", `gui/${uid}/${label}`]],
+    );
   }
-
-  return [...new Set(inputs)];
-}
-
-export async function defaultCommitMessage(target: Target): Promise<string> {
-  const generation = await readGeneration(target);
-  if (generation) return `${target.name}: generation ${generation}`;
-  return `${target.name}: rebuild ${DATE_STAMP}`;
-}
-
-async function readGeneration(target: Target): Promise<string | null> {
-  try {
-    if (target.kind === "darwin") {
-      const output = await runCapture(
-        "darwin-rebuild",
-        ["--list-generations"],
-        {
-          check: false,
-        },
-      );
-      const current = output
-        .split("\n")
-        .find((line) => /\bcurrent\b/.test(line));
-      return current?.match(/^\s*(\d+)/)?.[1] ?? null;
-    }
-
-    if (target.kind === "nixos") {
-      const output = await runCapture("nixos-rebuild", ["list-generations"], {
-        check: false,
-      });
-      const current = output.split("\n").find((line) => /\bTrue\b/.test(line));
-      return current?.match(/^\s*(\d+)/)?.[1] ?? null;
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
+  return [
+    [
+      "systemctl",
+      ["--user", "start", "--no-block", "update-javascript-toolchain.service"],
+    ],
+  ];
 }
 
 export async function notify(
@@ -190,156 +198,14 @@ export async function notify(
         "-e",
         `display notification ${JSON.stringify(message)} with title ${JSON.stringify(title)}`,
       ],
-      {
-        check: false,
-        cwd: HOME || "/",
-      },
+      { check: false, cwd: HOME || "/" },
     );
     return;
   }
-
   if (await commandExists("notify-send")) {
     await runCapture("notify-send", [title, message], {
       check: false,
       cwd: HOME || "/",
     });
   }
-}
-
-export type SystemdMajorUpgrade = {
-  currentVersion: string;
-  targetVersion: string;
-};
-
-export async function detectSystemdMajorUpgrade(
-  target: Target,
-): Promise<SystemdMajorUpgrade | null> {
-  if (target.kind !== "nixos") return null;
-
-  const currentOutput = await runCapture("systemctl", ["--version"], {
-    check: false,
-    cwd: "/",
-  });
-  const targetVersion = (
-    await runCapture(
-      "nix",
-      [
-        "eval",
-        "--raw",
-        "--impure",
-        "--expr",
-        `(builtins.getFlake (toString (builtins.toPath ${JSON.stringify(REPO_DIR)}))).inputs.nixpkgs.legacyPackages.\${builtins.currentSystem}.systemd.version`,
-      ],
-      { check: false, cwd: REPO_DIR },
-    )
-  ).trim();
-
-  const currentMatch = currentOutput.match(/^systemd\s+(\d+)(?:\.(\d+))?/m);
-  const targetMatch = targetVersion.match(/^(\d+)(?:\.(\d+))?/);
-  if (!currentMatch || !targetMatch || currentMatch[1] === targetMatch[1]) {
-    return null;
-  }
-
-  return {
-    currentVersion: currentMatch[2]
-      ? `${currentMatch[1]}.${currentMatch[2]}`
-      : currentMatch[1],
-    targetVersion,
-  };
-}
-
-export function rebuildCommand(
-  target: Target,
-  currentHost: string,
-  nixosMode: "switch" | "boot" = "switch",
-): [string, string[]] {
-  if (target.kind === "darwin") {
-    return withEarlySudo([
-      "nh",
-      [
-        "darwin",
-        "switch",
-        "path:.",
-        "-H",
-        target.flakeAttr,
-        "--show-activation-logs",
-        "--",
-        "--impure",
-      ],
-    ]);
-  }
-
-  if (target.kind === "nixos") {
-    return withEarlySudo([
-      "nh",
-      [
-        "os",
-        nixosMode,
-        "path:.",
-        "-H",
-        target.flakeAttr,
-        "--show-activation-logs",
-        ...REBUILD_STORE_SPACE_ARGS,
-        ...DESKTOP_CACHE_ARGS,
-        "--",
-        "--impure",
-      ],
-    ]);
-  }
-
-  if (!target.remote) {
-    throw new Error(`${target.name} is remote but has no remote config.`);
-  }
-
-  const deployArgs = ["run", "path:.#deploy-rs", "--", "--skip-checks"];
-
-  if (target.remote.remoteBuildFrom.includes(currentHost)) {
-    deployArgs.push("--remote-build");
-  }
-
-  // Each host owns its GC policy. Forwarded thresholds also override the caller's
-  // temporary NIX_CONFIG settings during deploy-rs evaluation.
-  deployArgs.push(
-    `path:.#${target.remote.deployNode}`,
-    "--",
-    "--impure",
-    ...NIXOS_CACHE_ONLY_ARGS,
-  );
-
-  return ["nix", deployArgs];
-}
-
-export function postRebuildHealthCommand(
-  target: Target,
-  currentHost: string,
-): [string, string[]] | null {
-  if (target.kind !== "darwin" || currentHost !== target.name) return null;
-
-  return ["/run/current-system/sw/bin/rgo-laptop-health", []];
-}
-
-function withEarlySudo(command: [string, string[]]): [string, string[]] {
-  const [cmd, args] = command;
-
-  return [
-    "bash",
-    [
-      "-lc",
-      [
-        "sudo -v || exit $?",
-        "(",
-        "  while true; do",
-        "    sudo -n -v >/dev/null 2>&1 || exit 0",
-        "    sleep 60",
-        "  done",
-        ") &",
-        "sudo_keepalive=$!",
-        "trap 'kill \"$sudo_keepalive\" >/dev/null 2>&1 || true' EXIT",
-        '"$@"',
-      ].join("\n"),
-      "rebuild-with-sudo",
-      cmd,
-      ...args,
-    ],
-  ];
 }

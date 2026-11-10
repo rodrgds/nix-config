@@ -1,5 +1,5 @@
 import { REPO_DIR } from "./config";
-import type { CommandOptions, LogCommandOptions } from "./types";
+import type { CommandOptions } from "./types";
 
 export function quoteShell(value: string): string {
   return `'${value.replaceAll("'", `'\\''`)}'`;
@@ -125,29 +125,6 @@ async function nixDaemonCrashedSince(startedAt: number): Promise<boolean> {
   }
 }
 
-function stripAnsiAndControl(text: string): string {
-  return (
-    text
-      // ANSI escape sequences
-      .replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, "")
-      // Backspace redraw noise
-      .replace(/[^\n]\x08/g, "")
-      // Keep tabs/newlines, remove other C0 controls
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
-  );
-}
-
-export async function runLogged(
-  append: (line: string) => void,
-  cmd: string,
-  args: string[],
-  options: LogCommandOptions = {},
-): Promise<void> {
-  return timePhase(options.phase ?? cmd, append, () =>
-    loggedCommand(append, cmd, args, options),
-  );
-}
-
 export async function timePhase<T>(
   phase: string,
   append: (line: string) => void,
@@ -160,76 +137,5 @@ export async function timePhase<T>(
     append(
       `[timing] ${phase}: ${((performance.now() - startedAt) / 1000).toFixed(2)}s`,
     );
-  }
-}
-
-async function loggedCommand(
-  append: (line: string) => void,
-  cmd: string,
-  args: string[],
-  options: LogCommandOptions,
-): Promise<void> {
-  append(`$ ${visibleCommand(cmd, args)}`);
-
-  const proc = Bun.spawn([cmd, ...args], {
-    cwd: options.cwd ?? REPO_DIR,
-    env: {
-      ...Bun.env,
-      NO_COLOR: "1",
-      CLICOLOR: "0",
-      TERM: "dumb",
-      ...(options.env ?? {}),
-    },
-    stdin: options.stdin ?? "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-
-  const pump = async (
-    stream: ReadableStream<Uint8Array>,
-    prefix = "",
-  ): Promise<void> => {
-    const reader = stream.getReader();
-    const decoder = new TextDecoder();
-
-    let buffered = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) {
-        const rest = stripAnsiAndControl(buffered).trimEnd();
-        if (rest) {
-          for (const line of rest.split("\n")) {
-            append(`${prefix}${line}`);
-          }
-        }
-        break;
-      }
-
-      const raw = decoder.decode(value, { stream: true });
-
-      // Treat carriage-return progress updates as line replacements.
-      // This avoids repeated "building..." / spinner spam as much as possible.
-      buffered += raw.replace(/\r(?!\n)/g, "\n");
-
-      const parts = buffered.split("\n");
-      buffered = parts.pop() ?? "";
-
-      for (const part of parts) {
-        const cleaned = stripAnsiAndControl(part).trimEnd();
-        if (cleaned.length > 0) append(`${prefix}${cleaned}`);
-      }
-    }
-  };
-
-  await Promise.all([pump(proc.stdout), pump(proc.stderr)]);
-  const code = await proc.exited;
-
-  append(`exit code: ${code}`);
-  append("");
-
-  if ((options.check ?? true) && code !== 0) {
-    throw new Error(`Command failed (${code}): ${visibleCommand(cmd, args)}`);
   }
 }

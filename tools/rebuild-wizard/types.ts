@@ -1,27 +1,12 @@
 export type PlatformKind = "darwin" | "linux" | "other";
 
-type TargetBase = {
+export type Target = {
   name: string;
   cliFlag: `--${string}`;
-  flakeAttr: string;
-  description: string;
+  kind: "darwin" | "nixos" | "nixos-remote";
   allowedFrom: string[];
+  remoteBuildFrom?: string[];
 };
-
-export type Target = TargetBase &
-  (
-    | {
-        kind: "darwin" | "nixos";
-        remote?: never;
-      }
-    | {
-        kind: "nixos-remote";
-        remote: {
-          deployNode: string;
-          remoteBuildFrom: string[];
-        };
-      }
-  );
 
 export type CommandOptions = {
   phase?: string;
@@ -31,28 +16,8 @@ export type CommandOptions = {
   retryNixDaemonCrash?: boolean;
 };
 
-export type LogCommandOptions = CommandOptions & {
-  stdin?: "ignore" | "inherit";
-};
-
-export type MenuItem<T> = {
-  label: string;
-  value: T;
-  description?: string;
-};
-
-export type ChecklistItem = {
-  label: string;
-  value: string;
-  description?: string;
-};
-
-export type SecretFile = {
-  name: string;
-  encryptedFile: string;
-  plainFile: string;
-};
-
-export type RebuildOptions = {
-  updateInputs: string[];
-};
+export type Action =
+  | { kind: "rebuild"; target?: string }
+  | { kind: "update" }
+  | { kind: "secrets"; file?: string }
+  | { kind: "help" };

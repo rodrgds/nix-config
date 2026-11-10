@@ -1,1153 +1,234 @@
 #!/usr/bin/env bun
-/// <reference types="bun" />
-
-import { createCliRenderer } from "@opentui/core";
-import { lstat, stat } from "node:fs/promises";
-
-import { App } from "./app";
-import { generateCommitMessageWithOpenRouter } from "./ai";
+// Applies this repo to the current machine; see USAGE in targets.ts.
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { CURRENT_SYSTEM, HOME, REPO_DIR, STATE_DIR } from "./config";
+import { runCapture, runInteractive } from "./command";
 import {
-  AGE_KEY_FILE,
-  HOME,
-  OPENROUTER_MODEL,
-  REPO_DIR,
-  SECRETS_DIR,
-} from "./config";
+  assertNoPlainSecrets,
+  editSecrets,
+  exposeNewFilesToFlake,
+} from "./secrets";
 import {
-  commandExists,
-  runCapture,
-  runInteractive,
-  runLogged,
-  timePhase,
-  visibleCommand,
-} from "./command";
-import {
-  basename,
-  deleteFile,
-  dirExists,
-  fileExists,
-  join,
-  pathExists,
-  readText,
-  writeText,
-} from "./fs";
-import {
-  getGitDiff,
-  getGitDiffStat,
-  getGitStatus,
-  getUnstagedOrUntrackedFiles,
-  hasGitChanges,
-} from "./git";
-import {
+  USAGE,
   allowedTargetsFor,
-  defaultCommitMessage,
+  backgroundUpdateCommands,
+  buildCommand,
+  darwinActivateCommand,
+  deployCommand,
   detectHost,
   detectPlatform,
-  detectSystemdMajorUpgrade,
-  directTargetHelp,
-  directTargetFromArgs,
-  directTargetUsage,
-  isNixOS,
+  needsActivation,
+  nixosSwitchCommand,
   notify,
-  parseFlakeInputs,
+  parseArgs,
   postRebuildHealthCommand,
-  rebuildCommand,
+  systemdMajorChange,
 } from "./targets";
-import type { SystemdMajorUpgrade } from "./targets";
-import type {
-  CommandOptions,
-  MenuItem,
-  PlatformKind,
-  RebuildOptions,
-  SecretFile,
-  Target,
-} from "./types";
+import type { CommandOptions, PlatformKind, Target } from "./types";
 
-async function showGitDiff(app: App): Promise<void> {
-  const status = await getGitStatus();
-  const stat = await getGitDiffStat();
-  const diff = await getGitDiff();
+// Notifications only help when the terminal was likely left unattended.
+const NOTIFY_AFTER_SECONDS = 30;
 
-  await app.coloredDiff("Git diff", `Repo: ${REPO_DIR}`, status, stat, diff, {
-    allowBack: true,
-    enterLabel: "Enter continue",
-  });
-}
-
-async function maybeStageBeforeInitialDiff(app: App): Promise<void> {
-  const files = await getUnstagedOrUntrackedFiles();
-  if (files.length === 0) return;
-
-  const list = files.map((file) => `  - ${file}`).join("\n");
-  await app.scrollText(
-    "Unstaged / untracked files",
-    "These are modified-but-not-staged or untracked files. Plaintext secrets and node_modules are excluded.",
-    list,
-    { allowBack: false, enterLabel: "Enter continue" },
-  );
-
-  const shouldStage = await app.confirm(
-    "Stage files?",
-    `Stage these ${files.length} unstaged/untracked file${files.length === 1 ? "" : "s"} before showing the initial diff?`,
-    false,
-  );
-
-  if (!shouldStage) return;
-
-  await app.logScreen(
-    "Stage files",
-    "Running git add -A -- <selected files>",
-    async (append) => {
-      await runLogged(append, "git", ["add", "-A", "--", ...files], {
-        cwd: REPO_DIR,
-      });
-    },
-  );
-}
-
-async function chooseTarget(
-  app: App,
-  currentHost: string,
-  allowed: Target[],
-): Promise<Target | null> {
-  if (allowed.length === 0) {
-    await app.scrollText(
-      "No allowed targets",
-      `Current host: ${currentHost}`,
-      "No rebuild targets are allowed from this host.\n\nSet NIX_REBUILD_HOST=rgo-desktop if hostname detection is wrong.",
-      { allowBack: true },
-    );
+function realpathOrNull(path: string): string | null {
+  try {
+    return realpathSync(path);
+  } catch {
     return null;
   }
-
-  return await app.menu(
-    "Target",
-    `Current host: ${currentHost}`,
-    allowed.map((target) => ({
-      label: target.name,
-      value: target,
-      description: target.description,
-    })),
-    { allowBack: true },
-  );
 }
 
-async function chooseRebuildOptions(app: App): Promise<RebuildOptions | null> {
-  const inputs = await parseFlakeInputs();
-  const defaultInputs: string[] = [];
-
-  const selectedInputs = await app.checklist(
-    "Flake inputs",
-    "Choose inputs to update before rebuilding. Default is no input updates.",
-    inputs.map((input) => ({
-      label: input,
-      value: input,
-      description: "Manual update only; default rebuild does not update inputs.",
-    })),
-    [],
-    {
-      allowBack: true,
-      controls:
-        "Space toggles · Enter continues · d default none · a all · n none · q/Esc back",
-      onDefault: () => defaultInputs,
-      onAll: () => inputs,
-      onNone: () => [],
-    },
-  );
-
-  if (selectedInputs === null) return null;
-
-  return {
-    updateInputs: selectedInputs,
-  };
-}
-
-async function listPlainSecretFiles(): Promise<string[]> {
+function readOrNull(path: string): string | null {
   try {
-    try {
-      await lstat(SECRETS_DIR);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
-      throw error;
-    }
-    if (!(await stat(SECRETS_DIR)).isDirectory()) {
-      throw new Error("Secrets path is not a directory.");
-    }
-
-    // path:. imports ignored files too. Match every extension and fail closed
-    // on unreadable directories, broken roots, or symlink traversal errors.
-    const output = await runCapture(
-      "find",
-      ["-L", SECRETS_DIR, "-name", "*_plain*", "-print0"],
-      { cwd: REPO_DIR },
-    );
-    return output.split("\0").filter(Boolean).sort();
-  } catch (error) {
-    throw new Error(
-      `Cannot scan plaintext secrets in ${SECRETS_DIR}: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    return readFileSync(path, "utf8").trim() || null;
+  } catch {
+    return null;
   }
 }
 
-async function assertNoPlainSecretsForRebuild(): Promise<void> {
-  const files = await listPlainSecretFiles();
-  if (files.length === 0) return;
-  throw new Error(
-    [
-      "Refusing to rebuild while plaintext secret paths exist:",
-      ...files.map((file) => `  - ${JSON.stringify(file)}`),
-      "",
-      "path:. copies Git-ignored files into the world-readable Nix store.",
-      "Encrypt or remove these paths using the Secrets manager before rebuilding.",
-    ].join("\n"),
-  );
-}
-
-const NINE_ROUTER_MODELS_URL = "http://rgo-nas:20128/v1/models";
-const COMBOS_FILE = join(
-  REPO_DIR,
-  "modules/shared/9router/combos.json",
-);
-
-async function readNineRouterApiKey(): Promise<string | null> {
-  const uid = (
-    await runCapture("id", ["-u"], { cwd: "/", check: false })
-  ).trim();
-
-  const candidates = [
-    Bun.env.XDG_RUNTIME_DIR
-      ? join(Bun.env.XDG_RUNTIME_DIR, "secrets/nine_router_api_key")
-      : null,
-    uid ? `/run/user/${uid}/secrets/nine_router_api_key` : null,
-    HOME ? join(HOME, ".config/sops-nix/secrets/nine_router_api_key") : null,
-  ].filter(Boolean) as string[];
-
-  for (const candidate of candidates) {
-    if (!(await fileExists(candidate))) continue;
-    const value = (await readText(candidate)).trim();
-    if (value) return value;
-  }
-
-  return null;
-}
-
-async function refreshNineRouterCombos(
-  append: (line: string) => void,
+async function run(
+  [cmd, args]: [string, string[]],
+  phase: string,
+  options: CommandOptions = {},
 ): Promise<void> {
-  const apiKey = await readNineRouterApiKey();
-  if (!apiKey) {
-    append("9Router API key not found; keeping the committed combos snapshot.");
+  const code = await runInteractive(cmd, args, {
+    cwd: REPO_DIR,
+    check: false,
+    phase,
+    ...options,
+  });
+  if (code !== 0) throw new Error(`${phase} failed with exit code ${code}.`);
+}
+
+async function rebuildLocal(target: Target, currentHost: string): Promise<void> {
+  mkdirSync(STATE_DIR, { recursive: true });
+  const outLink = join(STATE_DIR, `${target.name}-system`);
+  const stamp = join(STATE_DIR, `${target.name}-activated`);
+
+  await run(buildCommand(target, outLink), "evaluation and build", {
+    retryNixDaemonCrash: true,
+  });
+  const built = realpathSync(outLink);
+  if (!needsActivation(built, realpathOrNull(CURRENT_SYSTEM), readOrNull(stamp))) {
+    console.log(`\n${target.name} is already running this configuration.`);
     return;
   }
 
+  if (target.kind === "darwin") {
+    await run(darwinActivateCommand(built), "activation");
+  } else {
+    const upgrade = systemdMajorChange(
+      realpathOrNull(join(CURRENT_SYSTEM, "systemd")),
+      realpathOrNull(join(built, "systemd")),
+    );
+    if (upgrade) {
+      console.log(
+        `systemd ${upgrade.from} -> ${upgrade.to}: installing a boot generation instead of switching live. Reboot to finish.`,
+      );
+    }
+    await run(nixosSwitchCommand(target, upgrade ? "boot" : "switch"), "activation", {
+      retryNixDaemonCrash: true,
+    });
+  }
+  writeFileSync(stamp, `${realpathOrNull(CURRENT_SYSTEM) ?? ""}\n`);
+
+  const health = postRebuildHealthCommand(target, currentHost);
+  if (health) await run(health, "post-rebuild health");
+}
+
+const NINE_ROUTER_MODELS_URL = "http://rgo-nas:20128/v1/models";
+const COMBOS_FILE = "modules/shared/9router/combos.json";
+
+async function refreshNineRouterCombos(): Promise<void> {
+  const uid = (await runCapture("id", ["-u"], { cwd: "/", check: false })).trim();
+  const apiKey = [
+    Bun.env.XDG_RUNTIME_DIR && join(Bun.env.XDG_RUNTIME_DIR, "secrets/nine_router_api_key"),
+    uid && `/run/user/${uid}/secrets/nine_router_api_key`,
+    HOME && join(HOME, ".config/sops-nix/secrets/nine_router_api_key"),
+  ]
+    .filter((path): path is string => Boolean(path))
+    .map(readOrNull)
+    .find(Boolean);
+  if (!apiKey) {
+    console.log("9Router API key not found; keeping the committed combos.");
+    return;
+  }
   try {
     const response = await fetch(NINE_ROUTER_MODELS_URL, {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
     const body = (await response.json()) as {
-      data: { id: string; owned_by: string }[];
+      data?: { id: string; owned_by: string }[];
     };
     const combos = (body.data ?? [])
       .filter((model) => model.owned_by === "combo")
       .map((model) => ({ alias: model.id, displayName: model.id }))
       .sort((a, b) => a.alias.localeCompare(b.alias));
-
     if (combos.length === 0) {
-      append("9Router reports no combos; keeping the committed snapshot.");
+      console.log("9Router reports no combos; keeping the committed combos.");
       return;
     }
-
-    await writeText(
-      COMBOS_FILE,
+    writeFileSync(
+      join(REPO_DIR, COMBOS_FILE),
       `${JSON.stringify({ models: combos }, null, 2)}\n`,
     );
-    await runCapture("git", ["add", "--", COMBOS_FILE], {
-      cwd: REPO_DIR,
-      check: false,
-    });
-    append(
-      `Refreshed 9Router combos: ${combos.map((c) => c.alias).join(", ")}.`,
-    );
+    console.log(`9Router combos: ${combos.map((c) => c.alias).join(", ")}.`);
   } catch (error) {
-    append(
-      `9Router fetch failed (${error instanceof Error ? error.message : error}); keeping the committed snapshot.`,
+    console.log(
+      `9Router fetch failed (${error instanceof Error ? error.message : error}); keeping the committed combos.`,
     );
   }
 }
 
-async function runPreparationAndRebuild(
-  app: App,
-  platform: PlatformKind,
-  currentHost: string,
-  target: Target,
-  options: RebuildOptions,
-): Promise<boolean> {
-  const preparation = {
-    systemdUpgrade: null as SystemdMajorUpgrade | null,
-  };
-  const prepared = await app.logScreen(
-    "Preparation log",
-    `Target: ${target.name}. Running flake updates, statix, and nixfmt.`,
-    async (append) => {
-      append("Refreshing 9Router combo catalog from the proxy...");
-      await timePhase("9Router catalog refresh", append, () =>
-        refreshNineRouterCombos(append),
-      );
-
-      if (options.updateInputs.length > 0) {
-        await runLogged(
-          append,
-          "nix",
-          ["flake", "update", ...options.updateInputs, "--flake", REPO_DIR],
-          { cwd: REPO_DIR, phase: "selected input updates" },
-        );
-      } else {
-        append("Skipping flake input updates.");
-        append("");
-      }
-
-      if (target.kind === "nixos-remote") {
-        append("Evaluating all flake and deploy-rs checks...");
-        await runLogged(
-          append,
-          "nix",
-          [
-            "flake",
-            "check",
-            "path:.",
-            "--no-build",
-            "--all-systems",
-            "--impure",
-          ],
-          { cwd: REPO_DIR, phase: "all-system check evaluation (no builds)" },
-        );
-        append("");
-      }
-
-      if (await commandExists("statix")) {
-        await runLogged(append, "statix", ["check", "."], {
-          cwd: REPO_DIR,
-          check: false,
-          phase: "statix",
-        });
-      } else {
-        append("statix not found; skipping.");
-        append("");
-      }
-
-      if (await commandExists("nixfmt")) {
-        await runLogged(
-          append,
-          "bash",
-          [
-            "-lc",
-            "find . -name '*.nix' -not -path './tools/rebuild-wizard/node_modules/*' -exec nixfmt {} +",
-          ],
-          { cwd: REPO_DIR, check: false, phase: "nixfmt" },
-        );
-      } else {
-        append("nixfmt not found; skipping.");
-        append("");
-      }
-
-      if (target.kind === "nixos") {
-        append("Checking for a systemd major-version upgrade...");
-        preparation.systemdUpgrade = await timePhase(
-          "systemd version inspection",
-          append,
-          () => detectSystemdMajorUpgrade(target),
-        );
-      }
-      append(
-        preparation.systemdUpgrade
-          ? `systemd ${preparation.systemdUpgrade.currentVersion} -> ${preparation.systemdUpgrade.targetVersion} requires a reboot-safe build.`
-          : "No systemd major-version upgrade detected.",
-      );
-    },
+async function startBackgroundUpdates(platform: PlatformKind): Promise<void> {
+  const uid = (await runCapture("id", ["-u"], { cwd: "/", check: false })).trim();
+  for (const [cmd, args] of backgroundUpdateCommands(platform, uid)) {
+    await runCapture(cmd, args, { cwd: "/", check: false });
+  }
+  console.log(
+    `Updating npm CLIs and skills${platform === "darwin" ? " and Homebrew apps" : ""} in the background.`,
   );
-
-  if (!prepared) return false;
-
-  const { systemdUpgrade } = preparation;
-  const nixosMode = systemdUpgrade ? "boot" : "switch";
-
-  if (systemdUpgrade) {
-    await app.scrollText(
-      "Reboot required",
-      `systemd ${systemdUpgrade.currentVersion} -> ${systemdUpgrade.targetVersion}`,
-      [
-        "A live PID 1 re-exec across systemd major versions can hang and leave services stopped.",
-        "",
-        "The wizard will install this generation as the boot default without activating it live.",
-        "Reboot after the rebuild completes to finish the upgrade.",
-      ].join("\n"),
-      { allowBack: false, enterLabel: "Enter build boot generation" },
-    );
-  }
-
-  const [cmd, args] = rebuildCommand(target, currentHost, nixosMode);
-  const buildsRemotely =
-    target.kind === "nixos-remote" &&
-    target.remote?.remoteBuildFrom.includes(currentHost);
-  const subtitle = systemdUpgrade
-    ? `Target: ${target.name}. Building the boot generation; reboot required.`
-    : target.kind === "nixos-remote"
-      ? `Target: ${target.name}. Building ${buildsRemotely ? "on the VPS" : "locally"} with automatic rollback.`
-      : `Target: ${target.name}. Asking for sudo up front and keeping it fresh while building.`;
-
-  const success = await app.externalCommandScreen(
-    "Rebuild",
-    subtitle,
-    cmd,
-    args,
-    {
-      cwd: REPO_DIR,
-      retryNixDaemonCrash: true,
-      phase: "rebuild command (evaluation, build and activation)",
-    },
-  );
-
-  const healthCommand = postRebuildHealthCommand(target, currentHost);
-  if (success && healthCommand) {
-    const [healthCmd, healthArgs] = healthCommand;
-    const healthy = await app.externalCommandScreen(
-      "Post-rebuild health",
-      `Target: ${target.name}. Checking live desktop services and host security.`,
-      healthCmd,
-      healthArgs,
-      { cwd: REPO_DIR, phase: "post-rebuild health" },
-    );
-    if (!healthy) return false;
-  }
-
-  if (success) {
-    const message = systemdUpgrade
-      ? `${target.name}: reboot required`
-      : target.name;
-    await notify(platform, "Rebuild successful", message);
-
-    if (systemdUpgrade) {
-      await app.scrollText(
-        "Rebuild successful",
-        target.name,
-        "The new generation is the boot default. Reboot to activate it.",
-        { allowBack: false },
-      );
-    }
-  }
-
-  return success;
 }
 
-async function commitFlow(app: App, target: Target): Promise<void> {
-  if (!(await hasGitChanges())) {
-    await app.scrollText(
-      "Commit",
-      "No changes",
-      "There are no changes to commit.",
-      { allowBack: false },
-    );
-    return;
-  }
-
-  const plainSecrets = await listPlainSecretFiles();
-  if (plainSecrets.length > 0) {
-    await app.scrollText(
-      "Commit blocked",
-      "Plaintext secrets found",
-      [
-        "Refusing to commit while plaintext secret files exist:",
-        "",
-        ...plainSecrets.map((file) => `  - ${file}`),
-        "",
-        "Encrypt or remove them first.",
-      ].join("\n"),
-      { allowBack: false },
-    );
-    return;
-  }
-
-  const wantsCommit = await app.confirm(
-    "Commit changes?",
-    "Review the final diff, then choose a commit message?",
-    false,
-  );
-
-  if (!wantsCommit) return;
-
-  await showGitDiff(app);
-
-  const fallback = await defaultCommitMessage(target);
-  const mode = await app.menu(
-    "Commit message",
-    "Choose the commit message source.",
-    [
-      {
-        label: `Use default: ${fallback}`,
-        value: "default",
-        description: "Fastest option.",
-      },
-      {
-        label: "Generate with OpenRouter",
-        value: "ai",
-        description: `Uses ${OPENROUTER_MODEL} and your openrouter_api_key secret/env.`,
-      },
-      {
-        label: "Write manually",
-        value: "manual",
-        description: "Opens a one-line input inside the TUI.",
-      },
-      {
-        label: "Skip commit",
-        value: "skip",
-      },
-    ] as MenuItem<"default" | "ai" | "manual" | "skip">[],
-    { allowBack: true },
-  );
-
-  if (!mode || mode === "skip") return;
-
-  let message = fallback;
-
-  if (mode === "ai") {
-    const suggested = await app.logScreen(
-      "OpenRouter",
-      "Generating commit message from git diff.",
-      async (append) => {
-        append(`Model: ${OPENROUTER_MODEL}`);
-        const generated = await generateCommitMessageWithOpenRouter();
-        if (!generated) {
-          append("No commit message returned. Falling back to default.");
-          return;
-        }
-        message = generated;
-        append(`Suggested: ${message}`);
-      },
-    );
-
-    if (!suggested) message = fallback;
-
-    const edited = await app.input(
-      "Edit commit message",
-      "Review or edit the generated message.",
-      message,
-    );
-    if (edited === null) return;
-    message = edited || fallback;
-  }
-
-  if (mode === "manual") {
-    const manual = await app.input(
-      "Manual commit message",
-      "Write one commit subject line.",
-      fallback,
-    );
-    if (manual === null) return;
-    message = manual || fallback;
-  }
-
-  const committed = await app.logScreen(
-    "Commit",
-    `Message: ${message}`,
-    async (append) => {
-      await runLogged(append, "git", ["add", "-A"], { cwd: REPO_DIR });
-      await runLogged(append, "git", ["commit", "-m", message], {
-        cwd: REPO_DIR,
-      });
-    },
-  );
-
-  if (!committed) return;
-
-  const push = await app.confirm(
-    "Push",
-    "Push the new commit now? This is never automatic.",
-    false,
-  );
-
-  if (!push) return;
-
-  await app.logScreen("Push", "Running git push.", async (append) => {
-    await runLogged(append, "git", ["push"], { cwd: REPO_DIR });
-  });
-}
-
-async function rebuildWizard(
-  app: App,
-  platform: PlatformKind,
-  currentHost: string,
-  allowed: Target[],
-): Promise<void> {
-  await maybeStageBeforeInitialDiff(app);
-  await showGitDiff(app);
-
-  const target = await chooseTarget(app, currentHost, allowed);
-  if (!target) return;
-
-  const options = await chooseRebuildOptions(app);
-  if (!options) return;
-
-  const confirmed = await app.confirm(
-    "Confirm rebuild",
-    `Run statix, nixfmt, then rebuild ${target.name}?`,
-    true,
-  );
-  if (!confirmed) return;
-
-  try {
-    await assertNoPlainSecretsForRebuild();
-  } catch (error) {
-    await app.scrollText(
-      "Rebuild blocked",
-      "Plaintext safety preflight",
-      error instanceof Error ? error.message : String(error),
-      { allowBack: false },
-    );
-    return;
-  }
-
-  const success = await runPreparationAndRebuild(
-    app,
-    platform,
-    currentHost,
-    target,
-    options,
-  );
-  if (!success) {
-    await notify(platform, "Rebuild failed", target.name);
-    return;
-  }
-
-  await commitFlow(app, target);
-}
-
-async function sopsCommand(): Promise<[string, string[]]> {
-  if (await commandExists("sops")) return ["sops", []];
-  return ["nix", ["shell", "nixpkgs#sops", "-c", "sops"]];
-}
-
-async function secretFiles(): Promise<SecretFile[]> {
-  const roots = [...new Set([SECRETS_DIR, join(REPO_DIR, "secrets")])];
-
-  const existingRoots: string[] = [];
-  for (const root of roots) {
-    if (await dirExists(root)) existingRoots.push(root);
-  }
-
-  if (existingRoots.length === 0) return [];
-
-  const found = new Set<string>();
-
-  for (const root of existingRoots) {
-    const output = await runCapture(
-      "find",
-      [
-        "-L",
-        root,
-        "(",
-        "-type",
-        "f",
-        "-o",
-        "-type",
-        "l",
-        ")",
-        "(",
-        "-name",
-        "*.yaml",
-        "-o",
-        "-name",
-        "*.yml",
-        ")",
-      ],
-      { cwd: REPO_DIR, check: false },
-    );
-
-    for (const file of output.split("\n").filter(Boolean)) {
-      const base = basename(file);
-      if (base.includes("_plain")) continue;
-      if (base === ".sops.yaml" || base === ".sops.yml") continue;
-      found.add(file);
-    }
-  }
-
-  return [...found].sort().map((file) => {
-    const base = basename(file).replace(/\.(yaml|yml)$/, "");
-    const dir = file.split("/").slice(0, -1).join("/") || SECRETS_DIR;
-    const ext = file.endsWith(".yml") ? "yml" : "yaml";
-
-    return {
-      name: base,
-      encryptedFile: file,
-      plainFile: join(dir, `${base}_plain.${ext}`),
-    };
-  });
-}
-
-async function sopsInvocation(
-  args: string[],
-  options: CommandOptions = {},
-): Promise<{ cmd: string; args: string[]; options: CommandOptions }> {
-  const [cmd, prefix] = await sopsCommand();
-  return {
-    cmd,
-    args: [...prefix, "--config", join(SECRETS_DIR, ".sops.yaml"), ...args],
-    options: {
-      cwd: REPO_DIR,
-      ...options,
-      env: { SOPS_AGE_KEY_FILE: AGE_KEY_FILE, ...(options.env ?? {}) },
-    },
-  };
-}
-
-async function runSopsCapture(args: string[]): Promise<string> {
-  const command = await sopsInvocation(args);
-  return await runCapture(command.cmd, command.args, command.options);
-}
-
-async function secretsWizard(app: App): Promise<void> {
-  const files = await secretFiles();
-
-  if (files.length === 0) {
-    await app.scrollText(
-      "Secrets",
-      SECRETS_DIR,
-      "No encrypted YAML files found.",
-      { allowBack: true },
-    );
-    return;
-  }
-
-  const secret = await app.menu(
-    "Secrets file",
-    `Directory: ${SECRETS_DIR}`,
-    files.map((file) => ({
-      label: file.name,
-      value: file,
-      description: basename(file.encryptedFile),
-    })),
-    { allowBack: true },
-  );
-
-  if (!secret) return;
-
-  const action = await app.menu(
-    "Secrets action",
-    secret.name,
-    [
-      {
-        label: "Decrypt to *_plain.yaml",
-        value: "decrypt-file",
-        description:
-          "Writes plaintext locally; rebuild and git commit are blocked until encrypted/removed.",
-      },
-      {
-        label: "Encrypt *_plain.yaml and delete it",
-        value: "encrypt",
-        description:
-          "Reads the plaintext file, writes encrypted YAML, then removes plaintext.",
-      },
-      {
-        label: "View decrypted output inside TUI",
-        value: "view",
-        description: "Useful for inspection. Avoid screenshots/recording.",
-      },
-      {
-        label: "Edit directly with sops",
-        value: "edit",
-        description:
-          "External editor action; this is the only action that cannot stay fully inside TUI.",
-      },
-      {
-        label: "List plaintext leftovers",
-        value: "list-plain",
-      },
-    ] as MenuItem<
-      "decrypt-file" | "encrypt" | "view" | "edit" | "list-plain"
-    >[],
-    { allowBack: true },
-  );
-
-  if (!action) return;
-
-  if (action === "decrypt-file") {
-    const overwrite =
-      !(await pathExists(secret.plainFile)) ||
-      (await app.confirm(
-        "Overwrite plaintext?",
-        `${secret.plainFile} already exists. Overwrite?`,
-        false,
-      ));
-
-    if (!overwrite) return;
-
-    await app.logScreen("Decrypt", secret.name, async (append) => {
-      append(`Decrypting to ${secret.plainFile}`);
-      const decrypted = await runSopsCapture([
-        "--decrypt",
-        secret.encryptedFile,
-      ]);
-      await writeText(secret.plainFile, decrypted);
-      await runLogged(append, "chmod", ["600", secret.plainFile], {
-        cwd: SECRETS_DIR,
-        check: false,
-      });
-      append("Done.");
-    });
-    return;
-  }
-
-  if (action === "encrypt") {
-    if (!(await pathExists(secret.plainFile))) {
-      await app.scrollText(
-        "Encrypt",
-        secret.name,
-        `Plain file not found:\n${secret.plainFile}`,
-        { allowBack: false },
-      );
-      return;
-    }
-
-    const ok = await app.confirm(
-      "Encrypt",
-      `Encrypt ${secret.plainFile} into ${secret.encryptedFile} and delete plaintext?`,
-      true,
-    );
-
-    if (!ok) return;
-
-    await app.logScreen("Encrypt", secret.name, async (append) => {
-      append(`Encrypting ${secret.plainFile}`);
-      const encrypted = await runSopsCapture(["--encrypt", secret.plainFile]);
-      await writeText(secret.encryptedFile, encrypted);
-      await deleteFile(secret.plainFile);
-      append("Encrypted and removed plaintext file.");
-    });
-    return;
-  }
-
-  if (action === "view") {
-    const decrypted = await runSopsCapture(["--decrypt", secret.encryptedFile]);
-    await app.scrollText(
-      "Decrypted secrets",
-      `${secret.name} · output is not written to disk`,
-      decrypted,
-      { allowBack: false },
-    );
-    return;
-  }
-
-  if (action === "edit") {
-    const command = await sopsInvocation([secret.encryptedFile], {
-      cwd: SECRETS_DIR,
+async function offerUpdateCommit(): Promise<void> {
+  const changed = (
+    await runCapture("git", ["status", "--porcelain", "--", "flake.lock", COMBOS_FILE], {
       check: false,
-    });
+    })
+  )
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.slice(3));
+  if (changed.length === 0 || !process.stdin.isTTY) return;
+  const answer = prompt(`Commit ${changed.join(" and ")}? [Y/n]`) ?? "";
+  if (/^n/i.test(answer.trim())) return;
+  await assertNoPlainSecrets("commit");
+  const date = new Date().toISOString().slice(0, 10);
+  await run(["git", ["commit", "-m", `flake: update inputs ${date}`, "--", ...changed]], "commit");
+}
 
-    await app.externalCommandScreen(
-      "sops edit",
-      `${secret.name} - sops and $EDITOR need the real terminal`,
-      command.cmd,
-      command.args,
-      command.options,
-    );
+async function main(): Promise<void> {
+  const action = parseArgs(Bun.argv.slice(2));
+  if (action.kind === "help") {
+    console.log(USAGE);
+    return;
+  }
+  if (action.kind === "secrets") {
+    process.exitCode = await editSecrets(action.file);
     return;
   }
 
-  if (action === "list-plain") {
-    const leftovers = await listPlainSecretFiles();
-    await app.scrollText(
-      "Plaintext leftovers",
-      SECRETS_DIR,
-      leftovers.length ? leftovers.join("\n") : "No plaintext leftovers found.",
-      { allowBack: false },
-    );
-  }
-}
-
-type CleanupAction = {
-  label: string;
-  value: string;
-  description?: string;
-  command: [cmd: string, args: string[]];
-  options?: CommandOptions;
-};
-
-const CLEANUP_ACTIONS: CleanupAction[] = [
-  {
-    label: "Safe cache cleanup (pressure mode)",
-    value: "safe-cache-pressure",
-    description:
-      "Clear only reproducible package/build caches; preserve app data.",
-    command: ["rgo-cache-cleanup", ["--pressure"]],
-    options: { check: false },
-  },
-  {
-    label: "nh clean all --keep 5",
-    value: "nh-keep-5",
-    description: "Keep a few generations.",
-    command: ["nh", ["clean", "all", "--keep", "5"]],
-  },
-  {
-    label: "nh clean all",
-    value: "nh-clean-all",
-    description: "More aggressive nh cleanup.",
-    command: ["nh", ["clean", "all"]],
-  },
-  {
-    label: "nix store optimise",
-    value: "optimise",
-    description: "Hard-link identical store paths.",
-    command: ["nix", ["store", "optimise"]],
-  },
-  {
-    label: "nix-collect-garbage -d",
-    value: "gc-delete",
-    description: "Delete old generations and collect garbage.",
-    command: ["nix-collect-garbage", ["-d"]],
-  },
-  {
-    label: "Show GC roots",
-    value: "roots",
-    description: "Inspect why paths are kept alive.",
-    command: ["nix-store", ["--gc", "--print-roots"]],
-    options: { check: false },
-  },
-];
-
-async function cleanupWizard(app: App): Promise<void> {
-  const action = await app.menu(
-    "Cleanup tools",
-    "Choose one cleanup action.",
-    CLEANUP_ACTIONS.map(({ label, value, description }) => ({
-      label,
-      value,
-      description,
-    })),
-    { allowBack: true },
-  );
-
-  if (!action) return;
-
-  const selected = CLEANUP_ACTIONS.find((item) => item.value === action);
-  if (!selected) return;
-
-  await app.logScreen("Cleanup", selected.value, async (append) => {
-    const [cmd, args] = selected.command;
-    await runLogged(append, cmd, args, {
-      cwd: REPO_DIR,
-      ...(selected.options ?? {}),
-    });
-  });
-}
-
-async function mainLoop(app: App): Promise<void> {
-  if (!(await pathExists(join(REPO_DIR, "flake.nix")))) {
-    await app.scrollText(
-      "Error",
-      "Missing flake.nix",
-      `No flake.nix found at:\n${REPO_DIR}\n\nSet NIX_CONFIG_DIR to override.`,
-      { allowBack: false },
-    );
-    return;
-  }
-
-  const platform = await detectPlatform();
-  const nixos = await isNixOS(platform);
-  const currentHost = await detectHost();
-  const allowed = await allowedTargetsFor(currentHost, platform);
-
-  while (true) {
-    const action = await app.menu(
-      "rgo nix rebuild wizard",
-      [
-        `Repo: ${REPO_DIR}`,
-        `Host: ${currentHost}`,
-        `System: ${platform}${nixos ? " / NixOS" : ""}`,
-        `Allowed targets: ${allowed.map((target) => target.name).join(", ") || "none"}`,
-      ].join("\n"),
-      [
-        {
-          label: "Rebuild / update wizard",
-          value: "rebuild",
-          description:
-            "Diff → target → flake inputs → lint/format → rebuild → commit/push.",
-        },
-        {
-          label: "Show git diff",
-          value: "diff",
-          description:
-            "Status, diff stat, full diff, and untracked files inside the TUI.",
-        },
-        {
-          label: "Secrets manager",
-          value: "secrets",
-          description:
-            "Decrypt/encrypt/view sops YAML files with plaintext safety checks.",
-        },
-        {
-          label: "Cleanup tools",
-          value: "cleanup",
-          description:
-            "nh clean, nix store optimise, garbage collection, GC roots.",
-        },
-        {
-          label: "Quit",
-          value: "quit",
-        },
-      ] as MenuItem<"rebuild" | "diff" | "secrets" | "cleanup" | "quit">[],
-    );
-
-    if (action === "quit" || action === null) return;
-    if (action === "diff") await showGitDiff(app);
-    if (action === "rebuild") {
-      await rebuildWizard(app, platform, currentHost, allowed);
-    }
-    if (action === "secrets") await secretsWizard(app);
-    if (action === "cleanup") await cleanupWizard(app);
-  }
-}
-
-async function directRebuild(targetName: string): Promise<void> {
-  if (!(await pathExists(join(REPO_DIR, "flake.nix")))) {
-    throw new Error(
-      `No flake.nix found at ${REPO_DIR}. Set NIX_CONFIG_DIR to override.`,
-    );
-  }
-
+  const startedAt = performance.now();
   const platform = await detectPlatform();
   const currentHost = await detectHost();
-  const allowed = await allowedTargetsFor(currentHost, platform);
+  const allowed = allowedTargetsFor(currentHost, platform);
+  const targetName = (action.kind === "rebuild" && action.target) || currentHost;
   const target = allowed.find(({ name }) => name === targetName);
-
   if (!target) {
     throw new Error(
-      `${targetName} cannot be rebuilt from ${currentHost} on ${platform}. Allowed targets: ${allowed.map(({ name }) => name).join(", ") || "none"}.`,
+      `${targetName} cannot be rebuilt from ${currentHost} on ${platform}. Allowed: ${allowed.map(({ name }) => name).join(", ") || "none"} (set NIX_REBUILD_HOST if the hostname is wrong).`,
     );
   }
-
-  await assertNoPlainSecretsForRebuild();
-  const systemdUpgrade = target.kind === "nixos"
-    ? await timePhase("systemd version inspection", console.log, () =>
-        detectSystemdMajorUpgrade(target),
-      )
-    : null;
-  const nixosMode = systemdUpgrade ? "boot" : "switch";
-  const [cmd, args] = rebuildCommand(target, currentHost, nixosMode);
-
-  if (systemdUpgrade) {
-    console.log(
-      `systemd ${systemdUpgrade.currentVersion} -> ${systemdUpgrade.targetVersion}: building a boot generation; reboot is required.`,
-    );
-  }
-  console.log(`Rebuilding ${target.name}...`);
-  console.log(visibleCommand(cmd, args));
-  console.log("");
-
-  const code = await runInteractive(cmd, args, {
-    cwd: REPO_DIR,
-    check: false,
-    retryNixDaemonCrash: true,
-    phase: "rebuild command (evaluation, build and activation)",
-  });
-
-  if (code !== 0) {
-    await notify(platform, "Rebuild failed", target.name);
-    throw new Error(`Rebuild failed with exit code ${code}.`);
-  }
-
-  const healthCommand = postRebuildHealthCommand(target, currentHost);
-  if (healthCommand) {
-    const [healthCmd, healthArgs] = healthCommand;
-    console.log("");
-    console.log("Checking live laptop health...");
-    const healthCode = await runInteractive(healthCmd, healthArgs, {
-      cwd: REPO_DIR,
-      check: false,
-      phase: "post-rebuild health",
-    });
-    if (healthCode !== 0) {
-      await notify(platform, "Post-rebuild health failed", target.name);
-      throw new Error(`Post-rebuild health failed with exit code ${healthCode}.`);
-    }
-  }
-
-  await notify(
-    platform,
-    "Rebuild successful",
-    systemdUpgrade ? `${target.name}: reboot required` : target.name,
-  );
-}
-
-async function tuiMain(): Promise<void> {
-  const renderer = await createCliRenderer({
-    exitOnCtrlC: false,
-    targetFps: 30,
-    useAlternateScreen: true,
-  } as Parameters<typeof createCliRenderer>[0] & {
-    useAlternateScreen: boolean;
-  });
-
-  const app = new App(renderer);
-  renderer.start();
-
-  // Watch for the terminal dying under us (closed window, revoked pty):
-  // stdin/stdout then fail with EIO, but nothing terminates the TUI loop
-  // and the renderer keeps polling a dead stream at full CPU. Exit cleanly
-  // instead of spinning forever.
-  let exiting = false;
-  const exitOnDeadTerminal = () => {
-    if (exiting) return;
-    exiting = true;
-    try {
-      app.destroy();
-    } finally {
-      process.exit(0);
-    }
-  };
-  process.stdin.on("error", exitOnDeadTerminal);
-  process.stdin.on("close", exitOnDeadTerminal);
-  process.stdout.on("error", exitOnDeadTerminal);
-  process.on("SIGTERM", exitOnDeadTerminal);
 
   try {
-    await mainLoop(app);
+    await assertNoPlainSecrets("rebuild");
+    await exposeNewFilesToFlake();
+
+    if (action.kind === "update") {
+      await run(["nix", ["flake", "update", "--flake", REPO_DIR]], "flake input update");
+      await refreshNineRouterCombos();
+    }
+
+    if (target.kind === "nixos-remote") {
+      await run(deployCommand(target, currentHost), "deploy", {
+        retryNixDaemonCrash: true,
+      });
+    } else {
+      await rebuildLocal(target, currentHost);
+    }
+
+    if (action.kind === "update") {
+      await startBackgroundUpdates(platform);
+      await offerUpdateCommit();
+    }
   } catch (error) {
-    await app.scrollText(
-      "Unhandled error",
-      "The wizard caught an exception.",
-      error instanceof Error ? (error.stack ?? error.message) : String(error),
-      { allowBack: false },
-    );
-  } finally {
-    app.destroy();
+    if ((performance.now() - startedAt) / 1000 > NOTIFY_AFTER_SECONDS) {
+      await notify(platform, "Rebuild failed", target.name);
+    }
+    throw error;
+  }
+
+  const seconds = (performance.now() - startedAt) / 1000;
+  console.log(`${target.name} done in ${seconds.toFixed(1)}s.`);
+  if (seconds > NOTIFY_AFTER_SECONDS) {
+    await notify(platform, "Rebuild finished", target.name);
   }
 }
 
 try {
-  const args = Bun.argv.slice(2);
-  if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
-    console.log(directTargetHelp());
-    process.exit(0);
-  }
-
-  const directTarget = directTargetFromArgs(args);
-  if (directTarget) {
-    await directRebuild(directTarget);
-  } else {
-    if (!process.stdin.isTTY || !process.stdout.isTTY) {
-      console.error(
-        "The rebuild wizard is interactive and needs a terminal.",
-      );
-      console.error(
-        "Run it in a terminal, or pass a target to rebuild it directly:",
-      );
-      console.error(`  ${directTargetUsage()}`);
-      process.exit(1);
-    }
-    await tuiMain();
-  }
+  await main();
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;

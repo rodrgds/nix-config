@@ -1,4 +1,5 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync, realpathSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -29,13 +30,18 @@ async function fixture() {
   );
 
   const marker = join(root, "nix-called");
+  const sudoMarker = join(root, "sudo-called");
   for (const [name, body] of Object.entries({
     uname: "printf 'Darwin\\n'",
     id: "printf '9999999999\\n'",
     osascript: "exit 0",
     nix: 'printf "%s\\n" "$*" >> "$NIX_TEST_MARKER"; exit 73',
-    nh: "exit 74",
-    sudo: "exit 75",
+    // Builds "succeed" by linking the running system, as an unchanged build would.
+    nh: [
+      'while [ "$#" -gt 0 ]; do [ "$1" = -o ] && out=$2; shift; done',
+      'ln -sfn "$(readlink -f /run/current-system)" "$out"',
+    ].join("\n"),
+    sudo: 'printf "%s\\n" "$*" >> "$SUDO_TEST_MARKER"; exit 75',
   })) {
     const path = join(bin, name);
     await Bun.write(path, `#!/bin/sh\n${body}\n`);
@@ -50,6 +56,8 @@ async function fixture() {
     NIX_CONFIG_DIR: repo,
     NIX_REBUILD_HOST: "rgo-laptop",
     NIX_TEST_MARKER: marker,
+    SUDO_TEST_MARKER: sudoMarker,
+    XDG_STATE_HOME: join(home, "state"),
     TERM: "xterm-256color",
   };
   for (const args of [
@@ -66,11 +74,11 @@ async function fixture() {
     ).toBe(0);
   }
   const command = [process.execPath, join(import.meta.dir, "rebuild.ts")];
-  return { repo, env, marker, command };
+  return { home, repo, env, marker, sudoMarker, command };
 }
 
-async function direct(f: Awaited<ReturnType<typeof fixture>>) {
-  const proc = Bun.spawn([...f.command, "--vps"], {
+async function direct(f: Awaited<ReturnType<typeof fixture>>, args = ["--vps"]) {
+  const proc = Bun.spawn([...f.command, ...args], {
     cwd: f.repo,
     env: f.env,
     stdout: "pipe",
@@ -135,63 +143,47 @@ test.skipIf(process.getuid?.() === 0)(
   },
 );
 
-test("encrypted-only and missing secrets directories reach the rebuild command", async () => {
+test("encrypted-only and missing secrets directories reach the deploy command", async () => {
   const f = await fixture();
   for (const missing of [false, true]) {
     if (missing) await rm(join(f.repo, "secrets"), { recursive: true });
     const result = await direct(f);
-    expect(result.output).toContain("Rebuild failed with exit code 73");
-    expect(await Bun.file(f.marker).text()).toContain("path:.#deploy-rs");
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("deploy failed with exit code 73");
+    expect(await Bun.file(f.marker).text()).toContain(".#deploy-rs");
     await rm(f.marker);
   }
 });
 
-test("interactive rebuild blocks before preparation and keeps the Secrets manager accessible", async () => {
+test("a plain rebuild with a plaintext secret stops before building", async () => {
   const f = await fixture();
   await Bun.write(join(f.repo, "secrets/dummy_plain.txt"), "DUMMY ONLY\n");
-  let output = "";
-  const terminal = new Bun.Terminal({
-    cols: 160,
-    rows: 40,
-    data(_terminal, data) {
-      output += new TextDecoder()
-        .decode(data)
-        .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
-    },
+  const result = await direct(f, []);
+  expect(result.code).toBe(1);
+  expect(result.output).toContain("Refusing to rebuild");
+  expect(result.output).not.toContain("DUMMY ONLY");
+  expect(await Bun.file(join(f.home, "state/rebuild/rgo-laptop-system")).exists()).toBe(false);
+});
+
+describe.skipIf(!existsSync("/run/current-system"))("local laptop rebuild", () => {
+  test("activates a build that was never activated by the wizard", async () => {
+    const f = await fixture();
+    const result = await direct(f, []);
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("activation failed with exit code 75");
+    expect(await Bun.file(f.sudoMarker).text()).toContain("/nix/var/nix/profiles/system");
   });
-  const proc = Bun.spawn(f.command, { cwd: f.repo, env: f.env, terminal });
-  async function waitFor(text: string) {
-    const deadline = Date.now() + 5000;
-    while (!output.includes(text) && !(await Bun.file(f.marker).exists())) {
-      if (Date.now() > deadline) {
-        throw new Error(`Missing screen: ${text}\n${output.slice(-4000)}`);
-      }
-      await Bun.sleep(20);
-    }
-    expect(await Bun.file(f.marker).exists()).toBe(false);
-    expect(output).toContain(text);
-  }
-  async function enterScreen(keys: string, text: string) {
-    output = "";
-    terminal.write(keys);
-    await waitFor(text);
-  }
-  try {
-    await waitFor("rgo nix rebuild wizard");
-    await enterScreen("\r", "Git diff");
-    await enterScreen("\r", "Current host:");
-    await enterScreen("j\r", "Flake inputs");
-    await enterScreen("\r", "Run statix, nixfmt, then rebuild");
-    await enterScreen("\r", "Refusing to rebuild");
-    expect(output).toContain("dummy_plain.txt");
-    expect(output).not.toContain("DUMMY ONLY");
-    await enterScreen("\r", "rgo nix rebuild wizard");
-    await enterScreen("jj\r", "Directory:");
-    await enterScreen("\r", "External editor action");
-    expect(output.replace(/\s/g, "")).toContain("Editdirectlywithsops");
-  } finally {
-    proc.kill();
-    await proc.exited;
-    terminal.close();
-  }
-}, 15000);
+
+  test("an unchanged system finishes without asking for root", async () => {
+    const f = await fixture();
+    await mkdir(join(f.home, "state/rebuild"), { recursive: true });
+    await Bun.write(
+      join(f.home, "state/rebuild/rgo-laptop-activated"),
+      `${realpathSync("/run/current-system")}\n`,
+    );
+    const result = await direct(f, []);
+    expect(result.output).toContain("already running this configuration");
+    expect(result.code).toBe(0);
+    expect(await Bun.file(f.sudoMarker).exists()).toBe(false);
+  });
+});
