@@ -60,6 +60,13 @@ in
       apps.handy.enable = lib.mkDefault true;
       apps.vicinae.enable = lib.mkDefault true;
 
+      # Brave installs these as standalone apps (PWAs) on every workstation.
+      apps.brave.webApps = {
+        "YouTube Music" = "https://music.youtube.com/";
+        PinePods = "http://rgo-nas:8040/home";
+        OpenPost = "https://app.openpo.st/";
+      };
+
       environment.systemPackages = personalWorkstationPackages;
     })
     (lib.mkIf cfg.development.enable {
