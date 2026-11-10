@@ -54,4 +54,23 @@ touch -t 202001010000 "$fixture/cache/cold"
 fixture_available=16
 prune_managed_cache "$fixture/cache"
 [ -f "$fixture/cache/cold" ]
+# Package caches lose whole stale entries, never single files of a live one.
+pressure=0
+mkdir -p "$fixture/bun/stale@1" "$fixture/bun/live@1"
+touch "$fixture/bun/stale@1/index.js" "$fixture/bun/live@1/index.js" "$fixture/bun/live@1/old.js"
+touch -t 202001010000 "$fixture/bun/live@1/old.js" "$fixture/bun/stale@1/index.js" "$fixture/bun/stale@1"
+prune_cache_entries "$fixture/bun"
+[ ! -e "$fixture/bun/stale@1" ]
+[ -f "$fixture/bun/live@1/index.js" ]
+[ -f "$fixture/bun/live@1/old.js" ]
+# Manual-review locations are reported above the threshold and never touched.
+report_log="$fixture/report.log"
+log() { printf '%s\n' "$*" >>"$report_log"; }
+mkdir -p "$fixture/dev/big/tmp" "$fixture/dev/small/tmp"
+head -c 4096 /dev/zero >"$fixture/dev/big/tmp/scratch"
+report_min_kib=4
+report_manual_candidates "agent scratch" "$fixture"/dev/*/tmp "$fixture/missing"
+grep -q "in $fixture/dev/big/tmp (agent scratch" "$report_log"
+if grep -q "dev/small/tmp" "$report_log"; then exit 1; fi
+[ -f "$fixture/dev/big/tmp/scratch" ]
 echo 'cache policy tests passed'

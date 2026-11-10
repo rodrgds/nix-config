@@ -58,38 +58,22 @@ let
 
       user_home=${lib.escapeShellArg homeDir}
       xdg_cache_home="''${XDG_CACHE_HOME:-$user_home/.cache}"
-      nix_cache_dir="$user_home/.cache/nix"
       interval_seconds=${toString cfg.intervalSeconds}
-      transient_days=${toString cfg.transientRetentionDays}
-      npx_days=${toString cfg.npxRetentionDays}
-      derived_data_days=${toString cfg.xcodeDerivedDataRetentionDays}
-      do_homebrew=${if cfg.homebrew.enable then "1" else "0"}
-      do_beeper_uploads=${if cfg.beeperUploads.enable then "1" else "0"}
-      do_bun=${if cfg.bun.enable then "1" else "0"}
-      do_npm=${if cfg.npm.enable then "1" else "0"}
-      do_gradle=${if cfg.gradle.enable then "1" else "0"}
-      do_xcode=${if cfg.xcodeDerivedData.enable then "1" else "0"}
-      do_cocoapods=${if cfg.cocoapods.enable then "1" else "0"}
-      do_user_cache=${if cfg.userCache.enable then "1" else "0"}
-      do_go_builds=${if cfg.goBuilds.enable then "1" else "0"}
-      do_go_build_cache=${if cfg.goBuildCache.enable then "1" else "0"}
-      do_docker_build=${if cfg.dockerBuild.enable then "1" else "0"}
+      managed_cache_days=${toString cfg.managedCacheRetentionDays}
       auto_pressure=${if cfg.autoPressure.enable then "1" else "0"}
+      pressure_free_gib=${toString cfg.pressureFreeGiB}
+      pressure_recovery_gib=${toString cfg.autoPressure.recoveryFreeGiB}
+      pressure_cooldown_seconds=${toString cfg.autoPressure.cooldownSeconds}
       bun_max_gib=${toString cfg.bun.maxSizeGiB}
       npm_max_gib=${toString cfg.npm.maxSizeGiB}
-      gradle_max_gib=${toString cfg.gradle.maxSizeGiB}
-      go_build_cache_max_gib=${toString cfg.goBuildCache.maxSizeGiB}
       docker_build_max_gib=${toString cfg.dockerBuild.maxSizeGiB}
-      docker_build_reserved_gib=${toString cfg.dockerBuild.reservedSizeGiB}
-      pressure_free_gib=${toString cfg.pressureFreeGiB}
+      docker_build_reserved_gib=2
+      report_min_kib=$((1024 * 1024))
       log_dir=${lib.escapeShellArg logDir}
       state_dir=${lib.escapeShellArg stateDir}
       log_file="$log_dir/cache-cleanup.log"
       stamp_file="$state_dir/cache-cleanup.last-success"
       failures=0
-      pressure_recovery_gib=${toString cfg.autoPressure.recoveryFreeGiB}
-      pressure_cooldown_seconds=${toString cfg.autoPressure.cooldownSeconds}
-      managed_cache_days=${toString cfg.managedCacheRetentionDays}
 
       mkdir -p "$log_dir" "$state_dir"
       exec >>"$log_file" 2>&1
@@ -120,15 +104,11 @@ let
         dir=$1
         max_gib=$2
 
-        if pressure_target_reached; then
+        if [ ! -d "$dir" ] || pressure_target_reached; then
           return 1
         fi
         if [ "$pressure" = "1" ]; then
           return 0
-        fi
-
-        if [ ! -d "$dir" ]; then
-          return 1
         fi
 
         size_bytes=$(du -s -B1 "$dir" 2>/dev/null | cut -f1 || true)
@@ -136,38 +116,8 @@ let
         [ "''${size_bytes:-0}" -gt "$max_bytes" ]
       }
 
-      clear_cache_dir() {
-        label=$1
-        dir=$2
-        max_gib=$3
-
-        if cache_exceeds_limit "$dir" "$max_gib"; then
-          log "pruning $label cache at $dir (pressure mode or over ''${max_gib} GiB)"
-          if [ -d "$dir" ]; then
-            prune_managed_cache "$dir"
-          fi
-        else
-          log "keeping $label cache at or below ''${max_gib} GiB"
-        fi
-      }
-
       process_running() {
         pgrep -u "$(id -u)" -f "$1" >/dev/null 2>&1
-      }
-
-      clean_go_cache() {
-        dir=$1
-
-        if [ ! -d "$dir" ]; then
-          return 0
-        fi
-
-        if cache_exceeds_limit "$dir" "$go_build_cache_max_gib"; then
-          log "pruning Go build cache at $dir (pressure mode or over ''${go_build_cache_max_gib} GiB)"
-          prune_managed_cache "$dir"
-        else
-          log "keeping Go build cache at $dir at or below ''${go_build_cache_max_gib} GiB"
-        fi
       }
 
       prune_top_level_by_age() {
@@ -176,44 +126,6 @@ let
         if [ -d "$dir" ]; then
           log "removing top-level entries in $dir older than $days days"
           run find "$dir" -xdev -mindepth 1 -maxdepth 1 -mtime +"$days" -exec rm -rf -- {} +
-        fi
-      }
-
-      prune_named_top_level_by_age() {
-        dir=$1
-        pattern=$2
-        days=$3
-        if [ -d "$dir" ]; then
-          log "removing $pattern entries in $dir older than $days days"
-          run find "$dir" -xdev -mindepth 1 -maxdepth 1 -type d -user "$(id -u)" -name "$pattern" -mtime +"$days" -exec rm -rf -- {} +
-        fi
-      }
-
-      repair_nix_git_cache() {
-        # Nix keeps its fetched flake inputs as bare git repos under
-        # ~/.cache/nix. Older runs of this cleanup stripped pieces of them
-        # (the refs/ tree, or HEAD/config), after which libgit2 rejects the
-        # repo and the next rebuild fails with "could not find repository".
-        # Drop any cache entry that is missing the bits libgit2 requires.
-
-        # tarball-cache-v2: a single bare repo. The observed corruption is
-        # HEAD/config surviving while the empty refs/ tree was removed.
-        cache="$nix_cache_dir/tarball-cache-v2"
-        if [ -e "$cache/HEAD" ] && [ -d "$cache/objects" ] && [ ! -d "$cache/refs" ]; then
-          log "removing corrupt Nix git cache at $cache (HEAD present, refs/ missing)"
-          run rm -rf "$cache"
-        fi
-
-        # gitv3: one bare repo per input. The observed corruption keeps the
-        # recently-fetched pack files but deletes HEAD and config entirely.
-        if [ -d "$nix_cache_dir/gitv3" ]; then
-          for entry in "$nix_cache_dir"/gitv3/*/; do
-            [ -d "$entry" ] || continue
-            if [ -d "$entry/objects" ] && [ ! -e "$entry/HEAD" ]; then
-              log "removing corrupt Nix git cache at $entry (objects present, HEAD missing)"
-              run rm -rf "$entry"
-            fi
-          done
         fi
       }
 
@@ -237,108 +149,56 @@ let
 
       log "started force=$force pressure=$pressure"
 
-      repair_nix_git_cache
+      # Tool-managed caches that bound themselves are deliberately absent:
+      # Go build cache (trims entries unused for 5 days), Go modules, Gradle
+      # (own 30-day cleanup), Playwright browsers, uv, Nix, model weights.
 
-      if [ "$do_homebrew" = "1" ] && command -v brew >/dev/null 2>&1; then
+      if command -v brew >/dev/null 2>&1; then
         export HOMEBREW_NO_AUTO_UPDATE=1
         run brew cleanup --prune="$managed_cache_days"
       fi
 
-      if [ "$do_beeper_uploads" = "1" ]; then
-        prune_top_level_by_age "$user_home/Library/Application Support/BeeperTexts/api-uploads" "$transient_days"
-      fi
-
-      if [ "$do_bun" = "1" ]; then
-        if process_running '(^|/)(bun)( |$).*(install|add|update)'; then
-          log "keeping Bun caches while a package operation is active"
-        else
-          bun_caches=(
-            "$xdg_cache_home/.bun/install/cache"
-            "$user_home/.bun/install/cache"
-          )
-          bun_caches+=(
-      ${lib.concatMapStringsSep "\n" (
-        dir: "            ${lib.escapeShellArg dir}"
-      ) cfg.bun.extraDirectories}
-          )
-          for bun_cache in "''${bun_caches[@]}"; do
-            if [ -d "$bun_cache" ]; then
-              clear_cache_dir "Bun package" "$bun_cache" "$bun_max_gib"
-            fi
-          done
-        fi
-      fi
-
-      if [ "$do_npm" = "1" ]; then
-        if process_running '(^|/)(npm|npx)( |$)'; then
-          log "keeping npm cache while a package operation is active"
-        elif command -v npm >/dev/null 2>&1; then
-          if cache_exceeds_limit "$user_home/.npm/_cacache" "$npm_max_gib"; then
-            prune_managed_cache "$user_home/.npm/_cacache"
-            run npm cache verify
-          else
-            run npm cache verify
+      if process_running '(^|/)(bun)( |$).*(install|add|update|x )|(^|/)bunx( |$)'; then
+        log "keeping Bun cache while a package operation is active"
+      else
+        # BUN_INSTALL_CACHE_DIR is unset here, so Bun uses one of these.
+        for bun_cache in "$xdg_cache_home/.bun/install/cache" "$user_home/.bun/install/cache"; do
+          if cache_exceeds_limit "$bun_cache" "$bun_max_gib"; then
+            prune_cache_entries "$bun_cache"
           fi
-        fi
-        if ! process_running '(^|/)(npm|npx)( |$)'; then
-          prune_top_level_by_age "$user_home/.npm/_npx" "$npx_days"
-        fi
+        done
       fi
 
-      if [ "$do_gradle" = "1" ]; then
-        if process_running 'GradleDaemon|(^|/)(gradle|gradlew)( |$)'; then
-          log "keeping Gradle cache while a build daemon is active"
-        else
-          clear_cache_dir "Gradle" "$user_home/.gradle/caches" "$gradle_max_gib"
+      if process_running '(^|/)(npm|npx)( |$)'; then
+        log "keeping npm cache while a package operation is active"
+      elif command -v npm >/dev/null 2>&1; then
+        if cache_exceeds_limit "$user_home/.npm/_cacache" "$npm_max_gib"; then
+          prune_managed_cache "$user_home/.npm/_cacache"
         fi
+        # Drops index entries whose content is gone and unreferenced content.
+        run npm cache verify
+        prune_top_level_by_age "$user_home/.npm/_npx" 14
       fi
 
-      if [ "$do_xcode" = "1" ]; then
-        prune_top_level_by_age "$user_home/Library/Developer/Xcode/DerivedData" "$derived_data_days"
-      fi
-
-      if [ "$do_cocoapods" = "1" ] && command -v pod >/dev/null 2>&1; then
-        if ! process_running '(^|/)(pod)( |$)'; then
-          prune_managed_cache "$user_home/Library/Caches/CocoaPods"
+      ${lib.concatMapStringsSep "\n" (cache: ''
+        if process_running ${lib.escapeShellArg cache.processPattern}; then
+          log ${lib.escapeShellArg "keeping ${cache.name} cache while its writer is active"}
+        elif cache_exceeds_limit ${lib.escapeShellArg cache.directory} ${toString cache.maxSizeGiB}; then
+          prune_managed_cache ${lib.escapeShellArg cache.directory}
         fi
-      fi
+      '') cfg.userCache.boundedDirectories}
 
-      if [ "$do_user_cache" = "1" ]; then
-        # Keep tool caches behind their writer guards instead of sweeping all
-        # of .cache, which also contains model weights and active runtimes.
-        ${lib.concatMapStringsSep "\n" (cache: ''
-          if process_running ${lib.escapeShellArg cache.processPattern}; then
-            log ${lib.escapeShellArg "keeping ${cache.name} cache while its writer is active"}
-          else
-            clear_cache_dir ${lib.escapeShellArg cache.name} ${lib.escapeShellArg cache.directory} ${toString cache.maxSizeGiB}
+      # Interrupted Go commands leave their work directories behind.
+      if ! process_running '(^|/)(go)( |$)'; then
+        ${lib.optionalString isLinux ''
+          run find /tmp -xdev -mindepth 1 -maxdepth 1 -type d -user "$(id -u)" -name 'go-build*' -mtime +1 -exec rm -rf -- {} +
+        ''}
+        ${lib.optionalString isDarwin ''
+          darwin_tmp=$(/usr/bin/getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)
+          if [ -n "$darwin_tmp" ]; then
+            run find "$darwin_tmp" -xdev -mindepth 1 -maxdepth 1 -type d -user "$(id -u)" -name 'go-build*' -mtime +1 -exec rm -rf -- {} +
           fi
-        '') cfg.userCache.boundedDirectories}
-        if [ "$pressure" = "1" ]; then
-          pressure_cache_dirs=(
-      ${lib.concatMapStringsSep "\n" (
-        dir: "      ${lib.escapeShellArg dir}"
-      ) cfg.userCache.pressureDirectories}
-          )
-          for pressure_cache_dir in "''${pressure_cache_dirs[@]}"; do
-            clear_cache_dir "pressure-only user" "$pressure_cache_dir" 1
-          done
-        fi
-      fi
-
-      if [ "$do_go_builds" = "1" ]; then
-        if process_running '(^|/)(go)( |$).*(build|clean|env|generate|install|run|test|tool)'; then
-          log "keeping Go temporary builds while a Go command is active"
-        else
-          ${lib.optionalString isLinux ''
-            prune_named_top_level_by_age "/tmp" "go-build*" ${toString cfg.goBuildRetentionDays}
-          ''}
-          ${lib.optionalString isDarwin ''
-            darwin_tmp=$(/usr/bin/getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)
-            if [ -n "$darwin_tmp" ]; then
-              prune_named_top_level_by_age "$darwin_tmp" "go-build*" ${toString cfg.goBuildRetentionDays}
-            fi
-          ''}
-        fi
+        ''}
       fi
 
       # devenv writes a shell-<hash>.sh for every invocation and never removes
@@ -348,27 +208,19 @@ let
         run find "$devenv_state" -xdev -maxdepth 1 -type f -name 'shell-*.sh' -mtime +1 -delete
       done
 
-      if [ "$do_go_build_cache" = "1" ]; then
-        if process_running '(^|/)(go)( |$).*(build|clean|env|generate|install|run|test|tool)'; then
-          log "keeping Go build caches while a Go command is active"
-        else
-          go_build_caches=()
-          default_go_build_cache=$(go env GOCACHE 2>/dev/null || true)
-          if [ -n "$default_go_build_cache" ]; then
-            go_build_caches+=("$default_go_build_cache")
-          fi
-          go_build_caches+=(
-      ${lib.concatMapStringsSep "\n" (
-        dir: "            ${lib.escapeShellArg dir}"
-      ) cfg.goBuildCache.extraDirectories}
-          )
-          for go_build_cache in "''${go_build_caches[@]}"; do
-            clean_go_cache "$go_build_cache"
-          done
-        fi
-      fi
+      ${lib.optionalString isDarwin ''
+        prune_top_level_by_age "$user_home/Library/Developer/Xcode/DerivedData" 14
+        prune_top_level_by_age "$user_home/Library/Application Support/BeeperTexts/api-uploads" 1
+        # Sparkle leaves extracted updates behind; a week-old one is stale and
+        # the updater downloads it again if needed.
+        for sparkle_staging in "$user_home"/Library/Caches/*/org.sparkle-project.Sparkle/Installation; do
+          prune_top_level_by_age "$sparkle_staging" 7
+        done
+      ''}
 
-      if [ "$do_docker_build" = "1" ] && command -v docker >/dev/null 2>&1; then
+      # BuildKit evicts least recently used build cache itself; images and
+      # volumes are never touched. Skip quietly when no daemon is running.
+      if command -v docker >/dev/null 2>&1 && timeout 15 docker info >/dev/null 2>&1; then
         docker_args=(
           --force
           --max-used-space "''${docker_build_max_gib}gb"
@@ -379,6 +231,10 @@ let
         fi
         run docker builder prune "''${docker_args[@]}"
       fi
+
+      report_manual_candidates "agent scratch" "$user_home"/dev/*/tmp
+      report_manual_candidates "git worktrees" "$user_home"/.t3/worktrees "$user_home"/.codex/worktrees "$user_home"/.claude/worktrees
+      report_manual_candidates "agent session history" "$user_home"/.codex/sessions "$user_home"/.claude/projects
 
       if [ "$pressure" = 1 ] && ! pressure_target_reached; then
         log "warning: cleanup could not reach the $pressure_recovery_gib GiB recovery target; recent caches were retained"
@@ -431,103 +287,19 @@ in
     managedCacheRetentionDays = lib.mkOption {
       type = lib.types.ints.positive;
       default = 30;
-      description = "Preserve recently accessed or modified package and build cache files during eviction. Size limits trigger age-bounded pruning, not full deletion.";
-    };
-
-    transientRetentionDays = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 1;
-      description = "Delete transient app upload/cache entries older than this many days.";
-    };
-
-    npxRetentionDays = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 14;
-      description = "Delete npx temporary package directories older than this many days.";
-    };
-
-    xcodeDerivedDataRetentionDays = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 14;
-      description = "Delete Xcode DerivedData entries older than this many days.";
-    };
-
-    goBuildRetentionDays = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 1;
-      description = "Delete abandoned Go build temporary directories older than this many days.";
-    };
-
-    homebrew.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = isDarwin;
-      description = "Run Homebrew cleanup for stale downloads and old formula versions.";
-    };
-
-    beeperUploads.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = isDarwin;
-      description = "Prune Beeper Desktop API temporary upload files by age.";
-    };
-
-    bun.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Cap Bun's reproducible package cache.";
+      description = "Preserve package and build cache entries used or written within this many days, even under pressure. Size limits trigger age-bounded pruning, not full deletion.";
     };
 
     bun.maxSizeGiB = lib.mkOption {
       type = lib.types.ints.positive;
       default = 6;
-      description = "Keep the Bun package cache unless it grows beyond this size.";
-    };
-
-    bun.extraDirectories = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Additional reproducible Bun package caches managed like the XDG and legacy caches.";
-    };
-
-    npm.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Verify the npm cache and remove old npx temporary directories.";
+      description = "Prune old Bun package entries once the cache grows beyond this size.";
     };
 
     npm.maxSizeGiB = lib.mkOption {
       type = lib.types.ints.positive;
       default = 4;
-      description = "Keep the npm content cache unless it grows beyond this size.";
-    };
-
-    gradle.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Cap Gradle's reproducible dependency and transform cache.";
-    };
-
-    gradle.maxSizeGiB = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 12;
-      description = "Keep Gradle caches unless they grow beyond this size.";
-    };
-
-    xcodeDerivedData.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = isDarwin;
-      description = "Prune stale Xcode DerivedData.";
-    };
-
-    cocoapods.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = isDarwin;
-      description = "Prune unused CocoaPods download cache files by age.";
-    };
-
-    userCache.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Prune explicitly listed reproducible caches with size, age and writer guards.";
+      description = "Prune old npm content once the cache grows beyond this size.";
     };
 
     userCache.boundedDirectories = lib.mkOption {
@@ -545,66 +317,13 @@ in
         }
       );
       default = [ ];
-      description = "Named disposable caches checked during routine cleanup. Never list databases, browser profiles, installed runtimes or model weights.";
-    };
-
-    userCache.pressureDirectories = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = lib.optionals isDarwin [
-        "${homeDir}/Library/Caches/dotslash"
-        "${homeDir}/Library/Caches/Google"
-        "${homeDir}/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation"
-        "${homeDir}/Library/Caches/ms-playwright"
-        "${homeDir}/Library/Caches/beepertexts-updater"
-        "${homeDir}/Library/Caches/vesktop-updater"
-        "${homeDir}/Library/Caches/golangci-lint"
-        "${homeDir}/Library/Caches/bun"
-        "${homeDir}/Library/Caches/pip"
-        "${homeDir}/Library/Caches/node-gyp"
-      ];
-      description = "Reproducible or updater caches cleared only when pressure cleanup runs.";
-    };
-
-    goBuilds.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Prune abandoned Go build temporary directories.";
-    };
-
-    goBuildCache.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Cap Go's reproducible build cache without deleting downloaded modules.";
-    };
-
-    goBuildCache.maxSizeGiB = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 3;
-      description = "Keep the Go build cache unless it grows beyond this size.";
-    };
-
-    goBuildCache.extraDirectories = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Additional reproducible Go build caches managed like the cache reported by `go env GOCACHE`.";
-    };
-
-    dockerBuild.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = isLinux;
-      description = "Prune Docker build cache while preserving images and volumes.";
+      description = "Caches that never evict on their own and whose files are independent entries, so single-file pruning is a cache miss. Never list package stores that unpack directories, databases, browser profiles, installed runtimes or model weights.";
     };
 
     dockerBuild.maxSizeGiB = lib.mkOption {
       type = lib.types.ints.positive;
       default = 10;
-      description = "Maximum Docker build-cache size retained by routine cleanup.";
-    };
-
-    dockerBuild.reservedSizeGiB = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 2;
-      description = "Useful Docker build cache retained even during cleanup.";
+      description = "Maximum Docker build-cache size retained when a Docker daemon is running.";
     };
   };
 

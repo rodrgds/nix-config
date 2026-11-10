@@ -43,10 +43,39 @@ pressure_target_reached() {
   return 0
 }
 
+# For caches whose files are independent entries (npm content, Turbo
+# artifacts): a missing file is a cache miss.
 prune_managed_cache() {
   local cache_dir=$1
   [ -d "$cache_dir" ] || return 0
   pressure_target_reached && return 0
   log "pruning cache files unused for $managed_cache_days days at $cache_dir"
   run find "$cache_dir" -xdev -type f -atime +"$managed_cache_days" -mtime +"$managed_cache_days" -delete
+}
+
+# For caches whose top-level entries are unpacked packages (Bun). Deleting
+# single files would leave a package that looks cached but is incomplete,
+# so whole entries go. Only mtime counts: the size check reads every entry
+# directory, which refreshes directory access times.
+prune_cache_entries() {
+  local cache_dir=$1
+  [ -d "$cache_dir" ] || return 0
+  pressure_target_reached && return 0
+  log "pruning cache entries older than $managed_cache_days days at $cache_dir"
+  run find "$cache_dir" -xdev -mindepth 1 -maxdepth 1 -mtime +"$managed_cache_days" -exec rm -rf -- {} +
+}
+
+# Agent scratch, worktrees and session history are not provably
+# regenerable. Log the large ones so a person can review them.
+report_manual_candidates() {
+  local label=$1 path size_kib
+  shift
+  for path in "$@"; do
+    [ -d "$path" ] || continue
+    size_kib=$(du -sk "$path" 2>/dev/null | cut -f1 || true)
+    case "$size_kib" in *[!0-9]* | "") continue ;; esac
+    if [ "$size_kib" -ge "$report_min_kib" ]; then
+      log "report: $((size_kib / 1048576)) GiB in $path ($label; review manually, never deleted automatically)"
+    fi
+  done
 }
