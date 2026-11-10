@@ -15,8 +15,6 @@
   darwin.core.networking.nas.enable = true;
   darwin.core.fonts.enable = true;
   darwin.core.homebrew.enable = true;
-  # Applying configuration must not also replace every installed app.
-  homebrew.onActivation.upgrade = lib.mkForce false;
   darwin.core.karabiner.enable = true;
 
   core.nix.enable = true;
@@ -25,6 +23,9 @@
   profiles.agentWorkstation.enable = true;
 
   apps.virtualization.enable = false;
+  # iOS work uses Xcode and its simulators; Android lives on rgo-desktop.
+  apps.android-studio.enable = false;
+  apps.android-sdk.enable = false;
 
   # Dormant tools kept for intentional, temporary opt-in.
   apps.fish.enable = false;
@@ -49,8 +50,7 @@
 
   apps.cursor.enable = false;
   apps.clion.enable = false;
-  apps.cap.enable = false;
-  apps.affinity.enable = false;
+  apps.cap.enable = true;
 
   apps.telegram.enable = true;
   apps.teamspeak.enable = true;
@@ -61,11 +61,11 @@
   apps.obsidian.enable = true;
   apps.screenshot-tools.enable = true;
   apps.vicu.enable = true;
+  apps.wiztree.enable = true;
 
   apps.mpv.enable = true;
   apps.blender.enable = true;
   apps.blender.mcp.enable = true;
-  apps.stremio.enable = true;
   apps.cake-wallet.enable = false;
 
   darwin.core.networking.tailscale.enable = true;
@@ -77,30 +77,9 @@
     # Automatic rescue is separate from the rebuild wizard's space preflight.
     pressureFreeGiB = 16;
     autoPressure.recoveryFreeGiB = 24;
-    goBuildCache.extraDirectories = [
-      "/Users/rgo/Library/Caches/go-build"
-      "/Users/rgo/dev/openpost/.devenv/state/go-build"
-    ];
-    bun.extraDirectories = [
-      "/Users/rgo/dev/openpost/.devenv/state/bun-cache"
-    ];
     userCache.boundedDirectories = [
       {
-        name = "golangci-lint";
-        directory = "/Users/rgo/Library/Caches/golangci-lint";
-        processPattern = "(^|/)(golangci-lint|go)( |$)";
-      }
-      {
-        name = "uv";
-        directory = "/Users/rgo/.cache/uv";
-        processPattern = "(^|/)(uv|uvx)( |$)";
-      }
-      {
-        name = "pip";
-        directory = "/Users/rgo/Library/Caches/pip";
-        processPattern = "(^|/)(pip|pip3|python[^ ]*)( |$)";
-      }
-      {
+        # Turbo's local cache never evicts on its own.
         name = "OpenPost Turbo";
         directory = "/Users/rgo/.cache/openpost/turbo";
         processPattern = "(^|/)(turbo|bun|node|npm|pnpm)( |$)";

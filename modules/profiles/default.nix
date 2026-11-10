@@ -1,7 +1,6 @@
 {
   config,
   constants,
-  devenvPkg,
   lib,
   pkgs,
   ...
@@ -31,7 +30,7 @@ let
 
   developmentPackages = [
     pkgs.sqlite
-    devenvPkg
+    pkgs.devenv
   ];
 in
 {
@@ -91,7 +90,6 @@ in
       apps.claude.enable = lib.mkDefault true;
       apps.muse.enable = lib.mkDefault true;
       apps.t3-code.enable = lib.mkDefault true;
-      apps.hermes-desktop.enable = lib.mkDefault (!isDarwin);
     })
 
     (lib.optionalAttrs isDarwin (

@@ -157,7 +157,6 @@ routeClass("web-vivaldi", "vivaldi", 2)
 routeClass("web-brave", "brave", 2)
 
 routeClass("files-thunar", "thunar", 3)
-routeClass("personal-thunderbird", "thunderbird", 4)
 routeClass("personal-obsidian", "obsidian", 4)
 
 routeClass("chat-telegram", "(TelegramDesktop|org[.]telegram[.]desktop)", 5)

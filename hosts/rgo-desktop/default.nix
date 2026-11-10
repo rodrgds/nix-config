@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  username,
   lib,
   ...
 }:
@@ -69,15 +68,7 @@
   core.docker.enable = true;
   apps.virtualization.enable = false;
   core.downloads-cleanup.enable = true;
-  core.cache-cleanup = {
-    enable = true;
-    goBuildCache.extraDirectories = [
-      "/home/${username}/dev/openpost/.devenv/state/go-build"
-    ];
-    bun.extraDirectories = [
-      "/home/${username}/dev/openpost/.devenv/state/bun-cache"
-    ];
-  };
+  core.cache-cleanup.enable = true;
 
   profiles.personalWorkstation.enable = true;
   profiles.development.enable = true;
@@ -85,6 +76,7 @@
 
   # Dormant tools kept for intentional, temporary opt-in.
   apps.davinci-resolve.enable = false;
+  apps.hermes-desktop.enable = false;
   apps.fish.enable = false;
   apps.lamp.enable = false;
   apps.lunarclient.enable = false;
@@ -107,9 +99,10 @@
   apps.brave.enable = true;
   apps.cursor.enable = false;
   apps.arduino.enable = false;
-  apps.affinity.enable = false;
 
   apps.hyprland.enable = true;
+  # T3 Code is the main interface; it opens with the session.
+  apps.t3-code.autostart = true;
   apps.quickshell.enable = true;
 
   apps.dunst.enable = true;
@@ -123,11 +116,8 @@
 
   apps.obs.enable = true;
   apps.mpv.enable = true;
-  apps.auto-editor.enable = true;
   apps.normcap.enable = true;
   apps.charm-freeze.enable = true;
-  apps.stremio.enable = true;
-  apps.grayjay.enable = true;
 
   apps.cap.enable = false;
   apps.darktable.enable = false;
@@ -151,7 +141,6 @@
   apps.beeper.enable = true;
   apps.vesktop.enable = true;
   apps.telegram.enable = true;
-  apps.thunderbird.enable = true;
   apps.anydesk.enable = true;
 
   apps.teamspeak.enable = false;
@@ -160,6 +149,4 @@
 
   apps.obsidian.enable = true;
   apps.qdirstat.enable = true;
-
-  apps.synology-drive.enable = true;
 }

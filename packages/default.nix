@@ -1,11 +1,6 @@
 # Package overlay
 { inputs }:
-final: prev:
-let
-  affinityOverlay = inputs.affinity-nix.overlays.default final prev;
-in
-affinityOverlay
-// {
+final: prev: {
   unstable = import inputs.nixpkgs-unstable {
     inherit (prev.stdenv.hostPlatform) system;
     config.allowUnfree = true;
@@ -28,24 +23,10 @@ affinityOverlay
   # Vicu desktop task manager (upstream AppImage on Linux, dmg on macOS).
   vicu = prev.callPackage ./vicu { };
 
-  # Handy - Speech-to-text application
-  inherit (inputs.handy.packages.${prev.stdenv.hostPlatform.system}) handy;
+  # WizTree disk analyzer (official macOS dmg).
+  wiztree = prev.callPackage ./wiztree { };
 
-  # Disable direnv tests (they hang in the Nix sandbox)
-  direnv = prev.direnv.overrideAttrs (_: {
-    doCheck = false;
-  });
-
-  # mpv currently fails Darwin install-time version probing even though the
-  # build itself succeeds, so skip that broken post-install check on macOS.
-  mpv-unwrapped = prev.mpv-unwrapped.overrideAttrs (
-    _:
-    if prev.stdenv.hostPlatform.isDarwin then
-      {
-        doInstallCheck = false;
-        installCheckPhase = ":";
-      }
-    else
-      { }
-  );
+  # Fast-moving tools come prebuilt from nixpkgs-unstable instead of being
+  # compiled from their upstream flakes on every input update.
+  inherit (final.unstable) devenv handy;
 }
