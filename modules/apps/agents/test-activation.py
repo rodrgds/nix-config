@@ -14,6 +14,8 @@ let
 in {{
   activation = cfg.home-manager.users.rgo.home.activation.linkSkills.data;
   npmBinDir = cfg.apps.javascript-toolchain.npm.binDir;
+  sources = map (spec: spec.source) (import {json.dumps(str(repo) + '/modules/apps/agents/_skill-sources.nix')});
+  declared = builtins.concatMap (spec: spec.skills) (import {json.dumps(str(repo) + '/modules/apps/agents/_skill-sources.nix')});
 }}
 """
 configuration = json.loads(subprocess.check_output(
@@ -38,18 +40,37 @@ fs.appendFileSync(process.env.INVOCATIONS, JSON.stringify(process.argv.slice(2))
     script = fixture / "activate"
     script.write_text("set -euo pipefail\n" + activation)
     invocations = fixture / "invocations"
-    subprocess.run(["/bin/bash", str(script)], check=True, env={
-        "HOME": str(fixture),
-        "PATH": "/usr/bin:/bin",
-        "INVOCATIONS": str(invocations),
-    })
-    calls = [json.loads(line) for line in invocations.read_text().splitlines()]
-    adds = [call for call in calls if call and call[0] == "add"]
-    removes = [call for call in calls if call and call[0] == "remove"]
-    assert adds, calls
-    assert removes and "--global" in removes[0] and "--yes" in removes[0], calls
-    assert "wizard" in removes[0], calls
-    assert "code-review" not in removes[0], calls
-    assert (fixture / ".agents" / "skills").is_dir()
+    skills = fixture / ".agents" / "skills"
 
-print("Skill activation passes with a minimal PATH")
+    def activate():
+        invocations.unlink(missing_ok=True)
+        subprocess.run(["/bin/bash", str(script)], check=True, env={
+            "HOME": str(fixture),
+            "PATH": "/usr/bin:/bin",
+            "INVOCATIONS": str(invocations),
+        })
+        if not invocations.exists():
+            return [], []
+        calls = [json.loads(line) for line in invocations.read_text().splitlines()]
+        return (
+            [call for call in calls if call and call[0] == "add"],
+            [call for call in calls if call and call[0] == "remove"],
+        )
+
+    # A fresh home installs every declared source and removes nothing.
+    adds, removes = activate()
+    assert len(adds) == len(configuration["sources"]), adds
+    assert not removes, removes
+    assert skills.is_dir()
+
+    # With every declared skill installed, a rebuild makes no network calls.
+    # A leftover retired skill is removed without touching declared ones.
+    for name in configuration["declared"]:
+        (skills / name).mkdir(exist_ok=True)
+    (skills / "wizard").mkdir()
+    adds, removes = activate()
+    assert not adds, adds
+    assert len(removes) == 1 and "--global" in removes[0] and "--yes" in removes[0], removes
+    assert "wizard" in removes[0] and "code-review" not in removes[0], removes
+
+print("Skill activation installs only what is missing, with a minimal PATH")

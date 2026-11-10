@@ -20,7 +20,6 @@
       "explain-interface"
       "interface-review"
       "state-machine"
-      "technical-drawing"
       "variant"
     ];
   }
@@ -47,13 +46,6 @@
   {
     source = "h0rv/agent-skills";
     skills = [ "devenv" ];
-  }
-  {
-    source = "getpaseo/paseo";
-    skills = [
-      "paseo"
-      "paseo-help"
-    ];
   }
   {
     source = "cloudflare/skills";

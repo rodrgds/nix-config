@@ -18,18 +18,38 @@ let
   ];
 
   # The installer owns upstream content and its lockfile outside the checkout.
+  # Rebuilds only install declared skills that are missing and remove retired
+  # ones that are present, so an unchanged skill set needs no network. The
+  # background toolchain updater runs `skills update`. Sources run one at a
+  # time because every run rewrites the shared ~/.agents/.skill-lock.json.
   retiredSkills = import ./_retired-skills.nix;
-  removeSkillsSnippet = lib.optionalString (retiredSkills != [ ]) ''
-    ${lib.escapeShellArg (toolchain.npm.binDir + "/skills")} remove \
-      --global --yes ${lib.escapeShellArgs retiredSkills} >/dev/null 2>&1 || true
-  '';
   ensureSkillsSnippet = ''
+    skills_bin=${lib.escapeShellArg (toolchain.npm.binDir + "/skills")}
+    skills_root="$HOME/.agents/skills"
+    skills_missing() {
+      for skill_name in "$@"; do
+        [ -d "$skills_root/$skill_name" ] || return 0
+      done
+      return 1
+    }
+    skills_present() {
+      for skill_name in "$@"; do
+        if [ -e "$skills_root/$skill_name" ] || [ -L "$skills_root/$skill_name" ]; then
+          return 0
+        fi
+      done
+      return 1
+    }
     ${lib.concatMapStringsSep "\n" (spec: ''
-      ${lib.escapeShellArg toolchain.npm.binDir}/skills add ${lib.escapeShellArg spec.source} \
-        --global --yes --full-depth \
-        --agent ${lib.escapeShellArgs skillAgents} --skill ${lib.escapeShellArgs spec.skills}
+      if skills_missing ${lib.escapeShellArgs spec.skills}; then
+        "$skills_bin" add ${lib.escapeShellArg spec.source} \
+          --global --yes --full-depth \
+          --agent ${lib.escapeShellArgs skillAgents} --skill ${lib.escapeShellArgs spec.skills}
+      fi
     '') globalSkillSources}
-    ${removeSkillsSnippet}
+    if skills_present ${lib.escapeShellArgs retiredSkills}; then
+      "$skills_bin" remove --global --yes ${lib.escapeShellArgs retiredSkills} >/dev/null 2>&1 || true
+    fi
   '';
 
   # Local skills stay editable in the repo, with one link per skill.

@@ -53,4 +53,9 @@
   "workers-best-practices"
   "show-me"
   "find-skills"
+  "paseo"
+  "paseo-help"
+  "security-bounty-hunter"
+  # Deleted upstream from jakubkrehel/skills.
+  "technical-drawing"
 ]
