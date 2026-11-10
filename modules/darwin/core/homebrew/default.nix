@@ -1,4 +1,9 @@
 # Homebrew infrastructure. App modules own their formulae and casks.
+#
+# Rebuilds only install and remove declared packages; they never run
+# `brew update` or upgrade apps, which made activation slow and restarted
+# running apps. GUI casks marked auto_updates keep their own updaters, and a
+# daily background job upgrades everything else.
 {
   lib,
   config,
@@ -8,6 +13,7 @@
 let
   cfg = config.darwin.core.homebrew;
   brewPrefix = if pkgs.stdenv.hostPlatform.isAarch64 then "/opt/homebrew" else "/usr/local";
+
 in
 {
   options.darwin.core.homebrew = {
@@ -19,10 +25,9 @@ in
     homebrew = {
       enable = true;
       onActivation = {
-        autoUpdate = true;
+        autoUpdate = false;
         cleanup = "zap";
-        upgrade = true;
-        extraFlags = [ "--force-cleanup" ];
+        upgrade = false;
       };
 
       # Taps to add
@@ -38,6 +43,25 @@ in
           trusted = true;
         }
       ];
+    };
+
+    launchd.user.agents.homebrew-upgrade.serviceConfig = {
+      Label = "pt.rgo.homebrew-upgrade";
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        "${brewPrefix}/bin/brew update --quiet && ${brewPrefix}/bin/brew upgrade"
+      ];
+      StartCalendarInterval = [
+        {
+          Hour = 12;
+          Minute = 30;
+        }
+      ];
+      ProcessType = "Background";
+      LowPriorityIO = true;
+      StandardOutPath = "/tmp/homebrew-upgrade.log";
+      StandardErrorPath = "/tmp/homebrew-upgrade.log";
     };
 
     # Homebrew 4.6+ refuses formulae/casks from third-party taps until they are
