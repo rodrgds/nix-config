@@ -19,7 +19,6 @@
 ## Tools and context
 
 - Use GitHub Issues for work that needs durable tracking, unless the project specifies another tracker. Small tasks can stay in the conversation. Keep issues current and close them when their acceptance criteria are met.
-- Use Hindsight bank `rodrigo` when prior decisions or project history matter. Retain verified durable facts tagged `project:<slug>` and `source:<agent>`, excluding secrets, logs, temporary state, and unverified claims.
 - Keep upstream skills managed by their installer and unmodified. Put local conventions in project instructions or a local skill.
 
 ## Execution

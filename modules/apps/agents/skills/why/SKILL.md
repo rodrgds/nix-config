@@ -11,7 +11,7 @@ Companion to the `how` skill. `how` answers what the code does and how it works.
 
 ## How this skill works
 
-Historical context can live in Hindsight, GitHub Issues and pull requests, source control history, documents, team chat, observability, and product analytics. Start with the sources closest to the decision, then expand when the evidence leaves a material gap. Distinguish documented reasons from inference and report relevant searches that found no evidence.
+Historical context can live in GitHub Issues and pull requests, source control history, documents, team chat, observability, and product analytics. Start with the sources closest to the decision, then expand when the evidence leaves a material gap. Distinguish documented reasons from inference and report relevant searches that found no evidence.
 
 ## Operating Posture
 
@@ -99,15 +99,14 @@ Start with git history and linked GitHub Issues and pull requests. Expand to oth
 
 Source control is always available through git and `gh`. For the other categories, use whatever tools, MCPs, or integrations are available in your environment. Map what you have access to:
 
-1. **Hindsight durable context** - project decisions, constraints, domain language and source-linked history
-2. **GitHub Issues** - accepted specs, tasks, comments and execution history
-3. **Source control history** - always available via git and `gh`
-4. **Pull requests** - review discussion and implementation decisions
-5. **Long-form documents** - ADRs, design docs, specs, READMEs and wikis
-6. **Real-time team chat** - Slack, Discord, etc. if accessible
-7. **Infrastructure observability** - Datadog, Grafana, etc. if accessible
-8. **Error / exception tracking** - Sentry, Bugsnag, etc. if accessible
-9. **Product analytics** - warehouses, dashboards, etc. if accessible
+1. **GitHub Issues** - accepted specs, tasks, comments and execution history
+2. **Source control history** - always available via git and `gh`
+3. **Pull requests** - review discussion and implementation decisions
+4. **Long-form documents** - ADRs, design docs, specs, READMEs and wikis
+5. **Real-time team chat** - Slack, Discord, etc. if accessible
+6. **Infrastructure observability** - Datadog, Grafana, etc. if accessible
+7. **Error / exception tracking** - Sentry, Bugsnag, etc. if accessible
+8. **Product analytics** - warehouses, dashboards, etc. if accessible
 
 Record relevant searches that found nothing. A null result does not establish that no decision record exists.
 

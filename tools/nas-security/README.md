@@ -191,7 +191,7 @@ sudo /usr/syno/bin/synofirewall --disable
 ```
 
 Administrative/app ports requiring explicit containment include `9000/8000`
-(Portainer), `9119` (Hermes), `20128` (9Router), `8888/9999` (Hindsight), and
+(Portainer), `9119` (Hermes), `20128` (9Router), and
 `8191/8192` (browser solvers). Inventory other published ports before closing
 them. Prefer loopback/private bindings plus authenticated HTTPS access for
 management UIs. Change 9Router's secure-cookie setting only with its verified
@@ -255,7 +255,7 @@ production override:
    not an administrator-owned executable boundary.
 5. Replace host networking only after mapping loopback service dependencies.
    Publish the dashboard to the selected private interface. Keep a bridge path
-   to 9Router/Hindsight/MCP upstreams and verify profile clients. Add
+   to 9Router/MCP upstreams and verify profile clients. Add
    `cap_drop: [ALL]`, `no-new-privileges` and resource limits once the new
    bootstrap/browser behavior is proved. A single 822 MiB sample is not a safe
    peak-memory limit; NAS CPU quotas are unsupported.
@@ -350,7 +350,7 @@ Snapshots on this NAS do not replace an independent off-NAS recovery copy.
 ## Public tunnel authentication
 
 The `home-nas` tunnel routes Jellyfin at `watch.kraktoos.com`, Vikunja at
-`tasks.rgo.pt`, Hindsight at `memory.rgo.pt`, and Karakeep web/MCP at
+`tasks.rgo.pt`, and Karakeep web/MCP at
 `mind.rgo.pt` (`/mcp` selects the MCP bridge). Keep the terminal 404 rule.
 The audit found no Access applications. Existing app APIs returned 401 without
 credentials, including the MCP initialize route; do not treat public login
@@ -358,7 +358,7 @@ pages or API documentation as a data-access bypass.
 
 In Cloudflare Zero Trust, create narrowly scoped Access applications/policies
 for the human-facing private UIs after testing actual users. Do not place an
-interactive login redirect in front of MCP or Hindsight API clients without
+interactive login redirect in front of MCP API clients without
 first provisioning compatible service-token/OAuth access. Preserve native
 mobile clients and Jellyfin playback authentication. The Jellyfin hostname's
 TLS/DNS route still needs repair/verification before an authentication claim.

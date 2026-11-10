@@ -16,9 +16,9 @@ candidates per batch and at most 2 batches. When a cap is reached, stop and
 report the remaining candidates instead of continuing. Write down the bounded
 scope before starting.
 
-When exploring the codebase, recall Hindsight for the project's verified
-domain language and prior testing and interface decisions, then check them
-against current code and deterministic repository contracts. When the shape of
+When exploring the codebase, read the project's documented domain language and
+prior testing and interface decisions, then check them against current code and
+deterministic repository contracts. When the shape of
 a test boundary is itself in question, consult the `codebase-design` skill for
 seam vocabulary and the `tdd` skill for loop rules. The owner boundary below
 is that skill's seam: the public interface where behavior is observed without

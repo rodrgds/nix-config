@@ -13,49 +13,6 @@ let
   nineRouterCatalog = import ../../shared/9router.nix;
   # The skills CLI owns upstream installs; local skills are linked here by Nix.
   skillsDir = "${constants.homeDir}/.agents/skills";
-  # One local package entry resolves the Hindsight OpenCode V2 integration.
-  # The shared toolchain below owns its installation.
-  hindsightPluginPath = "${toolchain.npm.installRoot}/lib/node_modules/@vectorize-io/hindsight-coding-agents";
-  # Hindsight plugin config (single JSON file per upstream). Rendered by
-  # home.activation rather than home.file: the plugin's file layer wins over
-  # the HINDSIGHT_API_TOKEN env var, and home.file text would bake the token
-  # into the Nix store. The activation script merges apiToken in from the
-  # sops secret at runtime, so GUI-launched OpenCode processes (T3, desktop),
-  # which never source shell init, still authenticate.
-  # bankId rodrigo uses the shared rodrigo bank; retainTags carry the
-  # per-repo project tag. (`source:` tags are server-reserved; attribution is
-  # stamped by the integration itself.) autoUpdate is pinned off; rebuilds
-  # move the runtime forward.
-  hindsightAgentConfig = {
-    apiUrl = "http://rgo-nas:8888";
-    bankId = "rodrigo";
-    retainTags = [ "project:{gitProject}" ];
-    manageBankConfig = false;
-    retainSessions = false;
-    autoSeed = false;
-    gitIngest = "none";
-    codebaseSurvey = false;
-    autoInject = "none";
-    pageTriggerType = "manual";
-    pages = {
-      "Component map" = false;
-      "Core concepts" = false;
-      "Conventions and patterns" = false;
-      "Key decisions and rationale" = false;
-      "Initiatives and enhancements" = false;
-    };
-    recallOptions = {
-      types = [ "observation" ];
-      budget = "low";
-      max_tokens = 600;
-    };
-    toolGuideExtra = "This is Rodrigo's shared personal and project memory, not this repository alone. Search only the current project's context. Save durable decisions explicitly; verify current code and task state in their canonical systems.";
-    autoUpdate = false;
-  };
-  # Secret-free base the activation script merges apiToken into.
-  hindsightAgentConfigBase = pkgs.writeText "hindsight-coding-agent-base.json" (
-    builtins.toJSON hindsightAgentConfig
-  );
   opencodeSkills =
     if builtins.pathExists ./skills then
       lib.mapAttrs' (
@@ -94,30 +51,7 @@ in
             package = "@opencode/cli@latest";
             retiredPackages = [ "opencode-ai" ];
           };
-          # Hindsight memory plugin runtime (v2 entry resolves the package
-          # dir through its index.js). Library package: no binaries, but a
-          # bootstrap file so a missing install still triggers an update.
-          npm.cliPackages.hindsight-coding-agents = {
-            package = "@vectorize-io/hindsight-coding-agents@latest";
-            binaries = [ ];
-            bootstrapFiles = [
-              "lib/node_modules/@vectorize-io/hindsight-coding-agents/package.json"
-            ];
-            # Upstream 0.7.0 registers its companion skill without the
-            # `path` key opencode v2's skill schema requires, so the whole
-            # plugin gets disabled (skill.transform failure). Supply the
-            # packaged SKILL.md path until upstream fixes it. Guarded by a
-            # marker comment so re-runs are no-ops; remove when upstream
-            # ships the fix.
-            postUpdate = [
-              ''
-                skill_runtime="$install_root/lib/node_modules/@vectorize-io/hindsight-coding-agents/dist/opencode2.js"
-                if [ -f "$skill_runtime" ] && ! grep -q 'nix: opencode v2 Info.path workaround' "$skill_runtime"; then
-                  sed -i -e 's/location: srcDir,/location: srcDir, path: join14(srcDir, "SKILL.md"), \/\* nix: opencode v2 Info.path workaround \*\//g' "$skill_runtime" || true
-                fi
-              ''
-            ];
-          };
+          npm.retiredPackages = [ "@vectorize-io/hindsight-coding-agents" ];
         };
 
         home-manager.users.${username} =
@@ -126,7 +60,6 @@ in
             nineRouterApiKeyPath = config.sops.secrets.nine_router_api_key.path;
             opencodeGoApiKeyPath = config.sops.secrets.opencode_go_api_key.path;
             exaApiKeyPath = config.sops.secrets.exa_api_key.path;
-            hindsightApiTokenPath = config.sops.secrets.hindsight_api_token.path;
 
             opencodeConfig = {
               "$schema" = "https://opencode.ai/config.json";
@@ -136,12 +69,6 @@ in
               websearch = {
                 provider = "exa";
               };
-              # Hindsight explicit memory tools; automatic ingestion is disabled.
-              # The shared bank is managed centrally. Points at the
-              # self-hosted server; bank and tags live in
-              # ~/.hindsight/coding-agent.json, whose apiToken is merged in
-              # from the sops secret by home.activation (see below).
-              plugins = [ hindsightPluginPath ];
               # Global agent skills shared with the other harnesses.
               skills = [ skillsDir ];
               providers = {
@@ -179,10 +106,8 @@ in
                   };
                 };
               };
-              # Executor aggregates the integrations (exa, context7, github,
-              # and hindsight tools). Uses OAuth: run
-              # `opencode mcp auth executor` once per machine. Memory itself
-              # is the Hindsight plugin above, not an MCP server.
+              # Executor aggregates the integrations (exa, context7, github).
+              # Uses OAuth: run `opencode mcp auth executor` once per machine.
               mcp = {
                 servers = {
                   executor = {
@@ -199,7 +124,6 @@ in
                 nine_router_api_key = { };
                 exa_api_key = { };
                 opencode_go_api_key = { };
-                hindsight_api_token.sopsFile = ../../../secrets/hindsight-secrets.yaml;
               };
             }
             // lib.optionalAttrs isLinux {
@@ -238,9 +162,6 @@ in
               if [ -z "''${EXA_API_KEY:-}" ] && [ -r "${exaApiKeyPath}" ]; then
                 export EXA_API_KEY="$(tr -d '\n' < "${exaApiKeyPath}")"
               fi
-              if [ -z "''${HINDSIGHT_API_TOKEN:-}" ] && [ -r "${hindsightApiTokenPath}" ]; then
-                export HINDSIGHT_API_TOKEN="$(tr -d '\n' < "${hindsightApiTokenPath}")"
-              fi
             '';
 
             programs.zsh.envExtra = lib.mkAfter ''
@@ -252,9 +173,6 @@ in
               fi
               if [ -z "''${EXA_API_KEY:-}" ] && [ -r "${exaApiKeyPath}" ]; then
                 export EXA_API_KEY="$(tr -d '\n' < "${exaApiKeyPath}")"
-              fi
-              if [ -z "''${HINDSIGHT_API_TOKEN:-}" ] && [ -r "${hindsightApiTokenPath}" ]; then
-                export HINDSIGHT_API_TOKEN="$(tr -d '\n' < "${hindsightApiTokenPath}")"
               fi
             '';
 
@@ -300,25 +218,11 @@ in
                 '';
               };
 
-            # Hindsight plugin config, written as a regular file by activation
-            # instead of a home.file symlink: the plugin lets the file win over
-            # the HINDSIGHT_API_TOKEN env var, and a GUI-launched OpenCode
-            # process never sources shell init, so the file is the only channel
-            # that reaches every harness. apiToken is read from the sops secret
-            # at activation time, so the plaintext token never enters the Nix
-            # store. The shell-init exports below remain as the env fallback.
-            home.activation.renderHindsightAgentConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-              target=${lib.escapeShellArg "${config.home.homeDirectory}/.hindsight/coding-agent.json"}
-              ${pkgs.coreutils}/bin/mkdir -p "''${target%/*}"
-              ${pkgs.coreutils}/bin/rm -f "$target" "$target.tmp"
-              if [ -r "${hindsightApiTokenPath}" ]; then
-                ${pkgs.jq}/bin/jq --arg token "$(${pkgs.coreutils}/bin/tr -d '\n' < "${hindsightApiTokenPath}")" \
-                  '. + {apiToken: $token}' ${hindsightAgentConfigBase} > "$target.tmp"
-              else
-                ${pkgs.coreutils}/bin/cp ${hindsightAgentConfigBase} "$target.tmp"
-              fi
-              ${pkgs.coreutils}/bin/chmod 600 "$target.tmp"
-              ${pkgs.coreutils}/bin/mv "$target.tmp" "$target"
+            # Remove the retired coding-agent config left by older generations.
+            home.activation.removeRetiredAgentMemoryConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              retired_dir=${lib.escapeShellArg "${config.home.homeDirectory}/.hindsight"}
+              ${pkgs.coreutils}/bin/rm -f "$retired_dir/coding-agent.json" "$retired_dir/coding-agent.json.tmp"
+              ${pkgs.coreutils}/bin/rmdir "$retired_dir" 2>/dev/null || true
             '';
           };
       }
