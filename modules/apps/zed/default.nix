@@ -28,7 +28,8 @@ let
     agent.terminal_init_command = "opencode";
     autosave = "on_focus_change";
     format_on_save = "on";
-    features.inline_completion = false;
+    # Inline AI completions stay off; this also stops Copilot language servers.
+    features.edit_prediction_provider = "none";
     terminal = {
       font_family = fonts.mono;
       font_size = fontSize;
