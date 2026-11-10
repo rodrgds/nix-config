@@ -20,7 +20,7 @@ hosts/      per-machine top-level options
 modules/    shared app, core, service, and hosting modules
 packages/   local package/overlay definitions
 secrets/    sops-nix encrypted files + wiring
-tools/      rebuild-wizard (the `rebuild` TUI)
+tools/      rebuild-wizard (the `rebuild` command)
 ```
 
 ## Highlights
@@ -28,18 +28,18 @@ tools/      rebuild-wizard (the `rebuild` TUI)
 - One repo, three platforms, shared modules with per-platform gating where needed.
 - Home Manager integrated into both NixOS and nix-darwin; Homebrew declaratively managed on macOS.
 - `sops-nix` for personal and server secrets.
-- A single `rebuild` TUI for every host: `rebuild --desktop`, `rebuild --laptop`, `rebuild --vps`.
+- A single `rebuild` command for every host.
 
 ## Rebuilding
 
 ```bash
-rebuild --desktop   # NixOS, on rgo-desktop
-rebuild --laptop    # nix-darwin, on rgo-laptop
-rebuild --vps       # deploy-rs, from either machine
-rebuild             # open the interactive TUI
+rebuild             # this machine; skips activation when nothing changed
+rebuild update      # update flake inputs, rebuild, refresh CLIs, skills and Homebrew in the background
+rebuild vps         # deploy-rs to rgo-vps, from either machine
+rebuild secrets     # edit secrets/secrets.yaml with sops (or `rebuild secrets <name>`)
 ```
 
-The TUI selects a target, optionally updates flake inputs, shows the diff, runs `statix` and `nixfmt`, rebuilds, then commits and pushes. It blocks on plaintext secrets and never pushes automatically.
+`rebuild` refuses to run while plaintext secrets exist and never pushes.
 
 ## Secrets
 
@@ -59,7 +59,7 @@ Follow the flake per host. From scratch:
 
 ```bash
 # macOS
-nix run github:lnl7/nix-darwin/nix-darwin-25.11#darwin-rebuild -- switch --flake '.#rgo-laptop'
+nix run github:lnl7/nix-darwin/nix-darwin-26.05#darwin-rebuild -- switch --flake '.#rgo-laptop'
 
 # NixOS desktop
 sudo nixos-install --flake '.#rgo-desktop'
