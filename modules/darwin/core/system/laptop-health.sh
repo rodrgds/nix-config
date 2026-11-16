@@ -183,6 +183,15 @@ else
   fail "Touch ID sudo is not configured"
 fi
 
+login_shell="$(dscl . -read "/Users/$(id -un)" UserShell 2>/dev/null | sed -n 's/^UserShell: //p')"
+if [ "$login_shell" != "$health_login_shell" ]; then
+  fail "Login shell is ${login_shell:-unset} instead of $health_login_shell"
+elif [ ! -x "$login_shell" ]; then
+  fail "Login shell $login_shell is not executable"
+else
+  ok "Login shell resolves to $login_shell"
+fi
+
 if "$health_nix_trust"; then
   daemon_info="$("$health_nix" store info --json 2>/dev/null || true)"
   if printf '%s\n' "$daemon_info" | grep -Eq '"trusted"[[:space:]]*:[[:space:]]*false'; then

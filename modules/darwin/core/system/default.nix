@@ -7,7 +7,9 @@
 }:
 let
   cfg = config.darwin.core.system;
-  loginShell = lib.getExe pkgs.bashInteractive;
+  # The login record must hold a path that never changes. A store path breaks
+  # every future login once that build is garbage-collected.
+  loginShell = "/run/current-system/sw/bin/bash";
   laptopHealth = pkgs.writeShellScriptBin "rgo-laptop-health" (
     ''
       health_sketchybar=${lib.boolToString config.darwin.apps.sketchybar.enable}
@@ -21,6 +23,7 @@ let
       health_nix_trust=${lib.boolToString config.core.nix.enable}
       health_nix=${lib.getExe config.nix.package}
       health_allow_signed_app=${lib.boolToString config.networking.applicationFirewall.allowSignedApp}
+      health_login_shell=${lib.escapeShellArg loginShell}
     ''
     + builtins.readFile ./laptop-health.sh
   );
@@ -126,16 +129,30 @@ in
     # Primary user for nix-darwin
     system.primaryUser = username;
 
-    # Login can start before /run/current-system exists after a reboot.
-    # Use a store path so the shell is available as soon as the Nix volume mounts.
+    # The login shell must stay on the system profile: the path survives
+    # nixpkgs updates and the current-system root protects it from collection.
     users.users.${username} = {
       name = username;
       home = "/Users/${username}";
       shell = loginShell;
     };
 
+    # nix-darwin only writes the DSCL record for users in users.knownUsers, so
+    # keep the login shell aligned here instead of relying on that mechanism.
+    system.activationScripts.extraActivation.text = lib.mkAfter ''
+      login_shell=${lib.escapeShellArg loginShell}
+      current_shell="$(dscl . -read ${lib.escapeShellArg "/Users/${username}"} UserShell 2>/dev/null | sed -n 's/^UserShell: //p')"
+      if [ "$current_shell" != "$login_shell" ]; then
+        echo "setting ${username} login shell to $login_shell..." >&2
+        dscl . -create ${lib.escapeShellArg "/Users/${username}"} UserShell "$login_shell"
+      fi
+    '';
+
     environment.shells = [ loginShell ];
-    environment.systemPackages = [ laptopHealth ];
+    environment.systemPackages = [
+      pkgs.bashInteractive
+      laptopHealth
+    ];
 
     # Home-manager state version
     home-manager.users.${username} = {
