@@ -104,6 +104,10 @@ in
       "website_directus_url"
       "website_directus_access_token"
       "website_personal_data_api_key"
+      "website_openrouter_api_key"
+      "website_wetrakr_client_id"
+      "website_wetrakr_client_secret"
+      "website_openpost_api_token"
     ] (_: { });
 
     sops.templates."personal-site-env" = {
@@ -119,6 +123,11 @@ in
         DIRECTUS_INTERNAL_URL=http://127.0.0.1:8055
         DIRECTUS_ACCESS_TOKEN=${config.sops.placeholder.website_directus_access_token}
         PERSONAL_DATA_API_KEY=${config.sops.placeholder.website_personal_data_api_key}
+        OPENROUTER_API_KEY=${config.sops.placeholder.website_openrouter_api_key}
+        WETRAKR_CLIENT_ID=${config.sops.placeholder.website_wetrakr_client_id}
+        WETRAKR_CLIENT_SECRET=${config.sops.placeholder.website_wetrakr_client_secret}
+        OPENPOST_URL=https://app.openpo.st
+        OPENPOST_API_TOKEN=${config.sops.placeholder.website_openpost_api_token}
         HOST=127.0.0.1
         PORT=${toString personalPort}
         NODE_ENV=production
@@ -167,6 +176,8 @@ in
     systemd.services.personal-data-sync-hevy = mkSyncService "hevy";
     systemd.services.personal-data-sync-github = mkSyncService "github";
     systemd.services.personal-data-sync-leetcode = mkSyncService "leetcode";
+    systemd.services.personal-data-sync-wetrakr = mkSyncService "wetrakr";
+    systemd.services.personal-data-sync-openpost = mkSyncService "openpost";
     systemd.services.personal-data-reconcile = mkSyncService "all" // {
       description = "Reconcile all personal activity sources";
       serviceConfig = (mkSyncService "all").serviceConfig // {
@@ -180,6 +191,8 @@ in
       personal-data-sync-hevy = mkSyncTimer "4h" "15min";
       personal-data-sync-github = mkSyncTimer "6h" "25min";
       personal-data-sync-leetcode = mkSyncTimer "6h" "35min";
+      personal-data-sync-wetrakr = mkSyncTimer "2h" "40min";
+      personal-data-sync-openpost = mkSyncTimer "1h" "45min";
       personal-data-reconcile = {
         wantedBy = [ "timers.target" ];
         timerConfig = {
@@ -232,6 +245,10 @@ in
     services.caddy.virtualHosts."rgo.pt" = {
       logFormat = config.vps.caddy.accessLogFor "rgo.pt";
       extraConfig = ''
+        # Compress HTML, JS, CSS and JSON; the boot's three.js chunk and the
+        # /now globe scripts are several times smaller over the wire.
+        encode zstd gzip
+
         header {
           Strict-Transport-Security "max-age=31536000"
           X-Content-Type-Options "nosniff"
