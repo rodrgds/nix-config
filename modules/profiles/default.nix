@@ -95,6 +95,7 @@ in
       apps.javascript-toolchain.npm.retiredPackages = [ "@deepseek-ai/dsh" ];
       apps.codex.enable = lib.mkDefault true;
       apps.claude.enable = lib.mkDefault true;
+      apps.antigravity.enable = lib.mkDefault true;
       apps.muse.enable = lib.mkDefault true;
       apps.t3-code.enable = lib.mkDefault true;
     })

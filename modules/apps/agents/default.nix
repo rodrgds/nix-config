@@ -15,6 +15,7 @@ let
     "codex"
     "claude-code"
     "opencode"
+    "antigravity-cli"
   ];
 
   # The installer owns upstream content and its lockfile outside the checkout.
