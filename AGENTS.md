@@ -69,6 +69,8 @@ nixd formats on save with `nixfmt`. Write idiomatic Nix (prefer `inherit`) so ni
 
 The Claude module uses the shared npm updater, agent instructions, and skills. Activation merges Executor into `~/.claude.json`, which also holds account and project state; preserve every unrelated key. Keep Claude-only skill directories and mutable settings intact. Run `python3 modules/apps/claude/test_configure.py` after changing activation.
 
+Accounts are split by client. The CLI, and everything that runs the `claude` binary (T3 Code, editors), signs in to the personal subscription through the Keychain login. Claude Desktop signs in to the Augusta Labs work subscription and is used only for Augusta work. Desktop passes its own token to its bundled Claude Code, so the two logins stay independent. Do not pin `forceLoginOrgUUID` or `forceLoginMethod` in managed settings: they apply machine-wide and would lock Desktop's Code tab out of the work organization. To fix a CLI that drifted to the work account, run `claude auth login` in a private browser window.
+
 ## Darwin desktop runtime
 
 - Caps Lock is Super on `rgo-laptop`: hold sends Command+Control+Option, tap sends Escape. Keep both the Super bindings and the user's direct Option aliases. Leave Option+Arrow to apps and text editors.
