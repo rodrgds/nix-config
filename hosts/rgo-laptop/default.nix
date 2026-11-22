@@ -32,7 +32,8 @@
   apps.nushell.enable = false;
   apps.ollama.enable = false;
   apps.syncthing.enable = false;
-  apps.vscode.enable = false;
+  apps.vscode.enable = true;
+  apps.zed.enable = true;
   apps.zsh.enable = false;
 
   nixpkgs.config.allowUnfree = true;

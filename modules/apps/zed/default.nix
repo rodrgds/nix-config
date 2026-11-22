@@ -29,7 +29,12 @@ let
     autosave = "on_focus_change";
     format_on_save = "on";
     # Inline AI completions stay off; this also stops Copilot language servers.
-    features.edit_prediction_provider = "none";
+    edit_predictions.provider = "none";
+    file_scan_exclusions = [
+      "**/.devenv"
+      "**/.direnv"
+      "..."
+    ];
     terminal = {
       font_family = fonts.mono;
       font_size = fontSize;
