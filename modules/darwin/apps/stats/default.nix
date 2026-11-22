@@ -70,6 +70,10 @@ in
       config = {
         ProgramArguments = [ "/Applications/Stats.app/Contents/MacOS/Stats" ];
         RunAtLoad = true;
+        # Stats can exit cleanly during app updates or startup handoffs.
+        # Keep the managed instance alive after those exits as well as crashes.
+        KeepAlive = true;
+        ThrottleInterval = 5;
         ProcessType = "Interactive";
       };
     };
